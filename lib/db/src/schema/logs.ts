@@ -1,0 +1,67 @@
+import { pgTable, serial, text, integer, timestamp } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+import { studentsTable } from "./students.js";
+import { postingsTable } from "./postings.js";
+import { usersTable } from "./users.js";
+
+export const caseLogsTable = pgTable("case_logs", {
+  id: serial("id").primaryKey(),
+  studentId: integer("student_id").notNull().references(() => studentsTable.id),
+  postingId: integer("posting_id").references(() => postingsTable.id),
+  date: text("date").notNull(),
+  attemptNumber: integer("attempt_number").notNull().default(1),
+  patientAge: integer("patient_age").notNull(),
+  patientGender: text("patient_gender", { enum: ["male", "female", "other"] }).notNull(),
+  diagnosisProvisional: text("diagnosis_provisional").notNull(),
+  diagnosisFinal: text("diagnosis_final"),
+  history: text("history"),
+  investigations: text("investigations"),
+  managementPlan: text("management_plan"),
+  status: text("status", { enum: ["pending", "verified", "rejected"] }).notNull().default("pending"),
+  facultyRemarks: text("faculty_remarks"),
+  facultyGrade: text("faculty_grade"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertCaseLogSchema = createInsertSchema(caseLogsTable);
+export type InsertCaseLog = typeof caseLogsTable.$inferInsert;
+export type CaseLog = typeof caseLogsTable.$inferSelect;
+
+export const procedureLogsTable = pgTable("procedure_logs", {
+  id: serial("id").primaryKey(),
+  studentId: integer("student_id").notNull().references(() => studentsTable.id),
+  postingId: integer("posting_id").references(() => postingsTable.id),
+  procedureName: text("procedure_name").notNull(),
+  date: text("date").notNull(),
+  ageCategory: text("age_category", { enum: ["neonatal", "pediatric", "adult"] }).notNull(),
+  competencyLevel: text("competency_level", {
+    enum: ["observed", "assisted", "performed_under_supervision", "performed_independently"]
+  }).notNull(),
+  facultyVerifiedLevel: text("faculty_verified_level"),
+  status: text("status", { enum: ["pending", "verified", "rejected"] }).notNull().default("pending"),
+  facultyRemarks: text("faculty_remarks"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertProcedureLogSchema = createInsertSchema(procedureLogsTable);
+export type InsertProcedureLog = typeof procedureLogsTable.$inferInsert;
+export type ProcedureLog = typeof procedureLogsTable.$inferSelect;
+
+export const academicLogsTable = pgTable("academic_logs", {
+  id: serial("id").primaryKey(),
+  studentId: integer("student_id").notNull().references(() => studentsTable.id),
+  activityType: text("activity_type", {
+    enum: ["journal_club", "seminar", "bedside_presentation", "mm_meeting"]
+  }).notNull(),
+  topic: text("topic").notNull(),
+  date: text("date").notNull(),
+  presenter: text("presenter"),
+  supervisorId: integer("supervisor_id").references(() => usersTable.id),
+  status: text("status", { enum: ["pending", "verified", "rejected"] }).notNull().default("pending"),
+  facultyRemarks: text("faculty_remarks"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertAcademicLogSchema = createInsertSchema(academicLogsTable);
+export type InsertAcademicLog = typeof academicLogsTable.$inferInsert;
+export type AcademicLog = typeof academicLogsTable.$inferSelect;

@@ -1,4 +1,16 @@
 import { useEffect, useState, type ComponentType } from "react";
+import { Route, Switch } from "wouter";
+import { AppLayout, type RoleType } from "@/components/layout/AppLayout";
+import { Dashboard } from "@/components/Dashboard";
+import { ProfessorPortal } from "@/components/ProfessorPortal";
+import { HODPortal } from "@/components/HODPortal";
+import { DeanPortal } from "@/components/DeanPortal";
+import { CaseLogsPage } from "@/components/pages/CaseLogsPage";
+import { ProcedureLogsPage } from "@/components/pages/ProcedureLogsPage";
+import { AcademicLogsPage } from "@/components/pages/AcademicLogsPage";
+import { PostingsPage } from "@/components/pages/PostingsPage";
+import { AttendancePage } from "@/components/pages/AttendancePage";
+import { MilestonesPage } from "@/components/pages/MilestonesPage";
 
 import { modules as discoveredModules } from "./.generated/mockup-components";
 
@@ -91,32 +103,6 @@ function getBasePath(): string {
   return import.meta.env.BASE_URL.replace(/\/$/, "");
 }
 
-function getPreviewExamplePath(): string {
-  const basePath = getBasePath();
-  return `${basePath}/preview/ComponentName`;
-}
-
-function Gallery() {
-  return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-8">
-      <div className="text-center max-w-md">
-        <h1 className="text-2xl font-semibold text-gray-900 mb-3">
-          Component Preview Server
-        </h1>
-        <p className="text-gray-500 mb-4">
-          This server renders individual components for the workspace canvas.
-        </p>
-        <p className="text-sm text-gray-400">
-          Access component previews at{" "}
-          <code className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-600">
-            {getPreviewExamplePath()}
-          </code>
-        </p>
-      </div>
-    </div>
-  );
-}
-
 function getPreviewPath(): string | null {
   const basePath = getBasePath();
   const { pathname } = window.location;
@@ -130,6 +116,7 @@ function getPreviewPath(): string | null {
 
 function App() {
   const previewPath = getPreviewPath();
+  const [activeRole, setActiveRole] = useState<RoleType>("Student");
 
   if (previewPath) {
     return (
@@ -140,7 +127,45 @@ function App() {
     );
   }
 
-  return <Gallery />;
+  return (
+    <AppLayout activeRole={activeRole} setActiveRole={setActiveRole}>
+      {activeRole === "Professor" && (
+        <Switch>
+          <Route path="/mentees" component={() => <ProfessorPortal activeTab="mentees" />} />
+          <Route path="/appraisals" component={() => <ProfessorPortal activeTab="appraisals" />} />
+          <Route component={() => <ProfessorPortal activeTab="review-queue" />} />
+        </Switch>
+      )}
+      {activeRole === "HOD" && (
+        <Switch>
+          <Route path="/postings-builder" component={() => <HODPortal activeTab="posting-schedules" />} />
+          <Route path="/mentor-matching" component={() => <HODPortal activeTab="mentor-matching" />} />
+          <Route path="/leave-approvals" component={() => <HODPortal activeTab="leave-approvals" />} />
+          <Route component={() => <HODPortal activeTab="gap-dashboard" />} />
+        </Switch>
+      )}
+      {activeRole === "Dean" && (
+        <Switch>
+          <Route path="/user-provisioning" component={() => <DeanPortal activeTab="user-provisioning" />} />
+          <Route path="/nmc-master" component={() => <DeanPortal activeTab="nmc-master" />} />
+          <Route component={() => <DeanPortal activeTab="heatmap" />} />
+        </Switch>
+      )}
+      {activeRole === "Student" && (
+        <Switch>
+          <Route path="/" component={Dashboard} />
+          <Route path="/dashboard" component={Dashboard} />
+          <Route path="/cases" component={CaseLogsPage} />
+          <Route path="/procedures" component={ProcedureLogsPage} />
+          <Route path="/academics" component={AcademicLogsPage} />
+          <Route path="/postings" component={PostingsPage} />
+          <Route path="/attendance" component={AttendancePage} />
+          <Route path="/milestones" component={MilestonesPage} />
+          <Route component={Dashboard} />
+        </Switch>
+      )}
+    </AppLayout>
+  );
 }
 
 export default App;

@@ -1,0 +1,623 @@
+import * as React from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useLocation } from "wouter";
+import { toast } from "sonner";
+import {
+  CheckCircle2,
+  XCircle,
+  Stethoscope,
+  GraduationCap,
+  Clock,
+  UserCheck,
+  ChevronLeft,
+  ChevronRight,
+  FileCheck,
+  Award,
+  AlertTriangle,
+  Send,
+  BookOpen,
+  User,
+  FileText,
+} from "lucide-react";
+
+export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
+  const [location, setLocation] = useLocation();
+  const [data, setData] = React.useState<any>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [currentIndex, setCurrentIndex] = React.useState(0);
+  const [remarks, setRemarks] = React.useState("");
+  const [grade, setGrade] = React.useState("A");
+  const [competencyOverride, setCompetencyOverride] = React.useState("performed_independently");
+  const [evaluatedLogs, setEvaluatedLogs] = React.useState<Record<string, any>>({});
+  
+  // Selected mentee for Logbook Inspector Modal
+  const [selectedMentee, setSelectedMentee] = React.useState<any | null>(null);
+
+  const getTabFromPath = () => {
+    if (activeTab) return activeTab;
+    if (location === "/mentees") return "mentees";
+    if (location === "/appraisals") return "appraisals";
+    return "review-queue";
+  };
+
+  const currentTab = getTabFromPath();
+
+  const handleTabChange = (val: string) => {
+    if (val === "mentees") setLocation("/mentees");
+    else if (val === "appraisals") setLocation("/appraisals");
+    else setLocation("/");
+  };
+
+  React.useEffect(() => {
+    async function fetchProfessorData() {
+      try {
+        const res = await fetch("/api/professor/dashboard");
+        if (res.ok) {
+          const json = await res.json();
+          setData(json);
+        } else {
+          setData(getFallbackProfData());
+        }
+      } catch (e) {
+        setData(getFallbackProfData());
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchProfessorData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <p className="text-sm font-medium text-slate-500">Loading Faculty Review Queue...</p>
+      </div>
+    );
+  }
+
+  const reviews = data?.pendingReviews || [];
+  const mentees = data?.assignedMentees || [];
+  const currentItem = reviews[currentIndex];
+
+  const handleApprove = () => {
+    if (!currentItem) return;
+    setEvaluatedLogs({
+      ...evaluatedLogs,
+      [currentItem.id]: { status: "verified", remarks: remarks || "Approved without conditions.", grade },
+    });
+
+    toast.success(`Log ${currentItem.id} Verified!`, {
+      description: `Assigned Grade: ${grade}. Competency level updated.`,
+    });
+
+    setRemarks("");
+    if (currentIndex < reviews.length - 1) {
+      setCurrentIndex(currentIndex + 1);
+    }
+  };
+
+  const handleReject = () => {
+    if (!currentItem) return;
+    setEvaluatedLogs({
+      ...evaluatedLogs,
+      [currentItem.id]: { status: "rejected", remarks: remarks || "Please expand on case findings." },
+    });
+
+    toast.error(`Revision Requested for ${currentItem.id}`, {
+      description: `Returned to ${currentItem.studentName} with feedback.`,
+    });
+
+    setRemarks("");
+    if (currentIndex < reviews.length - 1) {
+      setCurrentIndex(currentIndex + 1);
+    }
+  };
+
+  return (
+    <div className="space-y-6 pb-12">
+      {/* Top Banner: Professor Profile */}
+      <div className="rounded-2xl bg-gradient-to-r from-teal-900 via-slate-900 to-teal-950 p-6 text-white shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <Badge className="bg-teal-500/20 text-teal-300 border-teal-500/30 text-xs font-semibold mb-2">
+            Faculty &amp; Evaluator Portal
+          </Badge>
+          <h2 className="text-2xl font-black">Welcome, {data?.faculty?.name || "Prof. Dr. Piyush Gupta"}</h2>
+          <p className="text-xs text-slate-300">
+            {data?.faculty?.role} • {data?.faculty?.department} • Assigned Mentees: <strong>{mentees.length} Residents</strong>
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="bg-teal-500/10 border border-teal-500/30 px-4 py-2 rounded-xl text-right">
+            <p className="text-xl font-extrabold text-teal-300">{reviews.length - Object.keys(evaluatedLogs).length}</p>
+            <p className="text-[11px] text-slate-300 font-medium">Pending Review Items</p>
+          </div>
+        </div>
+      </div>
+
+      <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full">
+        <TabsList className="bg-slate-200/70 p-1 rounded-xl">
+          <TabsTrigger value="review-queue" className="gap-2 text-xs font-semibold">
+            <FileCheck className="h-4 w-4" /> Sequential Review Queue ({reviews.length - Object.keys(evaluatedLogs).length})
+          </TabsTrigger>
+          <TabsTrigger value="mentees" className="gap-2 text-xs font-semibold">
+            <UserCheck className="h-4 w-4" /> Assigned Mentees ({mentees.length})
+          </TabsTrigger>
+          <TabsTrigger value="appraisals" className="gap-2 text-xs font-semibold">
+            <Award className="h-4 w-4" /> NMC Annexure-I Appraisal
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Tab 1: Sequential Fast Review Queue */}
+        <TabsContent value="review-queue" className="pt-4 space-y-6">
+          {reviews.length === 0 || currentIndex >= reviews.length ? (
+            <Card className="p-8 text-center bg-white border border-slate-200">
+              <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto mb-3" />
+              <h3 className="text-base font-bold text-slate-900">Review Queue Clear!</h3>
+              <p className="text-xs text-slate-500">All submitted student logs have been reviewed and verified.</p>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Submission Detail View */}
+              <div className="lg:col-span-2 space-y-4">
+                <Card className="border border-slate-200 shadow-xs bg-white">
+                  <CardHeader className="border-b border-slate-100 pb-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="bg-teal-50 text-teal-800 border-teal-300 text-xs">
+                          Item {currentIndex + 1} of {reviews.length}
+                        </Badge>
+                        <Badge className="bg-slate-100 text-slate-700 text-xs">
+                          {currentItem.type}
+                        </Badge>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={currentIndex === 0}
+                          onClick={() => setCurrentIndex(currentIndex - 1)}
+                          className="h-8 text-xs"
+                        >
+                          <ChevronLeft className="h-4 w-4 mr-1" /> Previous
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={currentIndex === reviews.length - 1}
+                          onClick={() => setCurrentIndex(currentIndex + 1)}
+                          className="h-8 text-xs"
+                        >
+                          Next <ChevronRight className="h-4 w-4 ml-1" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+
+                  <CardContent className="p-6 space-y-4">
+                    <div className="flex items-start justify-between border-b border-slate-100 pb-4">
+                      <div>
+                        <h3 className="text-lg font-bold text-slate-900">{currentItem.title}</h3>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          Submitted by <strong className="text-slate-800">{currentItem.studentName}</strong> ({currentItem.batch}) • Posting: <strong>{currentItem.posting}</strong>
+                        </p>
+                      </div>
+                      <span className="text-xs text-slate-400 font-mono">{currentItem.date}</span>
+                    </div>
+
+                    <div className="bg-slate-50 p-4 rounded-xl space-y-2 border border-slate-200/60">
+                      <h4 className="text-xs font-semibold uppercase text-slate-500">Submission Details</h4>
+                      <p className="text-sm text-slate-800 leading-relaxed">{currentItem.detail}</p>
+                      {currentItem.patientInfo && (
+                        <p className="text-xs text-slate-600 font-medium">Patient Info: {currentItem.patientInfo}</p>
+                      )}
+                      {currentItem.declaredCompetency && (
+                        <p className="text-xs text-teal-800 font-semibold bg-teal-50 inline-block px-2.5 py-1 rounded border border-teal-200 mt-1">
+                          Self-Declared Level: {currentItem.declaredCompetency}
+                        </p>
+                      )}
+                    </div>
+
+                    {evaluatedLogs[currentItem.id] && (
+                      <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-center justify-between">
+                        <span>Evaluated Status: <strong>{evaluatedLogs[currentItem.id].status.toUpperCase()}</strong> ({evaluatedLogs[currentItem.id].remarks})</span>
+                        <Badge className="bg-emerald-600">Saved</Badge>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Fast Evaluation Panel */}
+              <div className="space-y-4">
+                <Card className="border border-teal-200 shadow-sm bg-white">
+                  <CardHeader className="bg-teal-50/70 border-b border-teal-100 pb-3">
+                    <CardTitle className="text-sm font-bold text-teal-900 flex items-center gap-2">
+                      <FileCheck className="h-4 w-4 text-teal-700" /> Fast Faculty Evaluation
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold text-slate-700">Verified Competency Level</label>
+                      <Select value={competencyOverride} onValueChange={setCompetencyOverride}>
+                        <SelectTrigger className="text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="performed_independently">Performed Independently</SelectItem>
+                          <SelectItem value="performed_under_supervision">Performed Under Supervision</SelectItem>
+                          <SelectItem value="assisted">Assisted</SelectItem>
+                          <SelectItem value="observed">Observed</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold text-slate-700">Scholastic Grade</label>
+                      <div className="flex gap-2">
+                        {["A+", "A", "B+", "B", "C"].map((g) => (
+                          <button
+                            key={g}
+                            type="button"
+                            onClick={() => setGrade(g)}
+                            className={`flex-1 py-1.5 rounded text-xs font-bold transition-all border ${
+                              grade === g ? "bg-teal-600 text-white border-teal-600" : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"
+                            }`}
+                          >
+                            {g}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold text-slate-700">Faculty Remarks</label>
+                      <Textarea
+                        rows={3}
+                        placeholder="Add constructive feedback or verification notes..."
+                        value={remarks}
+                        onChange={(e) => setRemarks(e.target.value)}
+                        className="text-xs"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 pt-2">
+                      <Button
+                        onClick={handleReject}
+                        variant="outline"
+                        className="border-rose-300 text-rose-700 hover:bg-rose-50 text-xs font-semibold gap-1"
+                      >
+                        <XCircle className="h-4 w-4" /> Request Revision
+                      </Button>
+                      <Button
+                        onClick={handleApprove}
+                        className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold gap-1"
+                      >
+                        <CheckCircle2 className="h-4 w-4" /> Verify &amp; Next
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Tab 2: Assigned Mentees List with Full Logbook Inspector */}
+        <TabsContent value="mentees" className="pt-4 space-y-4">
+          <Card className="border border-slate-200 shadow-xs bg-white">
+            <CardHeader className="pb-3 border-b border-slate-100">
+              <CardTitle className="text-base font-bold text-slate-900">Assigned PG Residents Progress</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader className="bg-slate-50">
+                  <TableRow>
+                    <TableHead className="text-xs font-semibold">Resident Name</TableHead>
+                    <TableHead className="text-xs font-semibold">Batch &amp; Posting</TableHead>
+                    <TableHead className="text-xs font-semibold">Requirement Progress</TableHead>
+                    <TableHead className="text-xs font-semibold">Shortfall Status</TableHead>
+                    <TableHead className="text-xs font-semibold text-right">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {mentees.map((m: any) => (
+                    <TableRow key={m.id}>
+                      <TableCell className="font-bold text-xs text-slate-900">
+                        {m.name}
+                        <p className="text-[11px] text-slate-500 font-normal">{m.registrationNumber}</p>
+                      </TableCell>
+                      <TableCell className="text-xs text-slate-700">
+                        {m.batch}
+                        <p className="text-[11px] text-teal-700 font-semibold">{m.currentPosting}</p>
+                      </TableCell>
+                      <TableCell className="text-xs w-48">
+                        <div className="flex items-center justify-between text-[11px] mb-1">
+                          <span className="font-semibold text-slate-700">{m.overallCompletion}%</span>
+                        </div>
+                        <Progress value={m.overallCompletion} className="h-2" />
+                      </TableCell>
+                      <TableCell>{renderShortfallBadge(m.shortfallStatus)}</TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          onClick={() => {
+                            setSelectedMentee(m);
+                            toast.info(`Opening Logbook for ${m.name}`);
+                          }}
+                          size="sm"
+                          variant="outline"
+                          className="text-xs text-teal-700 border-teal-300 font-semibold gap-1.5"
+                        >
+                          <BookOpen className="h-3.5 w-3.5" /> View Logbook
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab 3: Appraisal Form */}
+        <TabsContent value="appraisals" className="pt-4 space-y-4">
+          <Card className="border border-slate-200 bg-white">
+            <CardHeader className="pb-3 border-b border-slate-100">
+              <CardTitle className="text-base font-bold text-slate-900">NMC Annexure-I Quarterly Appraisal Form</CardTitle>
+              <CardDescription className="text-xs text-slate-500">
+                Quarterly evaluation covering scholastic performance, patient care competency, and professional attributes.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-700">Select Resident</label>
+                  <Select defaultValue="1">
+                    <SelectTrigger className="text-xs">
+                      <SelectValue placeholder="Select Resident" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">Dr. Aarav Sharma (MD Paediatrics - PG II)</SelectItem>
+                      <SelectItem value="2">Dr. Ananya Roy (MD Paediatrics - PG II)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-700">Evaluation Period</label>
+                  <Input value="Q2 2026 (Apr - Jun)" readOnly className="text-xs bg-slate-50" />
+                </div>
+              </div>
+
+              <div className="space-y-3 pt-2">
+                <h4 className="text-xs font-bold uppercase text-slate-500">Evaluation Criteria</h4>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                    <p className="text-xs font-bold text-slate-900 mb-2">1. Scholastic Knowledge</p>
+                    <Select defaultValue="satisfactory">
+                      <SelectTrigger className="text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="excellent">Excellent</SelectItem>
+                        <SelectItem value="satisfactory">Satisfactory</SelectItem>
+                        <SelectItem value="needs_improvement">Needs Improvement</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                    <p className="text-xs font-bold text-slate-900 mb-2">2. Clinical &amp; Patient Care</p>
+                    <Select defaultValue="excellent">
+                      <SelectTrigger className="text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="excellent">Excellent</SelectItem>
+                        <SelectItem value="satisfactory">Satisfactory</SelectItem>
+                        <SelectItem value="needs_improvement">Needs Improvement</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                    <p className="text-xs font-bold text-slate-900 mb-2">3. Professional Attributes</p>
+                    <Select defaultValue="satisfactory">
+                      <SelectTrigger className="text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="excellent">Excellent</SelectItem>
+                        <SelectItem value="satisfactory">Satisfactory</SelectItem>
+                        <SelectItem value="needs_improvement">Needs Improvement</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
+              <Button
+                onClick={() => toast.success("NMC Annexure-I Appraisal Signed & Submitted!", {
+                  description: "Report archived into Dr. Aarav Sharma's permanent compliance record."
+                })}
+                className="bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs gap-2"
+              >
+                <Send className="h-4 w-4" /> Submit Signed Quarterly Appraisal
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Mentee Detailed Logbook Inspector Dialog Modal */}
+      <Dialog open={!!selectedMentee} onOpenChange={() => setSelectedMentee(null)}>
+        <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-y-auto bg-white">
+          {selectedMentee && (
+            <div className="space-y-4">
+              <DialogHeader className="border-b border-slate-100 pb-3">
+                <DialogTitle className="text-slate-900 flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <BookOpen className="h-5 w-5 text-teal-600" /> Logbook Record: {selectedMentee.name}
+                  </span>
+                  <Badge variant="outline" className="text-xs bg-teal-50 text-teal-800">
+                    {selectedMentee.batch}
+                  </Badge>
+                </DialogTitle>
+                <DialogDescription className="text-slate-500">
+                  Registration: {selectedMentee.registrationNumber} • Active Posting: {selectedMentee.currentPosting}
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="bg-slate-50 p-4 rounded-xl space-y-2 border border-slate-200">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-slate-700">Overall NMC Requirement Completion</span>
+                  <span className="font-bold text-teal-800">{selectedMentee.overallCompletion}%</span>
+                </div>
+                <Progress value={selectedMentee.overallCompletion} className="h-2" />
+              </div>
+
+              <Tabs defaultValue="case-logs" className="w-full">
+                <TabsList className="bg-slate-100 p-1 rounded-lg">
+                  <TabsTrigger value="case-logs" className="text-xs">Clinical Case Logs</TabsTrigger>
+                  <TabsTrigger value="proc-logs" className="text-xs">Procedure Logs</TabsTrigger>
+                  <TabsTrigger value="acad-logs" className="text-xs">Academic Activity</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="case-logs" className="pt-3">
+                  <Table>
+                    <TableHeader className="bg-slate-50">
+                      <TableRow>
+                        <TableHead className="text-xs font-semibold">Date</TableHead>
+                        <TableHead className="text-xs font-semibold">Diagnosis</TableHead>
+                        <TableHead className="text-xs font-semibold">Patient</TableHead>
+                        <TableHead className="text-xs font-semibold text-right">Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell className="text-xs font-medium">2026-07-26</TableCell>
+                        <TableCell className="text-xs font-bold text-slate-900">Acute Severe Asthma Exacerbation</TableCell>
+                        <TableCell className="text-xs text-slate-600">7 yr / Male</TableCell>
+                        <TableCell className="text-right">
+                          <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-[10px]">Pending Review</Badge>
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="text-xs font-medium">2026-07-23</TableCell>
+                        <TableCell className="text-xs font-bold text-slate-900">Severe Dengue Hemorrhagic Fever</TableCell>
+                        <TableCell className="text-xs text-slate-600">3 yr / Female</TableCell>
+                        <TableCell className="text-right">
+                          <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]">Faculty Verified</Badge>
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </TabsContent>
+
+                <TabsContent value="proc-logs" className="pt-3">
+                  <Table>
+                    <TableHeader className="bg-slate-50">
+                      <TableRow>
+                        <TableHead className="text-xs font-semibold">Procedure Name</TableHead>
+                        <TableHead className="text-xs font-semibold">Competency</TableHead>
+                        <TableHead className="text-xs font-semibold text-right">Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell className="text-xs font-bold text-slate-900">Endotracheal Intubation</TableCell>
+                        <TableCell className="text-xs text-teal-800 font-semibold">Performed Independently</TableCell>
+                        <TableCell className="text-right">
+                          <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]">Verified</Badge>
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </TabsContent>
+
+                <TabsContent value="acad-logs" className="pt-3">
+                  <Table>
+                    <TableHeader className="bg-slate-50">
+                      <TableRow>
+                        <TableHead className="text-xs font-semibold">Type</TableHead>
+                        <TableHead className="text-xs font-semibold">Topic</TableHead>
+                        <TableHead className="text-xs font-semibold text-right">Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell className="text-xs font-semibold">Journal Club</TableCell>
+                        <TableCell className="text-xs text-slate-900">High-Flow Nasal Cannula in Bronchiolitis</TableCell>
+                        <TableCell className="text-right">
+                          <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]">Verified</Badge>
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </TabsContent>
+              </Tabs>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function renderShortfallBadge(status: string) {
+  switch (status) {
+    case "on_track":
+      return <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]">On Track</Badge>;
+    case "behind":
+      return <Badge className="bg-rose-50 text-rose-700 border-rose-200 text-[10px]">Behind</Badge>;
+    default:
+      return <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-[10px]">At Risk</Badge>;
+  }
+}
+
+function getFallbackProfData() {
+  return {
+    faculty: { name: "Prof. Dr. Piyush Gupta", role: "Professor & HOD", department: "Department of Paediatrics" },
+    pendingReviews: [
+      { id: "LOG-1092", studentName: "Dr. Aarav Sharma", batch: "2024-2027", type: "Case Log", title: "Acute Severe Asthma Exacerbation in a 7yo Child", date: "2026-07-26", posting: "PICU", detail: "Managed with Nebulized Salbutamol + Ipratropium", patientInfo: "7 yr / Male" },
+    ],
+    assignedMentees: [
+      { id: 1, name: "Dr. Aarav Sharma", registrationNumber: "PG2024-PAED-014", batch: "2024-2027", currentPosting: "PICU", overallCompletion: 73, shortfallStatus: "at_risk" },
+      { id: 2, name: "Dr. Ananya Roy", registrationNumber: "PG2024-PAED-018", batch: "2024-2027", currentPosting: "NICU", overallCompletion: 88, shortfallStatus: "on_track" },
+    ],
+  };
+}

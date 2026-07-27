@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { Stethoscope, PlusCircle, CheckCircle2, Clock, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
+import { PROCEDURE_OPTIONS, REQUIRED_PROCEDURE_COUNT } from "@/lib/logbook-config";
 
 export function ProcedureLogsPage() {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
@@ -31,8 +32,9 @@ export function ProcedureLogsPage() {
       id: "LOG-1088",
       date: "2026-07-24",
       posting: "PICU",
-      procedureName: "Endotracheal Intubation (Pediatric)",
-      ageCategory: "Pediatric (7yr)",
+      patientUhid: "UHID-2026-003944",
+      procedureName: "Endotracheal Intubation",
+      patientAge: "7 years",
       selfCompetency: "Performed Independently",
       facultyVerified: "Performed Independently",
       status: "verified",
@@ -42,8 +44,9 @@ export function ProcedureLogsPage() {
       id: "LOG-1075",
       date: "2026-07-20",
       posting: "Emergency Ward",
-      procedureName: "Lumbar Puncture (Infant)",
-      ageCategory: "Infant (4mo)",
+      patientUhid: "UHID-2026-003771",
+      procedureName: "Lumbar Puncture",
+      patientAge: "4 months",
       selfCompetency: "Assisted",
       facultyVerified: "Assisted",
       status: "rejected",
@@ -53,8 +56,9 @@ export function ProcedureLogsPage() {
       id: "LOG-1062",
       date: "2026-07-14",
       posting: "NICU",
+      patientUhid: "UHID-2026-003502",
       procedureName: "Surfactant Administration via ETT",
-      ageCategory: "Neonatal (32 wks preterm)",
+      patientAge: "32 weeks gestation",
       selfCompetency: "Performed Under Supervision",
       facultyVerified: "Performed Under Supervision",
       status: "verified",
@@ -64,20 +68,22 @@ export function ProcedureLogsPage() {
 
   const [form, setForm] = React.useState({
     procedureName: "",
-    ageCategory: "pediatric",
+    patientUhid: "",
+    patientAge: "",
     competency: "performed_independently",
   });
 
   const handleAddProcedure = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.procedureName) return;
+    if (!form.procedureName || !form.patientUhid || !form.patientAge) return;
 
     const newLog = {
       id: `LOG-${Math.floor(1000 + Math.random() * 9000)}`,
       date: new Date().toISOString().split("T")[0],
       posting: "PICU",
+      patientUhid: form.patientUhid,
       procedureName: form.procedureName,
-      ageCategory: form.ageCategory === "neonatal" ? "Neonatal (<28d)" : "Pediatric (1mo-18yr)",
+      patientAge: form.patientAge,
       selfCompetency: form.competency === "performed_independently" ? "Performed Independently" : "Performed Under Supervision",
       facultyVerified: "Pending Review",
       status: "pending",
@@ -89,7 +95,7 @@ export function ProcedureLogsPage() {
       description: `${newLog.procedureName} queued for faculty review.`,
     });
 
-    setForm({ procedureName: "", ageCategory: "pediatric", competency: "performed_independently" });
+    setForm({ procedureName: "", patientUhid: "", patientAge: "", competency: "performed_independently" });
     setIsModalOpen(false);
   };
 
@@ -123,26 +129,42 @@ export function ProcedureLogsPage() {
             <form onSubmit={handleAddProcedure} className="space-y-4 py-2">
               <div className="space-y-2">
                 <Label>Procedure Name</Label>
-                <Input
-                  placeholder="e.g. Lumbar Puncture / Bone Marrow Aspiration"
+                <Select
                   value={form.procedureName}
-                  onChange={(e) => setForm({ ...form, procedureName: e.target.value })}
-                  required
-                />
+                  onValueChange={(val) => setForm({ ...form, procedureName: val })}
+                >
+                  <SelectTrigger><SelectValue placeholder="Select a required procedure" /></SelectTrigger>
+                  <SelectContent>
+                    {PROCEDURE_OPTIONS.map((procedure) => (
+                      <SelectItem key={procedure} value={procedure}>{procedure}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Age Category</Label>
-                  <Select value={form.ageCategory} onValueChange={(val) => setForm({ ...form, ageCategory: val })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="neonatal">Neonatal (&lt; 28d)</SelectItem>
-                      <SelectItem value="pediatric">Pediatric (1mo-18yr)</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label>Patient UHID</Label>
+                  <Input
+                    placeholder="UHID-2026-004281"
+                    value={form.patientUhid}
+                    onChange={(e) => setForm({ ...form, patientUhid: e.target.value })}
+                    required
+                  />
                 </div>
 
+                <div className="space-y-2">
+                  <Label>Age</Label>
+                  <Input
+                    placeholder="e.g. 4 months"
+                    value={form.patientAge}
+                    onChange={(e) => setForm({ ...form, patientAge: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-2">
                   <Label>Self-Declared Competency</Label>
                   <Select value={form.competency} onValueChange={(val) => setForm({ ...form, competency: val })}>
@@ -169,7 +191,7 @@ export function ProcedureLogsPage() {
         <div className="flex items-center gap-3">
           <AlertCircle className="h-5 w-5 text-amber-700" />
           <p className="text-xs text-amber-900">
-            <strong>Requirement Gap Warning:</strong> You have logged <strong>{procedureLogs.length}/15</strong> procedures. Maintain logging pace during your current rotation.
+            <strong>Requirement Gap Warning:</strong> You have logged <strong>{procedureLogs.length}/{REQUIRED_PROCEDURE_COUNT}</strong> procedures. New entries must be selected from the required procedure list.
           </p>
         </div>
       </div>
@@ -184,7 +206,8 @@ export function ProcedureLogsPage() {
               <TableRow>
                 <TableHead className="text-xs font-semibold">Log ID &amp; Date</TableHead>
                 <TableHead className="text-xs font-semibold">Procedure Name</TableHead>
-                <TableHead className="text-xs font-semibold">Age Category</TableHead>
+                <TableHead className="text-xs font-semibold">Patient UHID</TableHead>
+                <TableHead className="text-xs font-semibold">Age</TableHead>
                 <TableHead className="text-xs font-semibold">Declared Competency</TableHead>
                 <TableHead className="text-xs font-semibold">Faculty Verified</TableHead>
                 <TableHead className="text-xs font-semibold">Status</TableHead>
@@ -201,7 +224,8 @@ export function ProcedureLogsPage() {
                     {log.procedureName}
                     <p className="text-[11px] text-slate-500 font-normal">{log.posting}</p>
                   </TableCell>
-                  <TableCell className="py-3 text-xs text-slate-700">{log.ageCategory}</TableCell>
+                  <TableCell className="py-3 text-xs font-semibold text-teal-800">{log.patientUhid}</TableCell>
+                  <TableCell className="py-3 text-xs text-slate-700">{log.patientAge}</TableCell>
                   <TableCell className="py-3 text-xs text-teal-800 font-semibold">{log.selfCompetency}</TableCell>
                   <TableCell className="py-3 text-xs text-slate-700">{log.facultyVerified}</TableCell>
                   <TableCell className="py-3">{renderStatusBadge(log.status)}</TableCell>

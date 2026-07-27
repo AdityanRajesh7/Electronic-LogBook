@@ -5,7 +5,7 @@ const router: IRouter = Router();
 const mockProfessorData = {
   faculty: {
     id: 10,
-    name: "Prof. Dr. Piyush Gupta",
+    name: "Prof. Dr. Mohammad MTP",
     role: "Professor & HOD",
     department: "Department of Paediatrics",
     assignedMenteesCount: 6,
@@ -15,12 +15,13 @@ const mockProfessorData = {
     {
       id: "LOG-1092",
       studentId: 1,
-      studentName: "Dr. Aarav Sharma",
+      studentName: "Dr. Adithya Nair",
       batch: "2024-2027",
       type: "Case Log",
       title: "Acute Severe Asthma Exacerbation in a 7yo Child",
       date: "2026-07-26",
       posting: "PICU",
+      patientUhid: "UHID-2026-004281",
       patientInfo: "7 yr / Male",
       detail: "Managed with Nebulized Salbutamol + Ipratropium, IV Hydrocortisone, supplemental O2",
       diagnosis: "Acute Severe Asthma",
@@ -35,6 +36,8 @@ const mockProfessorData = {
       title: "Neonatal Resuscitation & Bag-Mask Ventilation",
       date: "2026-07-26",
       posting: "NICU",
+      patientUhid: "UHID-2026-004255",
+      patientInfo: "Age: 2 days",
       detail: "Performed under emergency supervision during meconium aspiration presentation",
       declaredCompetency: "Performed Independently",
       status: "pending",
@@ -54,12 +57,14 @@ const mockProfessorData = {
     {
       id: "LOG-1095",
       studentId: 1,
-      studentName: "Dr. Aarav Sharma",
+      studentName: "Dr. Adithya Nair",
       batch: "2024-2027",
       type: "Procedure",
       title: "Bone Marrow Aspiration (Diagnostic)",
       date: "2026-07-25",
       posting: "PICU",
+      patientUhid: "UHID-2026-004198",
+      patientInfo: "Age: 6 years",
       detail: "Performed under direct supervision of Senior Resident for Acute Leukemia evaluation",
       declaredCompetency: "Performed Under Supervision",
       status: "pending",
@@ -68,7 +73,7 @@ const mockProfessorData = {
   assignedMentees: [
     {
       id: 1,
-      name: "Dr. Aarav Sharma",
+      name: "Dr. Adithya Nair",
       registrationNumber: "PG2024-PAED-014",
       batch: "2024-2027",
       currentPosting: "PICU",

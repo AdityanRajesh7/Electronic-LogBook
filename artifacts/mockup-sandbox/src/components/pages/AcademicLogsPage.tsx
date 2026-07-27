@@ -32,7 +32,7 @@ export function AcademicLogsPage() {
       date: "2026-07-22",
       type: "Journal Club",
       topic: "High-Flow Nasal Cannula vs CPAP in Pediatric Bronchiolitis",
-      supervisor: "Prof. Dr. Piyush Gupta",
+      supervisor: "Prof. Dr. Mohammad MTP",
       status: "verified",
       remarks: "Critical appraisal of NEJM 2025 RCT study design.",
     },
@@ -59,7 +59,7 @@ export function AcademicLogsPage() {
   const [form, setForm] = React.useState({
     type: "Journal Club",
     topic: "",
-    supervisor: "Prof. Dr. Piyush Gupta",
+    supervisor: "Prof. Dr. Mohammad MTP",
   });
 
   const handleAddAcademic = (e: React.FormEvent) => {
@@ -81,7 +81,7 @@ export function AcademicLogsPage() {
       description: `${newLog.type}: ${newLog.topic}`,
     });
 
-    setForm({ type: "Journal Club", topic: "", supervisor: "Prof. Dr. Piyush Gupta" });
+    setForm({ type: "Journal Club", topic: "", supervisor: "Prof. Dr. Mohammad MTP" });
     setIsModalOpen(false);
   };
 
@@ -93,7 +93,7 @@ export function AcademicLogsPage() {
             <GraduationCap className="h-6 w-6 text-teal-600" /> Academic Activity Logbook
           </h2>
           <p className="text-xs text-slate-500">
-            Journal clubs, seminars, bedside case presentations, and M&amp;M meeting logs
+            Journal clubs, seminars, symposia, bedside case presentations, and mortality meeting logs
           </p>
         </div>
 
@@ -120,8 +120,9 @@ export function AcademicLogsPage() {
                   <SelectContent>
                     <SelectItem value="Journal Club">Journal Club Presentation</SelectItem>
                     <SelectItem value="Seminar">Seminar Presentation</SelectItem>
+                    <SelectItem value="Symposia">Symposia</SelectItem>
                     <SelectItem value="Bedside Presentation">Bedside Case Presentation</SelectItem>
-                    <SelectItem value="M&M Meeting">M&amp;M Meeting Attendance</SelectItem>
+                    <SelectItem value="Mortality Meeting">Mortality Meeting Attendance</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -141,7 +142,7 @@ export function AcademicLogsPage() {
                 <Select value={form.supervisor} onValueChange={(val) => setForm({ ...form, supervisor: val })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Prof. Dr. Piyush Gupta">Prof. Dr. Piyush Gupta</SelectItem>
+                    <SelectItem value="Prof. Dr. Mohammad MTP">Prof. Dr. Mohammad MTP</SelectItem>
                     <SelectItem value="Dr. Meenakshi Sundaram">Dr. Meenakshi Sundaram</SelectItem>
                     <SelectItem value="Dr. Sunita Kulkarni">Dr. Sunita Kulkarni</SelectItem>
                   </SelectContent>

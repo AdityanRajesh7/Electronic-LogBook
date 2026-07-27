@@ -33,16 +33,18 @@ export function CaseLogsPage() {
       id: "LOG-1092",
       date: "2026-07-26",
       posting: "PICU",
+      patientUhid: "UHID-2026-004281",
       patientInfo: "7 yr / Male",
       diagnosis: "Acute Severe Asthma Exacerbation",
       management: "Nebulized Salbutamol + Ipratropium, IV Hydrocortisone, supplemental O2",
       status: "pending",
-      remarks: "Awaiting Prof. Dr. Piyush Gupta review",
+      remarks: "Awaiting Prof. Dr. Mohammad MTP review",
     },
     {
       id: "LOG-1085",
       date: "2026-07-23",
       posting: "PICU",
+      patientUhid: "UHID-2026-004097",
       patientInfo: "3 yr / Female",
       diagnosis: "Severe Dengue Hemorrhagic Fever with Plasma Leakage",
       management: "IV Fluid resuscitation as per WHO Dengue protocol, hematocrit tracking",
@@ -53,6 +55,7 @@ export function CaseLogsPage() {
       id: "LOG-1079",
       date: "2026-07-19",
       posting: "Paediatric Wards",
+      patientUhid: "UHID-2026-003812",
       patientInfo: "10 mo / Male",
       diagnosis: "Acute Gastroenteritis with Moderate Dehydration",
       management: "ORS rehydration, Zinc supplementation, ongoing breastfeeding guidance",
@@ -63,6 +66,7 @@ export function CaseLogsPage() {
       id: "LOG-1070",
       date: "2026-07-15",
       posting: "Emergency Ward",
+      patientUhid: "UHID-2026-003641",
       patientInfo: "5 yr / Female",
       diagnosis: "Febrile Seizure (First Episode)",
       management: "Intranasal Midazolam, antipyretic measures, EEG scheduling",
@@ -72,6 +76,7 @@ export function CaseLogsPage() {
   ]);
 
   const [form, setForm] = React.useState({
+    patientUhid: "",
     patientAge: "5",
     patientGender: "male",
     posting: "PICU",
@@ -81,12 +86,13 @@ export function CaseLogsPage() {
 
   const handleAddCase = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.diagnosis) return;
+    if (!form.patientUhid || !form.diagnosis) return;
 
     const newLog = {
       id: `LOG-${Math.floor(1000 + Math.random() * 9000)}`,
       date: new Date().toISOString().split("T")[0],
       posting: form.posting,
+      patientUhid: form.patientUhid,
       patientInfo: `${form.patientAge} yr / ${form.patientGender === "male" ? "Male" : "Female"}`,
       diagnosis: form.diagnosis,
       management: form.management || "Managed as per clinical ward protocol",
@@ -99,7 +105,7 @@ export function CaseLogsPage() {
       description: `${newLog.diagnosis} added to Case Logbook.`,
     });
 
-    setForm({ patientAge: "5", patientGender: "male", posting: "PICU", diagnosis: "", management: "" });
+    setForm({ patientUhid: "", patientAge: "5", patientGender: "male", posting: "PICU", diagnosis: "", management: "" });
     setIsModalOpen(false);
   };
 
@@ -107,6 +113,7 @@ export function CaseLogsPage() {
     (log) =>
       log.diagnosis.toLowerCase().includes(searchTerm.toLowerCase()) ||
       log.posting.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      log.patientUhid.toLowerCase().includes(searchTerm.toLowerCase()) ||
       log.id.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -118,7 +125,7 @@ export function CaseLogsPage() {
             <FileText className="h-6 w-6 text-teal-600" /> Clinical Case Logbook
           </h2>
           <p className="text-xs text-slate-500">
-            De-identified clinical case records logged per NMC Paediatric curriculum guidelines
+            Clinical cases presented and maintained according to MCI logbook preparation guidelines
           </p>
         </div>
 
@@ -138,6 +145,16 @@ export function CaseLogsPage() {
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleAddCase} className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label>Patient UHID</Label>
+                <Input
+                  placeholder="e.g. UHID-2026-004281"
+                  value={form.patientUhid}
+                  onChange={(e) => setForm({ ...form, patientUhid: e.target.value })}
+                  required
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Patient Age (Years)</Label>
@@ -194,7 +211,7 @@ export function CaseLogsPage() {
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
             <Input
-              placeholder="Search diagnosis, rotation, log ID..."
+              placeholder="Search diagnosis, posting, UHID, or log ID..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9 text-xs"
@@ -211,7 +228,7 @@ export function CaseLogsPage() {
               <TableRow>
                 <TableHead className="text-xs font-semibold">Log ID &amp; Date</TableHead>
                 <TableHead className="text-xs font-semibold">Diagnosis &amp; Rotation</TableHead>
-                <TableHead className="text-xs font-semibold">Patient Info</TableHead>
+                <TableHead className="text-xs font-semibold">Patient UHID &amp; Info</TableHead>
                 <TableHead className="text-xs font-semibold">Management Plan</TableHead>
                 <TableHead className="text-xs font-semibold">Review Status</TableHead>
                 <TableHead className="text-xs font-semibold text-right">Faculty Remarks</TableHead>
@@ -230,7 +247,10 @@ export function CaseLogsPage() {
                       {log.posting}
                     </Badge>
                   </TableCell>
-                  <TableCell className="py-3 text-xs text-slate-700 font-medium">{log.patientInfo}</TableCell>
+                  <TableCell className="py-3 text-xs text-slate-700 font-medium">
+                    <p className="font-bold text-teal-800">{log.patientUhid}</p>
+                    <p className="text-[11px] font-normal text-slate-500">{log.patientInfo}</p>
+                  </TableCell>
                   <TableCell className="py-3 text-xs text-slate-600 max-w-[280px] truncate">{log.management}</TableCell>
                   <TableCell className="py-3">{renderStatusBadge(log.status)}</TableCell>
                   <TableCell className="py-3 text-right text-xs text-slate-500 max-w-[180px] truncate">

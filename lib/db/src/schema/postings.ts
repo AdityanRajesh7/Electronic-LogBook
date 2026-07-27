@@ -9,7 +9,7 @@ export const postingsTable = pgTable("postings", {
   startDate: text("start_date").notNull(),
   endDate: text("end_date").notNull(),
   durationDays: integer("duration_days").notNull(),
-  attendanceInCharge: text("attendance_in_charge").notNull(),
+  hodOrGuide: text("hod_or_guide").notNull(),
   status: text("status", { enum: ["active", "completed", "upcoming"] }).notNull().default("active"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

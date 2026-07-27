@@ -7,6 +7,8 @@ export const studentsTable = pgTable("students", {
   userId: integer("user_id").notNull().references(() => usersTable.id),
   batch: text("batch").notNull(),
   registrationNumber: text("registration_number").notNull().unique(),
+  dateOfJoining: text("date_of_joining").notNull(),
+  kuhzId: text("kuhz_id").notNull().unique(),
   specialty: text("specialty").notNull(),
   mentorId: integer("mentor_id").references(() => usersTable.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),

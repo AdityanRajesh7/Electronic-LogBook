@@ -8,7 +8,7 @@ const mockDeanData = {
     totalDepartments: 14,
     totalPGResidents: 240,
     totalFaculty: 85,
-    overallNMCCompliance: "91.2%",
+    overallMCICompliance: "91.2%",
     lastInspectionDate: "2025-11-14",
   },
   departmentComplianceHeatmap: [

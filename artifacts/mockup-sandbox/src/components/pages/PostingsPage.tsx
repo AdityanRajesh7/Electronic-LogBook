@@ -12,7 +12,7 @@ export function PostingsPage() {
       startDate: "2026-07-01",
       endDate: "2026-07-31",
       duration: "31 Days",
-      inCharge: "Dr. Meenakshi Sundaram",
+      hodOrGuide: "Dr. Meenakshi Sundaram",
       status: "active",
       statusLabel: "Current Rotation",
     },
@@ -22,7 +22,7 @@ export function PostingsPage() {
       startDate: "2026-05-01",
       endDate: "2026-06-30",
       duration: "61 Days",
-      inCharge: "Prof. Dr. Piyush Gupta",
+      hodOrGuide: "Prof. Dr. Mohammad MTP",
       status: "completed",
       statusLabel: "Completed",
     },
@@ -32,7 +32,7 @@ export function PostingsPage() {
       startDate: "2026-08-01",
       endDate: "2026-08-31",
       duration: "31 Days",
-      inCharge: "Dr. Sunita Kulkarni",
+      hodOrGuide: "Dr. Sunita Kulkarni",
       status: "upcoming",
       statusLabel: "Upcoming",
     },
@@ -45,7 +45,7 @@ export function PostingsPage() {
           <CalendarDays className="h-6 w-6 text-teal-600" /> Rotation Postings Schedule
         </h2>
         <p className="text-xs text-slate-500">
-          Clinical rotations, ward postings, and attendance in-charge assignments
+          Clinical postings with assigned HOD / Guide
         </p>
       </div>
 
@@ -60,7 +60,7 @@ export function PostingsPage() {
                 <TableHead className="text-xs font-semibold">Posting Name</TableHead>
                 <TableHead className="text-xs font-semibold">Start &amp; End Dates</TableHead>
                 <TableHead className="text-xs font-semibold">Duration</TableHead>
-                <TableHead className="text-xs font-semibold">Attendance In-Charge</TableHead>
+                <TableHead className="text-xs font-semibold">HOD / Guide</TableHead>
                 <TableHead className="text-xs font-semibold">Status</TableHead>
               </TableRow>
             </TableHeader>
@@ -70,9 +70,9 @@ export function PostingsPage() {
                   <TableCell className="py-3 text-xs font-bold text-slate-900">{p.name}</TableCell>
                   <TableCell className="py-3 text-xs text-slate-700">{p.startDate} to {p.endDate}</TableCell>
                   <TableCell className="py-3 text-xs font-medium text-slate-800">{p.duration}</TableCell>
-                  <TableCell className="py-3 text-xs text-teal-800 font-semibold">{p.inCharge}</TableCell>
+                  <TableCell className="py-3 text-xs text-teal-800 font-semibold">{p.hodOrGuide}</TableCell>
                   <TableCell className="py-3">
-                    {p.status === "active" && <Badge className="bg-emerald-600 text-white text-[10px]">Active Rotation</Badge>}
+                    {p.status === "active" && <Badge className="bg-emerald-600 text-white text-[10px]">Current</Badge>}
                     {p.status === "completed" && <Badge className="bg-slate-100 text-slate-700 text-[10px]">Completed</Badge>}
                     {p.status === "upcoming" && <Badge variant="outline" className="bg-blue-50 text-blue-700 text-[10px]">Upcoming</Badge>}
                   </TableCell>

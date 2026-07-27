@@ -62,18 +62,18 @@ export function HODPortal({ activeTab }: { activeTab?: string }) {
 
   // Dynamic states
   const [rotations, setRotations] = React.useState([
-    { name: "PICU Rotation (1 Month)", duration: "31 Days", inCharge: "Dr. Meenakshi Sundaram", residentsCount: 6 },
-    { name: "NICU Rotation (2 Months)", duration: "61 Days", inCharge: "Prof. Dr. Piyush Gupta", residentsCount: 5 },
-    { name: "Paediatric Emergency (1 Month)", duration: "31 Days", inCharge: "Dr. Sunita Kulkarni", residentsCount: 7 },
+    { name: "PICU Posting (1 Month)", duration: "31 Days", hodOrGuide: "Dr. Meenakshi Sundaram", residentsCount: 6 },
+    { name: "NICU Posting (2 Months)", duration: "61 Days", hodOrGuide: "Prof. Dr. Mohammad MTP", residentsCount: 5 },
+    { name: "Paediatric Emergency (1 Month)", duration: "31 Days", hodOrGuide: "Dr. Sunita Kulkarni", residentsCount: 7 },
   ]);
 
   const [mentorAllocations, setMentorAllocations] = React.useState([
-    { resident: "Dr. Aarav Sharma (PG-II)", mentor: "Prof. Dr. Piyush Gupta", batch: "2024-2027" },
-    { resident: "Dr. Ananya Roy (PG-II)", mentor: "Prof. Dr. Piyush Gupta", batch: "2024-2027" },
+    { resident: "Dr. Adithya Nair (PG-II)", mentor: "Prof. Dr. Mohammad MTP", batch: "2024-2027" },
+    { resident: "Dr. Ananya Roy (PG-II)", mentor: "Prof. Dr. Mohammad MTP", batch: "2024-2027" },
     { resident: "Dr. Rohan Verma (PG-III)", mentor: "Dr. Meenakshi Sundaram", batch: "2023-2026" },
   ]);
 
-  const [newPosting, setNewPosting] = React.useState({ name: "", duration: "31 Days", inCharge: "Dr. Meenakshi Sundaram" });
+  const [newPosting, setNewPosting] = React.useState({ name: "", duration: "31 Days", hodOrGuide: "Dr. Meenakshi Sundaram" });
   const [newMentor, setNewMentor] = React.useState({ resident: "Dr. Priyanshi Patel (PG-II)", mentor: "Dr. Sunita Kulkarni" });
 
   const getTabFromPath = () => {
@@ -146,11 +146,11 @@ export function HODPortal({ activeTab }: { activeTab?: string }) {
     e.preventDefault();
     if (!newPosting.name) return;
 
-    setRotations([...rotations, { name: newPosting.name, duration: newPosting.duration, inCharge: newPosting.inCharge, residentsCount: 4 }]);
+    setRotations([...rotations, { name: newPosting.name, duration: newPosting.duration, hodOrGuide: newPosting.hodOrGuide, residentsCount: 4 }]);
     toast.success(`Rotation Posting Created!`, {
       description: `${newPosting.name} added to schedule for Batch 2024-2027.`,
     });
-    setNewPosting({ name: "", duration: "31 Days", inCharge: "Dr. Meenakshi Sundaram" });
+    setNewPosting({ name: "", duration: "31 Days", hodOrGuide: "Dr. Meenakshi Sundaram" });
     setIsPostingModalOpen(false);
   };
 
@@ -165,7 +165,7 @@ export function HODPortal({ activeTab }: { activeTab?: string }) {
 
   const handleRecalculateGaps = () => {
     toast.success("Gap Analytics Engine Recalculated!", {
-      description: `Re-evaluated 18 resident logbook portfolios against NMC PGMER-2023 baseline targets.`,
+      description: `Re-evaluated 18 resident logbook portfolios against MCI logbook targets.`,
     });
   };
 
@@ -183,7 +183,7 @@ export function HODPortal({ activeTab }: { activeTab?: string }) {
           </Badge>
           <h2 className="text-2xl font-black">{dept.name}</h2>
           <p className="text-xs text-slate-300 mt-1">
-            Total Residents: <strong>{dept.totalResidents}</strong> • Faculty Count: <strong>{dept.facultyCount}</strong> • NMC Readiness: <strong className="text-emerald-400">{dept.inspectionReadiness}</strong>
+            Total Residents: <strong>{dept.totalResidents}</strong> • Faculty Count: <strong>{dept.facultyCount}</strong> • MCI Readiness: <strong className="text-emerald-400">{dept.inspectionReadiness}</strong>
           </p>
         </div>
 
@@ -226,7 +226,7 @@ export function HODPortal({ activeTab }: { activeTab?: string }) {
             <CardHeader className="pb-3 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
                 <CardTitle className="text-base font-bold text-slate-900">
-                  NMC Compliance &amp; Target Shortfall Matrix
+                  MCI Compliance &amp; Target Shortfall Matrix
                 </CardTitle>
                 <CardDescription className="text-xs text-slate-500">
                   Department-wide exposure analysis sorted by severity of target gap
@@ -261,7 +261,7 @@ export function HODPortal({ activeTab }: { activeTab?: string }) {
                     <TableHead className="text-xs font-semibold">Resident</TableHead>
                     <TableHead className="text-xs font-semibold">Batch &amp; Rotation</TableHead>
                     <TableHead className="text-xs font-semibold">Assigned Mentor</TableHead>
-                    <TableHead className="text-xs font-semibold">Cases Completed</TableHead>
+                    <TableHead className="text-xs font-semibold">Cases Presented</TableHead>
                     <TableHead className="text-xs font-semibold">Procedures Completed</TableHead>
                     <TableHead className="text-xs font-semibold">Shortfall Severity</TableHead>
                     <TableHead className="text-xs font-semibold text-right">Target Gap Analysis</TableHead>
@@ -332,12 +332,12 @@ export function HODPortal({ activeTab }: { activeTab?: string }) {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Faculty In-Charge</Label>
-                      <Select value={newPosting.inCharge} onValueChange={(val) => setNewPosting({ ...newPosting, inCharge: val })}>
+                      <Label>HOD / Guide</Label>
+                      <Select value={newPosting.hodOrGuide} onValueChange={(val) => setNewPosting({ ...newPosting, hodOrGuide: val })}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Dr. Meenakshi Sundaram">Dr. Meenakshi Sundaram</SelectItem>
-                          <SelectItem value="Prof. Dr. Piyush Gupta">Prof. Dr. Piyush Gupta</SelectItem>
+                          <SelectItem value="Prof. Dr. Mohammad MTP">Prof. Dr. Mohammad MTP</SelectItem>
                           <SelectItem value="Dr. Sunita Kulkarni">Dr. Sunita Kulkarni</SelectItem>
                         </SelectContent>
                       </Select>
@@ -356,10 +356,10 @@ export function HODPortal({ activeTab }: { activeTab?: string }) {
                 {rotations.map((post, idx) => (
                   <div key={idx} className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
                     <h4 className="text-xs font-bold text-slate-900">{post.name}</h4>
-                    <p className="text-[11px] text-slate-500">Duration: {post.duration} • In-Charge: <strong>{post.inCharge}</strong></p>
+                    <p className="text-[11px] text-slate-500">Duration: {post.duration} • HOD / Guide: <strong>{post.hodOrGuide}</strong></p>
                     <div className="flex items-center justify-between pt-1">
                       <p className="text-[11px] text-teal-800 font-semibold">Assigned Residents: {post.residentsCount}</p>
-                      <Badge variant="outline" className="bg-white text-xs text-teal-700">Active</Badge>
+                      <Badge variant="outline" className="bg-white text-xs text-teal-700">Scheduled</Badge>
                     </div>
                   </div>
                 ))}
@@ -401,7 +401,7 @@ export function HODPortal({ activeTab }: { activeTab?: string }) {
                       <Select value={newMentor.mentor} onValueChange={(val) => setNewMentor({ ...newMentor, mentor: val })}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Prof. Dr. Piyush Gupta">Prof. Dr. Piyush Gupta</SelectItem>
+                          <SelectItem value="Prof. Dr. Mohammad MTP">Prof. Dr. Mohammad MTP</SelectItem>
                           <SelectItem value="Dr. Meenakshi Sundaram">Dr. Meenakshi Sundaram</SelectItem>
                           <SelectItem value="Dr. Sunita Kulkarni">Dr. Sunita Kulkarni</SelectItem>
                         </SelectContent>
@@ -432,7 +432,7 @@ export function HODPortal({ activeTab }: { activeTab?: string }) {
                       <TableCell className="text-xs text-slate-700">{m.batch}</TableCell>
                       <TableCell className="text-xs font-semibold text-teal-800">{m.mentor}</TableCell>
                       <TableCell className="text-right">
-                        <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]">Active</Badge>
+                        <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]">Assigned</Badge>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -516,7 +516,7 @@ function getFallbackHODData() {
   return {
     department: { name: "Department of Paediatrics", totalResidents: 18, facultyCount: 8, onTrackCount: 11, atRiskCount: 5, behindCount: 2, inspectionReadiness: "84%" },
     residentsGapOverview: [
-      { id: 1, name: "Dr. Rohan Verma", registrationNumber: "PG2023-PAED-005", batch: "2023-2026", mentor: "Prof. Dr. Piyush Gupta", currentPosting: "General Wards", casesCompleted: 28, casesRequired: 60, proceduresCompleted: 8, proceduresRequired: 25, shortfallSeverity: "behind", shortfallNote: "Lagging in Independent Procedures." },
+      { id: 1, name: "Dr. Rohan Verma", registrationNumber: "PG2023-PAED-005", batch: "2023-2026", mentor: "Prof. Dr. Mohammad MTP", currentPosting: "General Wards", casesCompleted: 28, casesRequired: 60, proceduresCompleted: 8, proceduresRequired: 25, shortfallSeverity: "behind", shortfallNote: "Lagging in Independent Procedures." },
     ],
     pendingLeaves: [],
   };

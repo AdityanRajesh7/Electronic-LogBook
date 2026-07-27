@@ -5,12 +5,14 @@ const router: IRouter = Router();
 const mockDashboardData = {
   student: {
     id: 1,
-    name: "Dr. Aarav Sharma",
+    name: "Dr. Adithya Nair",
     registrationNumber: "PG2024-PAED-014",
+    dateOfJoining: "2024-06-15",
+    kuhzId: "KUHZ-MD-PED-2024-014",
     specialty: "MD Paediatrics",
     batch: "2024 - 2027",
     department: "Department of Paediatrics",
-    mentor: "Prof. Dr. Piyush Gupta",
+    mentor: "Prof. Dr. Mohammad MTP",
     avatarUrl: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=150&auto=format&fit=crop&q=80",
   },
   currentPosting: {
@@ -20,7 +22,7 @@ const mockDashboardData = {
     endDate: "2026-07-31",
     daysElapsed: 27,
     totalDays: 31,
-    inCharge: "Dr. Meenakshi Sundaram",
+    hodOrGuide: "Dr. Meenakshi Sundaram",
     status: "active",
   },
   overallShortfallSummary: {
@@ -28,12 +30,12 @@ const mockDashboardData = {
     atRiskCount: 2,
     behindCount: 1,
     onTrackCount: 3,
-    message: "Shortfall detected in Independent Procedures and M&M Meetings relative to NMC PGMER-2023 baseline targets.",
+    message: "Shortfall detected in Independent Procedures and Mortality Meetings relative to MCI logbook targets.",
   },
   categories: [
     {
       id: "cases",
-      name: "Clinical Case Exposure",
+      name: "Clinical Cases Presented",
       logged: 42,
       required: 50,
       verified: 38,
@@ -82,8 +84,8 @@ const mockDashboardData = {
       unit: "presentations",
     },
     {
-      id: "mm_meetings",
-      name: "M&M Meetings Attended",
+      id: "mortality_meetings",
+      name: "Mortality Meetings Attended",
       logged: 2,
       required: 4,
       verified: 2,
@@ -101,6 +103,7 @@ const mockDashboardData = {
       posting: "PICU",
       status: "pending",
       statusLabel: "Pending Faculty Review",
+      patientUhid: "UHID-2026-004281",
       patientInfo: "7 yr / Male",
       detail: "Managed with Nebulized Salbutamol + Ipratropium, IV Hydrocortisone, supplemental O2",
     },
@@ -112,6 +115,8 @@ const mockDashboardData = {
       posting: "PICU",
       status: "verified",
       statusLabel: "Faculty Verified",
+      patientUhid: "UHID-2026-003944",
+      patientInfo: "Age: 7 years",
       competency: "Performed Independently",
       facultyRemarks: "Well performed with standard sterile technique under supervision.",
     },
@@ -133,19 +138,45 @@ const mockDashboardData = {
       posting: "Emergency Ward",
       status: "rejected",
       statusLabel: "Needs Revision",
+      patientUhid: "UHID-2026-003771",
+      patientInfo: "Age: 4 months",
       competency: "Assisted",
       facultyRemarks: "Please expand on CSF analysis findings and post-procedure monitoring notes.",
     },
   ],
   attendance: {
-    clockedIn: true,
-    clockInTime: "08:00 AM",
-    attendanceRate: 96.4,
-    totalDaysPresent: 26,
-    leavesTaken: 1,
-    todayStatus: "Present (Duty On)",
+    approvedLeaves: 1,
+    pendingLeaves: 1,
+    approvedLeaveDays: 2,
   },
 };
+
+const mockLeaveRecords = [
+  {
+    id: "LV-402",
+    studentId: 1,
+    appliedOn: "2026-07-27",
+    fromDate: "2026-08-12",
+    toDate: "2026-08-14",
+    totalDays: 3,
+    leaveType: "Academic Leave",
+    reason: "Attending National Paediatric Pulmonary Conference (IAP)",
+    status: "pending",
+    approvedBy: "Awaiting HOD",
+  },
+  {
+    id: "LV-388",
+    studentId: 1,
+    appliedOn: "2026-06-04",
+    fromDate: "2026-06-10",
+    toDate: "2026-06-11",
+    totalDays: 2,
+    leaveType: "Casual Leave",
+    reason: "Personal leave",
+    status: "approved",
+    approvedBy: "Prof. Dr. Mohammad MTP",
+  },
+];
 
 router.get("/dashboard", (_req, res) => {
   res.json(mockDashboardData);
@@ -178,6 +209,7 @@ router.post("/logs/case", (req, res) => {
     posting: "PICU",
     status: "pending",
     statusLabel: "Pending Faculty Review",
+    patientUhid: req.body.patientUhid,
     patientInfo: `${req.body.patientAge || 5} yr / ${req.body.patientGender || "Male"}`,
     detail: req.body.managementPlan || "Submitted for faculty review",
   };
@@ -185,15 +217,50 @@ router.post("/logs/case", (req, res) => {
   res.status(201).json({ success: true, log: newLog });
 });
 
-router.post("/attendance/clock-in", (_req, res) => {
-  mockDashboardData.attendance.clockedIn = true;
-  mockDashboardData.attendance.clockInTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  res.json({ success: true, attendance: mockDashboardData.attendance });
+router.post("/logs/procedure", (req, res) => {
+  const newLog = {
+    id: `LOG-${Math.floor(1000 + Math.random() * 9000)}`,
+    type: "Procedure",
+    title: req.body.procedureName || "New Procedure Entry",
+    date: new Date().toISOString().split("T")[0],
+    posting: "PICU",
+    status: "pending",
+    statusLabel: "Pending Faculty Review",
+    patientUhid: req.body.patientUhid,
+    patientInfo: `Age: ${req.body.patientAge}`,
+    competency: req.body.competencyLevel || "Performed Under Supervision",
+    facultyRemarks: "Awaiting faculty verification.",
+  };
+  mockDashboardData.recentLogs.unshift(newLog);
+  res.status(201).json({ success: true, log: newLog });
 });
 
-router.post("/attendance/clock-out", (_req, res) => {
-  mockDashboardData.attendance.clockedIn = false;
-  res.json({ success: true, attendance: mockDashboardData.attendance });
+router.get("/leave-records", (_req, res) => {
+  res.json({ data: mockLeaveRecords });
+});
+
+router.post("/leave-records", (req, res) => {
+  const from = new Date(`${req.body.fromDate}T00:00:00Z`).getTime();
+  const to = new Date(`${req.body.toDate}T00:00:00Z`).getTime();
+  if (!Number.isFinite(from) || !Number.isFinite(to) || to < from || !req.body.leaveType || !req.body.reason) {
+    res.status(400).json({ success: false, message: "A valid leave period, leave type, and reason are required." });
+    return;
+  }
+  const totalDays = Math.floor((to - from) / 86_400_000) + 1;
+  const newLeave = {
+    id: `LV-${Math.floor(400 + Math.random() * 500)}`,
+    studentId: 1,
+    appliedOn: new Date().toISOString().split("T")[0],
+    fromDate: req.body.fromDate,
+    toDate: req.body.toDate,
+    totalDays,
+    leaveType: req.body.leaveType,
+    reason: req.body.reason,
+    status: "pending",
+    approvedBy: "Awaiting HOD",
+  };
+  mockLeaveRecords.unshift(newLeave);
+  res.status(201).json({ success: true, leave: newLeave });
 });
 
 export default router;

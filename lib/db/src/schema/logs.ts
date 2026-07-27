@@ -10,6 +10,7 @@ export const caseLogsTable = pgTable("case_logs", {
   postingId: integer("posting_id").references(() => postingsTable.id),
   date: text("date").notNull(),
   attemptNumber: integer("attempt_number").notNull().default(1),
+  patientUhid: text("patient_uhid").notNull(),
   patientAge: integer("patient_age").notNull(),
   patientGender: text("patient_gender", { enum: ["male", "female", "other"] }).notNull(),
   diagnosisProvisional: text("diagnosis_provisional").notNull(),
@@ -33,7 +34,8 @@ export const procedureLogsTable = pgTable("procedure_logs", {
   postingId: integer("posting_id").references(() => postingsTable.id),
   procedureName: text("procedure_name").notNull(),
   date: text("date").notNull(),
-  ageCategory: text("age_category", { enum: ["neonatal", "pediatric", "adult"] }).notNull(),
+  patientUhid: text("patient_uhid").notNull(),
+  patientAge: text("patient_age").notNull(),
   competencyLevel: text("competency_level", {
     enum: ["observed", "assisted", "performed_under_supervision", "performed_independently"]
   }).notNull(),
@@ -51,7 +53,7 @@ export const academicLogsTable = pgTable("academic_logs", {
   id: serial("id").primaryKey(),
   studentId: integer("student_id").notNull().references(() => studentsTable.id),
   activityType: text("activity_type", {
-    enum: ["journal_club", "seminar", "bedside_presentation", "mm_meeting"]
+    enum: ["journal_club", "seminar", "symposia", "bedside_presentation", "mortality_meeting"]
   }).notNull(),
   topic: text("topic").notNull(),
   date: text("date").notNull(),

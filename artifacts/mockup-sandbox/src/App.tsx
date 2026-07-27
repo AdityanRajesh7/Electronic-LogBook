@@ -147,7 +147,8 @@ function App() {
       {activeRole === "Dean" && (
         <Switch>
           <Route path="/user-provisioning" component={() => <DeanPortal activeTab="user-provisioning" />} />
-          <Route path="/nmc-master" component={() => <DeanPortal activeTab="nmc-master" />} />
+          <Route path="/mci-guidelines" component={() => <DeanPortal activeTab="mci-master" />} />
+          <Route path="/nmc-master" component={() => <DeanPortal activeTab="mci-master" />} />
           <Route component={() => <DeanPortal activeTab="heatmap" />} />
         </Switch>
       )}

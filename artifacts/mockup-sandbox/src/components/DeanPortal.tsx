@@ -68,9 +68,9 @@ export function DeanPortal({ activeTab }: { activeTab?: string }) {
     department: "Paediatrics",
   });
 
-  // Dynamic NMC requirements master seed
+  // Dynamic MCI logbook requirements master seed
   const [requirementsMaster, setRequirementsMaster] = React.useState([
-    { specialty: "MD Paediatrics", category: "Case Exposure", itemName: "Clinical Case Exposure Baseline", count: 50 },
+    { specialty: "MD Paediatrics", category: "Case Presentations", itemName: "Clinical Cases Presented", count: 50 },
     { specialty: "MD Paediatrics", category: "Procedures", itemName: "Independent Pediatric Procedures", count: 15 },
     { specialty: "MD Paediatrics", category: "Academic", itemName: "Journal Club Presentations", count: 8 },
     { specialty: "MS General Surgery", category: "Procedures", itemName: "Independent Major Surgeries", count: 40 },
@@ -86,7 +86,7 @@ export function DeanPortal({ activeTab }: { activeTab?: string }) {
   const getTabFromPath = () => {
     if (activeTab) return activeTab;
     if (location === "/user-provisioning") return "user-provisioning";
-    if (location === "/nmc-master") return "nmc-master";
+    if (location === "/mci-guidelines" || location === "/nmc-master") return "mci-master";
     return "heatmap";
   };
 
@@ -94,7 +94,7 @@ export function DeanPortal({ activeTab }: { activeTab?: string }) {
 
   const handleTabChange = (val: string) => {
     if (val === "user-provisioning") setLocation("/user-provisioning");
-    else if (val === "nmc-master") setLocation("/nmc-master");
+    else if (val === "mci-master") setLocation("/mci-guidelines");
     else setLocation("/");
   };
 
@@ -153,7 +153,7 @@ export function DeanPortal({ activeTab }: { activeTab?: string }) {
     if (!reqForm.itemName) return;
 
     setRequirementsMaster([...requirementsMaster, { specialty: reqForm.specialty, category: reqForm.category, itemName: reqForm.itemName, count: reqForm.count }]);
-    toast.success(`NMC Target Rule Saved!`, {
+    toast.success(`MCI Logbook Target Rule Saved!`, {
       description: `${reqForm.itemName}: Target ${reqForm.count} for ${reqForm.specialty}.`,
     });
     setReqForm({ specialty: "MD Paediatrics", category: "Procedures", itemName: "", count: 20 });
@@ -161,7 +161,7 @@ export function DeanPortal({ activeTab }: { activeTab?: string }) {
   };
 
   const handleExportReport = () => {
-    toast.success("NMC Compliance Audit Report Exported!", {
+    toast.success("MCI Logbook Compliance Report Exported!", {
       description: "Generated official institution audit summary (PDF/CSV format).",
     });
   };
@@ -181,20 +181,20 @@ export function DeanPortal({ activeTab }: { activeTab?: string }) {
         </div>
 
         <div className="bg-indigo-500/10 border border-indigo-500/30 px-5 py-3 rounded-xl text-center">
-          <p className="text-2xl font-black text-emerald-400">{inst.overallNMCCompliance}</p>
-          <p className="text-[11px] text-slate-300 font-semibold uppercase">NMC Inspection Readiness</p>
+          <p className="text-2xl font-black text-emerald-400">{inst.overallMCICompliance}</p>
+          <p className="text-[11px] text-slate-300 font-semibold uppercase">MCI Logbook Readiness</p>
         </div>
       </div>
 
       <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="bg-slate-200/70 p-1 rounded-xl">
           <TabsTrigger value="heatmap" className="gap-2 text-xs font-semibold">
-            <ShieldCheck className="h-4 w-4 text-emerald-600" /> NMC Compliance Heatmap
+            <ShieldCheck className="h-4 w-4 text-emerald-600" /> MCI Compliance Heatmap
           </TabsTrigger>
           <TabsTrigger value="user-provisioning" className="gap-2 text-xs font-semibold">
             <UserPlus className="h-4 w-4" /> Profile &amp; User Provisioning ({usersList.length})
           </TabsTrigger>
-          <TabsTrigger value="nmc-master" className="gap-2 text-xs font-semibold">
+          <TabsTrigger value="mci-master" className="gap-2 text-xs font-semibold">
             <BookOpen className="h-4 w-4" /> Requirement Master Seed Data ({requirementsMaster.length})
           </TabsTrigger>
         </TabsList>
@@ -206,11 +206,11 @@ export function DeanPortal({ activeTab }: { activeTab?: string }) {
               <div>
                 <CardTitle className="text-base font-bold text-slate-900">Department Compliance Matrix</CardTitle>
                 <CardDescription className="text-xs text-slate-500">
-                  Readiness score per department for NMC inspection audit
+                  Logbook readiness score per department against MCI guidance
                 </CardDescription>
               </div>
               <Button onClick={handleExportReport} size="sm" variant="outline" className="text-xs text-teal-700 border-teal-300 gap-1 font-semibold">
-                <FileSpreadsheet className="h-4 w-4" /> Export NMC Compliance Report
+                <FileSpreadsheet className="h-4 w-4" /> Export MCI Compliance Report
               </Button>
             </CardHeader>
             <CardContent className="p-0">
@@ -342,12 +342,12 @@ export function DeanPortal({ activeTab }: { activeTab?: string }) {
           </div>
         </TabsContent>
 
-        {/* Tab 3: NMC Master Seed */}
-        <TabsContent value="nmc-master" className="pt-4 space-y-4">
+        {/* Tab 3: MCI logbook requirement master */}
+        <TabsContent value="mci-master" className="pt-4 space-y-4">
           <Card className="border border-slate-200 bg-white">
             <CardHeader className="pb-3 border-b border-slate-100 flex items-center justify-between">
               <div>
-                <CardTitle className="text-base font-bold text-slate-900">NMC PGMER-2023 Master Seed Data</CardTitle>
+                <CardTitle className="text-base font-bold text-slate-900">MCI Logbook Preparation Requirements</CardTitle>
                 <CardDescription className="text-xs text-slate-500">
                   Specialty-specific minimum target baseline rules for gap analytics engine
                 </CardDescription>
@@ -362,7 +362,7 @@ export function DeanPortal({ activeTab }: { activeTab?: string }) {
                 <DialogContent className="sm:max-w-[450px] bg-white">
                   <DialogHeader>
                     <DialogTitle className="text-slate-900 flex items-center gap-2">
-                      <BookOpen className="h-5 w-5 text-teal-600" /> Add NMC Requirement Target Rule
+                      <BookOpen className="h-5 w-5 text-teal-600" /> Add MCI Requirement Target Rule
                     </DialogTitle>
                     <DialogDescription className="text-slate-500">Define minimum target for specialty curriculum.</DialogDescription>
                   </DialogHeader>
@@ -449,7 +449,7 @@ function renderHeatmapBadge(status: string) {
 
 function getFallbackDeanData() {
   return {
-    institution: { name: "Grant Government Medical College, Mumbai", totalDepartments: 14, totalPGResidents: 240, totalFaculty: 85, overallNMCCompliance: "91.2%" },
+    institution: { name: "Grant Government Medical College, Mumbai", totalDepartments: 14, totalPGResidents: 240, totalFaculty: 85, overallMCICompliance: "91.2%" },
     departmentComplianceHeatmap: [
       { name: "Paediatrics", totalResidents: 18, complianceRate: 84, status: "at_risk", atRiskResidents: 7, lastAudited: "2026-07-20" },
       { name: "General Surgery", totalResidents: 32, complianceRate: 94, status: "on_track", atRiskResidents: 2, lastAudited: "2026-07-22" },

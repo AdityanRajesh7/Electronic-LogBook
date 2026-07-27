@@ -155,7 +155,7 @@ export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
           <Badge className="bg-teal-500/20 text-teal-300 border-teal-500/30 text-xs font-semibold mb-2">
             Faculty &amp; Evaluator Portal
           </Badge>
-          <h2 className="text-2xl font-black">Welcome, {data?.faculty?.name || "Prof. Dr. Piyush Gupta"}</h2>
+          <h2 className="text-2xl font-black">Welcome, {data?.faculty?.name || "Prof. Dr. Mohammad MTP"}</h2>
           <p className="text-xs text-slate-300">
             {data?.faculty?.role} • {data?.faculty?.department} • Assigned Mentees: <strong>{mentees.length} Residents</strong>
           </p>
@@ -178,7 +178,7 @@ export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
             <UserCheck className="h-4 w-4" /> Assigned Mentees ({mentees.length})
           </TabsTrigger>
           <TabsTrigger value="appraisals" className="gap-2 text-xs font-semibold">
-            <Award className="h-4 w-4" /> NMC Annexure-I Appraisal
+            <Award className="h-4 w-4" /> MCI Quarterly Appraisal
           </TabsTrigger>
         </TabsList>
 
@@ -245,6 +245,9 @@ export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
                       <p className="text-sm text-slate-800 leading-relaxed">{currentItem.detail}</p>
                       {currentItem.patientInfo && (
                         <p className="text-xs text-slate-600 font-medium">Patient Info: {currentItem.patientInfo}</p>
+                      )}
+                      {currentItem.patientUhid && (
+                        <p className="text-xs font-semibold text-teal-800">Patient UHID: {currentItem.patientUhid}</p>
                       )}
                       {currentItem.declaredCompetency && (
                         <p className="text-xs text-teal-800 font-semibold bg-teal-50 inline-block px-2.5 py-1 rounded border border-teal-200 mt-1">
@@ -398,7 +401,7 @@ export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
         <TabsContent value="appraisals" className="pt-4 space-y-4">
           <Card className="border border-slate-200 bg-white">
             <CardHeader className="pb-3 border-b border-slate-100">
-              <CardTitle className="text-base font-bold text-slate-900">NMC Annexure-I Quarterly Appraisal Form</CardTitle>
+              <CardTitle className="text-base font-bold text-slate-900">MCI Quarterly Appraisal Form</CardTitle>
               <CardDescription className="text-xs text-slate-500">
                 Quarterly evaluation covering scholastic performance, patient care competency, and professional attributes.
               </CardDescription>
@@ -412,7 +415,7 @@ export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
                       <SelectValue placeholder="Select Resident" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="1">Dr. Aarav Sharma (MD Paediatrics - PG II)</SelectItem>
+                      <SelectItem value="1">Dr. Adithya Nair (MD Paediatrics - PG II)</SelectItem>
                       <SelectItem value="2">Dr. Ananya Roy (MD Paediatrics - PG II)</SelectItem>
                     </SelectContent>
                   </Select>
@@ -471,8 +474,8 @@ export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
               </div>
 
               <Button
-                onClick={() => toast.success("NMC Annexure-I Appraisal Signed & Submitted!", {
-                  description: "Report archived into Dr. Aarav Sharma's permanent compliance record."
+                onClick={() => toast.success("MCI Quarterly Appraisal Signed & Submitted!", {
+                  description: "Report archived into Dr. Adithya Nair's permanent compliance record."
                 })}
                 className="bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs gap-2"
               >
@@ -498,13 +501,13 @@ export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
                   </Badge>
                 </DialogTitle>
                 <DialogDescription className="text-slate-500">
-                  Registration: {selectedMentee.registrationNumber} • Active Posting: {selectedMentee.currentPosting}
+                  Registration: {selectedMentee.registrationNumber} • Current Posting: {selectedMentee.currentPosting}
                 </DialogDescription>
               </DialogHeader>
 
               <div className="bg-slate-50 p-4 rounded-xl space-y-2 border border-slate-200">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-slate-700">Overall NMC Requirement Completion</span>
+                  <span className="font-semibold text-slate-700">Overall MCI Requirement Completion</span>
                   <span className="font-bold text-teal-800">{selectedMentee.overallCompletion}%</span>
                 </div>
                 <Progress value={selectedMentee.overallCompletion} className="h-2" />
@@ -523,7 +526,7 @@ export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
                       <TableRow>
                         <TableHead className="text-xs font-semibold">Date</TableHead>
                         <TableHead className="text-xs font-semibold">Diagnosis</TableHead>
-                        <TableHead className="text-xs font-semibold">Patient</TableHead>
+                        <TableHead className="text-xs font-semibold">Patient UHID &amp; Info</TableHead>
                         <TableHead className="text-xs font-semibold text-right">Status</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -531,7 +534,10 @@ export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
                       <TableRow>
                         <TableCell className="text-xs font-medium">2026-07-26</TableCell>
                         <TableCell className="text-xs font-bold text-slate-900">Acute Severe Asthma Exacerbation</TableCell>
-                        <TableCell className="text-xs text-slate-600">7 yr / Male</TableCell>
+                        <TableCell className="text-xs text-slate-600">
+                          <p className="font-semibold text-teal-800">UHID-2026-004281</p>
+                          <p>7 yr / Male</p>
+                        </TableCell>
                         <TableCell className="text-right">
                           <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-[10px]">Pending Review</Badge>
                         </TableCell>
@@ -539,7 +545,10 @@ export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
                       <TableRow>
                         <TableCell className="text-xs font-medium">2026-07-23</TableCell>
                         <TableCell className="text-xs font-bold text-slate-900">Severe Dengue Hemorrhagic Fever</TableCell>
-                        <TableCell className="text-xs text-slate-600">3 yr / Female</TableCell>
+                        <TableCell className="text-xs text-slate-600">
+                          <p className="font-semibold text-teal-800">UHID-2026-004097</p>
+                          <p>3 yr / Female</p>
+                        </TableCell>
                         <TableCell className="text-right">
                           <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]">Faculty Verified</Badge>
                         </TableCell>
@@ -553,6 +562,7 @@ export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
                     <TableHeader className="bg-slate-50">
                       <TableRow>
                         <TableHead className="text-xs font-semibold">Procedure Name</TableHead>
+                        <TableHead className="text-xs font-semibold">Patient UHID &amp; Age</TableHead>
                         <TableHead className="text-xs font-semibold">Competency</TableHead>
                         <TableHead className="text-xs font-semibold text-right">Status</TableHead>
                       </TableRow>
@@ -560,6 +570,10 @@ export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
                     <TableBody>
                       <TableRow>
                         <TableCell className="text-xs font-bold text-slate-900">Endotracheal Intubation</TableCell>
+                        <TableCell className="text-xs text-slate-600">
+                          <p className="font-semibold text-teal-800">UHID-2026-003944</p>
+                          <p>7 years</p>
+                        </TableCell>
                         <TableCell className="text-xs text-teal-800 font-semibold">Performed Independently</TableCell>
                         <TableCell className="text-right">
                           <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]">Verified</Badge>
@@ -611,12 +625,12 @@ function renderShortfallBadge(status: string) {
 
 function getFallbackProfData() {
   return {
-    faculty: { name: "Prof. Dr. Piyush Gupta", role: "Professor & HOD", department: "Department of Paediatrics" },
+    faculty: { name: "Prof. Dr. Mohammad MTP", role: "Professor & HOD", department: "Department of Paediatrics" },
     pendingReviews: [
-      { id: "LOG-1092", studentName: "Dr. Aarav Sharma", batch: "2024-2027", type: "Case Log", title: "Acute Severe Asthma Exacerbation in a 7yo Child", date: "2026-07-26", posting: "PICU", detail: "Managed with Nebulized Salbutamol + Ipratropium", patientInfo: "7 yr / Male" },
+      { id: "LOG-1092", studentName: "Dr. Adithya Nair", batch: "2024-2027", type: "Case Log", title: "Acute Severe Asthma Exacerbation in a 7yo Child", date: "2026-07-26", posting: "PICU", detail: "Managed with Nebulized Salbutamol + Ipratropium", patientUhid: "UHID-2026-004281", patientInfo: "7 yr / Male" },
     ],
     assignedMentees: [
-      { id: 1, name: "Dr. Aarav Sharma", registrationNumber: "PG2024-PAED-014", batch: "2024-2027", currentPosting: "PICU", overallCompletion: 73, shortfallStatus: "at_risk" },
+      { id: 1, name: "Dr. Adithya Nair", registrationNumber: "PG2024-PAED-014", batch: "2024-2027", currentPosting: "PICU", overallCompletion: 73, shortfallStatus: "at_risk" },
       { id: 2, name: "Dr. Ananya Roy", registrationNumber: "PG2024-PAED-018", batch: "2024-2027", currentPosting: "NICU", overallCompletion: 88, shortfallStatus: "on_track" },
     ],
   };

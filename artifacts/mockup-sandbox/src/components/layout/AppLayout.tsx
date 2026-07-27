@@ -32,7 +32,6 @@ import {
   Stethoscope,
   GraduationCap,
   CalendarDays,
-  Clock,
   Award,
   ChevronDown,
   BookOpenCheck,
@@ -68,7 +67,7 @@ export function AppLayout({ children, activeRole, setActiveRole }: AppLayoutProp
         ];
       case "HOD":
         return [
-          { title: "Department Gap View", icon: AlertTriangle, href: "/", badge: "NMC Live", badgeColor: "bg-rose-500/15 text-rose-700 border-rose-300" },
+          { title: "Department Gap View", icon: AlertTriangle, href: "/", badge: "MCI Live", badgeColor: "bg-rose-500/15 text-rose-700 border-rose-300" },
           { title: "Posting Schedule Builder", icon: CalendarDays, href: "/postings-builder" },
           { title: "Mentor Allocation", icon: Users, href: "/mentor-matching" },
           { title: "Leave Approvals", icon: CheckCircle2, href: "/leave-approvals", badge: "2 New", badgeColor: "bg-teal-500/15 text-teal-700 border-teal-300" },
@@ -77,16 +76,16 @@ export function AppLayout({ children, activeRole, setActiveRole }: AppLayoutProp
         return [
           { title: "Compliance Heatmap", icon: ShieldCheck, href: "/", badge: "91.2%", badgeColor: "bg-emerald-500/15 text-emerald-700 border-emerald-300" },
           { title: "User Provisioning", icon: UserPlus, href: "/user-provisioning" },
-          { title: "Requirement Master Data", icon: BookOpen, href: "/nmc-master" },
+          { title: "Requirement Master Data", icon: BookOpen, href: "/mci-guidelines" },
         ];
       default: // Student
         return [
-          { title: "Dashboard", icon: LayoutDashboard, href: "/", badge: "NMC Live", badgeColor: "bg-emerald-500/15 text-emerald-700 border-emerald-300" },
+          { title: "Dashboard", icon: LayoutDashboard, href: "/", badge: "MCI Guide", badgeColor: "bg-emerald-500/15 text-emerald-700 border-emerald-300" },
           { title: "Case Logs", icon: FileText, href: "/cases", badge: "42/50" },
           { title: "Procedure Logs", icon: Stethoscope, href: "/procedures", badge: "At Risk", badgeColor: "bg-amber-500/15 text-amber-700 border-amber-300" },
           { title: "Academic Activities", icon: GraduationCap, href: "/academics" },
           { title: "Postings & Rotations", icon: CalendarDays, href: "/postings", badge: "PICU" },
-          { title: "Attendance & Leave", icon: Clock, href: "/attendance" },
+          { title: "Leave Records", icon: CalendarDays, href: "/attendance" },
           { title: "Certifications & Thesis", icon: Award, href: "/milestones" },
         ];
     }
@@ -113,7 +112,7 @@ export function AppLayout({ children, activeRole, setActiveRole }: AppLayoutProp
                   E-Logbook
                 </span>
                 <span className="text-xs text-teal-700 font-medium flex items-center gap-1">
-                  <ShieldCheck className="h-3 w-3 inline" /> NMC PGMER-2023
+                  <ShieldCheck className="h-3 w-3 inline" /> MCI Logbook Guidelines
                 </span>
               </div>
             </div>
@@ -190,13 +189,13 @@ export function AppLayout({ children, activeRole, setActiveRole }: AppLayoutProp
                   onClick={() => handleRoleChange("Student")}
                   className={`flex items-center gap-2 cursor-pointer text-xs ${activeRole === "Student" ? "font-bold text-teal-700 bg-teal-50" : ""}`}
                 >
-                  <UserCheck className="h-3.5 w-3.5 text-teal-600" /> PG Student Portal (Dr. Aarav)
+                  <UserCheck className="h-3.5 w-3.5 text-teal-600" /> PG Student Portal (Dr. Adithya)
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => handleRoleChange("Professor")}
                   className={`flex items-center gap-2 cursor-pointer text-xs ${activeRole === "Professor" ? "font-bold text-teal-700 bg-teal-50" : ""}`}
                 >
-                  <Stethoscope className="h-3.5 w-3.5 text-slate-600" /> Professor Review Queue (Dr. Piyush)
+                  <Stethoscope className="h-3.5 w-3.5 text-slate-600" /> Professor Review Queue (Dr. Mohammad)
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => handleRoleChange("HOD")}
@@ -225,7 +224,7 @@ export function AppLayout({ children, activeRole, setActiveRole }: AppLayoutProp
                 <h1 className="text-sm font-semibold text-slate-900">
                   Department of Paediatrics • {activeRole} View
                 </h1>
-                <p className="text-xs text-slate-500">NMC PGMER-2023 Residency Platform</p>
+                <p className="text-xs text-slate-500">MCI-aligned Postgraduate Logbook</p>
               </div>
             </div>
 
@@ -264,19 +263,19 @@ export function AppLayout({ children, activeRole, setActiveRole }: AppLayoutProp
 
 function getNameForRole(role: RoleType) {
   switch (role) {
-    case "Professor": return "Prof. Dr. Piyush Gupta";
+    case "Professor": return "Prof. Dr. Mohammad MTP";
     case "HOD": return "Dr. Meenakshi Sundaram (HOD)";
     case "Dean": return "Dean Dr. R. K. Sharma";
-    default: return "Dr. Aarav Sharma";
+    default: return "Dr. Adithya Nair";
   }
 }
 
 function getInitialsForRole(role: RoleType) {
   switch (role) {
-    case "Professor": return "PG";
+    case "Professor": return "MM";
     case "HOD": return "MS";
     case "Dean": return "RS";
-    default: return "AS";
+    default: return "AN";
   }
 }
 

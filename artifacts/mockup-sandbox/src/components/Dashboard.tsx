@@ -5,7 +5,6 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -37,7 +36,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -48,24 +46,24 @@ import {
   GraduationCap,
   Calendar,
   AlertCircle,
-  TrendingUp,
   User,
   Activity,
   ArrowRight,
-  Sparkles,
+  BookOpen,
 } from "lucide-react";
 
 import { toast } from "sonner";
+import { PROCEDURE_OPTIONS } from "@/lib/logbook-config";
 
 export function Dashboard() {
   const [data, setData] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(true);
   const [isCaseModalOpen, setIsCaseModalOpen] = React.useState(false);
   const [isProcedureModalOpen, setIsProcedureModalOpen] = React.useState(false);
-  const [isClockedIn, setIsClockedIn] = React.useState(true);
 
   // Form states
   const [caseForm, setCaseForm] = React.useState({
+    patientUhid: "",
     patientAge: "7",
     patientGender: "male",
     diagnosisProvisional: "",
@@ -74,7 +72,8 @@ export function Dashboard() {
 
   const [procedureForm, setProcedureForm] = React.useState({
     procedureName: "",
-    ageCategory: "pediatric",
+    patientUhid: "",
+    patientAge: "",
     competencyLevel: "performed_independently",
   });
 
@@ -85,7 +84,6 @@ export function Dashboard() {
         if (res.ok) {
           const json = await res.json();
           setData(json);
-          setIsClockedIn(json.attendance?.clockedIn ?? true);
         } else {
           setData(getFallbackMockData());
         }
@@ -100,7 +98,7 @@ export function Dashboard() {
 
   const handleCreateCase = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!caseForm.diagnosisProvisional) return;
+    if (!caseForm.patientUhid || !caseForm.diagnosisProvisional) return;
 
     const newLog = {
       id: `LOG-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -110,6 +108,7 @@ export function Dashboard() {
       posting: data?.currentPosting?.postingName || "PICU",
       status: "pending",
       statusLabel: "Pending Faculty Review",
+      patientUhid: caseForm.patientUhid,
       patientInfo: `${caseForm.patientAge} yr / ${caseForm.patientGender === "male" ? "Male" : "Female"}`,
       detail: caseForm.managementPlan || "Managed as per ward protocols",
     };
@@ -125,16 +124,16 @@ export function Dashboard() {
     }
 
     toast.success(`Case Entry ${newLog.id} submitted!`, {
-      description: `Diagnosis: ${newLog.title}. Sent to Prof. Dr. Piyush Gupta for verification.`,
+      description: `Diagnosis: ${newLog.title}. Sent to Prof. Dr. Mohammad MTP for verification.`,
     });
 
-    setCaseForm({ patientAge: "7", patientGender: "male", diagnosisProvisional: "", managementPlan: "" });
+    setCaseForm({ patientUhid: "", patientAge: "7", patientGender: "male", diagnosisProvisional: "", managementPlan: "" });
     setIsCaseModalOpen(false);
   };
 
   const handleCreateProcedure = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!procedureForm.procedureName) return;
+    if (!procedureForm.procedureName || !procedureForm.patientUhid || !procedureForm.patientAge) return;
 
     const newLog = {
       id: `LOG-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -144,8 +143,10 @@ export function Dashboard() {
       posting: data?.currentPosting?.postingName || "PICU",
       status: "pending",
       statusLabel: "Pending Faculty Review",
+      patientUhid: procedureForm.patientUhid,
+      patientInfo: `Age: ${procedureForm.patientAge}`,
       competency: "Performed Independently",
-      detail: `Category: ${procedureForm.ageCategory}`,
+      detail: `Patient UHID: ${procedureForm.patientUhid}`,
     };
 
     if (data) {
@@ -162,16 +163,8 @@ export function Dashboard() {
       description: `${newLog.title} (${procedureForm.competencyLevel.replace(/_/g, ' ')}) queued for faculty verification.`,
     });
 
-    setProcedureForm({ procedureName: "", ageCategory: "pediatric", competencyLevel: "performed_independently" });
+    setProcedureForm({ procedureName: "", patientUhid: "", patientAge: "", competencyLevel: "performed_independently" });
     setIsProcedureModalOpen(false);
-  };
-
-  const toggleClock = () => {
-    const nextState = !isClockedIn;
-    setIsClockedIn(nextState);
-    toast.info(nextState ? "Duty On (Clocked In at 08:00 AM)" : "Duty Off (Clocked Out)", {
-      description: nextState ? "Duty attendance register updated." : "Duty session logged.",
-    });
   };
 
   if (loading) {
@@ -193,6 +186,30 @@ export function Dashboard() {
 
   return (
     <div className="space-y-6 pb-12">
+      {/* Logbook cover and resident identity */}
+      <Card className="border border-teal-200 bg-gradient-to-br from-white to-teal-50/60 shadow-sm">
+        <CardContent className="p-6 md:p-8">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+            <div className="space-y-2">
+              <Badge className="bg-teal-700 text-white text-[10px] uppercase tracking-wider">MCI Logbook Guidelines</Badge>
+              <h1 className="text-2xl font-black text-slate-900">Postgraduate Electronic Logbook</h1>
+              <p className="flex items-center gap-2 text-sm font-semibold text-teal-800">
+                <BookOpen className="h-4 w-4" /> {student?.department || "Department of Paediatrics"}
+              </p>
+              <p className="max-w-2xl text-xs leading-relaxed text-slate-600">
+                Maintain dated, complete clinical and academic records with patient confidentiality, regular guide review, and verified competency entries in accordance with MCI logbook preparation guidelines.
+              </p>
+            </div>
+            <div className="grid min-w-full grid-cols-1 gap-3 sm:grid-cols-2 lg:min-w-[520px]">
+              <ProfileField label="Resident" value={student?.name} />
+              <ProfileField label="Registration Number" value={student?.registrationNumber} />
+              <ProfileField label="Date of Joining" value={student?.dateOfJoining} />
+              <ProfileField label="KUHZ ID" value={student?.kuhzId} />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Top Banner: Current Posting & Resident Profile */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-teal-950 to-slate-900 p-6 md:p-8 text-white shadow-xl">
         <div className="absolute top-0 right-0 -mt-8 -mr-8 h-64 w-64 rounded-full bg-teal-500/10 blur-3xl" />
@@ -200,9 +217,6 @@ export function Dashboard() {
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <Badge className="bg-teal-500/20 text-teal-300 border-teal-500/30 text-xs font-semibold px-2.5 py-0.5">
-                Active Rotation
-              </Badge>
               <span className="text-xs text-slate-400 font-mono">
                 Days Elapsed: {posting?.daysElapsed}/{posting?.totalDays}
               </span>
@@ -215,7 +229,7 @@ export function Dashboard() {
                 <User className="h-4 w-4 text-teal-400" /> Resident: <strong className="text-white">{student?.name}</strong> ({student?.registrationNumber})
               </span>
               <span className="flex items-center gap-1.5">
-                <Calendar className="h-4 w-4 text-teal-400" /> In-Charge: <strong className="text-white">{posting?.inCharge}</strong>
+                <Calendar className="h-4 w-4 text-teal-400" /> HOD / Guide: <strong className="text-white">{posting?.hodOrGuide}</strong>
               </span>
             </p>
           </div>
@@ -234,10 +248,21 @@ export function Dashboard() {
                     <FileText className="h-5 w-5 text-teal-600" /> Log New Clinical Case
                   </DialogTitle>
                   <DialogDescription className="text-slate-500">
-                    Record patient clinical details. All entries remain strictly de-identified per NMC compliance.
+                    Record patient clinical details for verification. Use the hospital UHID; do not enter the patient's name.
                   </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleCreateCase} className="space-y-4 py-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="caseUhid">Patient UHID</Label>
+                    <Input
+                      id="caseUhid"
+                      placeholder="e.g. UHID-2026-004281"
+                      value={caseForm.patientUhid}
+                      onChange={(e) => setCaseForm({ ...caseForm, patientUhid: e.target.value })}
+                      required
+                    />
+                  </div>
+
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="age">Patient Age (Years)</Label>
@@ -319,33 +344,46 @@ export function Dashboard() {
                 <form onSubmit={handleCreateProcedure} className="space-y-4 py-2">
                   <div className="space-y-2">
                     <Label htmlFor="procName">Procedure Name</Label>
-                    <Input
-                      id="procName"
-                      placeholder="e.g. Lumbar Puncture / Endotracheal Intubation"
+                    <Select
                       value={procedureForm.procedureName}
-                      onChange={(e) => setProcedureForm({ ...procedureForm, procedureName: e.target.value })}
-                      required
-                    />
+                      onValueChange={(val) => setProcedureForm({ ...procedureForm, procedureName: val })}
+                    >
+                      <SelectTrigger id="procName">
+                        <SelectValue placeholder="Select a required procedure" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PROCEDURE_OPTIONS.map((procedure) => (
+                          <SelectItem key={procedure} value={procedure}>{procedure}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="ageCategory">Age Category</Label>
-                      <Select
-                        value={procedureForm.ageCategory}
-                        onValueChange={(val) => setProcedureForm({ ...procedureForm, ageCategory: val })}
-                      >
-                        <SelectTrigger id="ageCategory">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="neonatal">Neonatal (&lt; 28 days)</SelectItem>
-                          <SelectItem value="pediatric">Pediatric (1mo - 18yr)</SelectItem>
-                          <SelectItem value="adult">Adult (&gt; 18yr)</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <Label htmlFor="procedureUhid">Patient UHID</Label>
+                      <Input
+                        id="procedureUhid"
+                        placeholder="UHID-2026-004281"
+                        value={procedureForm.patientUhid}
+                        onChange={(e) => setProcedureForm({ ...procedureForm, patientUhid: e.target.value })}
+                        required
+                      />
                     </div>
 
+                    <div className="space-y-2">
+                      <Label htmlFor="procedureAge">Age</Label>
+                      <Input
+                        id="procedureAge"
+                        placeholder="e.g. 4 months"
+                        value={procedureForm.patientAge}
+                        onChange={(e) => setProcedureForm({ ...procedureForm, patientAge: e.target.value })}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="competency">Self-Declared Level</Label>
                       <Select
@@ -376,19 +414,6 @@ export function Dashboard() {
                 </form>
               </DialogContent>
             </Dialog>
-
-            <Button
-              variant="outline"
-              onClick={toggleClock}
-              className={`font-medium transition-all ${
-                isClockedIn
-                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20"
-                  : "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700"
-              }`}
-            >
-              <Clock className="h-4 w-4 mr-2" />
-              {isClockedIn ? "Duty On (Clock Out)" : "Clock In Duty"}
-            </Button>
           </div>
         </div>
       </div>
@@ -402,7 +427,7 @@ export function Dashboard() {
           <div className="flex-1">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <h3 className="text-sm font-bold text-amber-900 flex items-center gap-2">
-                NMC Target Gap Alert — MD Paediatrics Baseline
+                MCI Logbook Target Gap Alert — MD Paediatrics
                 <Badge className="bg-amber-600 text-white text-[10px] uppercase font-semibold">
                   Action Required
                 </Badge>
@@ -412,7 +437,7 @@ export function Dashboard() {
               </span>
             </div>
             <p className="text-xs text-amber-800 mt-1">
-              You are currently behind schedule on <strong>Independent Procedures (60%)</strong> and <strong>M&amp;M Meetings (50%)</strong> for your training phase. Increase procedure logging during your current PICU rotation to maintain compliance.
+              You are currently behind schedule on <strong>Independent Procedures (60%)</strong> and <strong>Mortality Meetings (50%)</strong> for your training phase. Increase procedure logging during your current PICU posting to maintain compliance.
             </p>
           </div>
         </div>
@@ -424,7 +449,7 @@ export function Dashboard() {
           <div>
             <h3 className="text-lg font-bold text-slate-900">Training Target Progression</h3>
             <p className="text-xs text-slate-500">
-              Live tracking against NMC PGMER-2023 specialty requirement baseline
+              Live tracking against MCI logbook preparation requirements
             </p>
           </div>
           <span className="text-xs font-semibold text-teal-700 bg-teal-50 px-2.5 py-1 rounded-full border border-teal-200">
@@ -518,6 +543,9 @@ export function Dashboard() {
                           {log.patientInfo && (
                             <p className="text-[11px] text-slate-500">Patient: {log.patientInfo}</p>
                           )}
+                          {log.patientUhid && (
+                            <p className="text-[11px] font-medium text-teal-700">UHID: {log.patientUhid}</p>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell className="py-3 text-xs text-slate-600">
@@ -540,41 +568,27 @@ export function Dashboard() {
 
         {/* Right Sidebar Widget Column */}
         <div className="space-y-6">
-          {/* Duty & Attendance Card */}
+          {/* Leave record summary */}
           <Card className="border border-slate-200 shadow-xs bg-white">
             <CardHeader className="pb-3 border-b border-slate-100">
               <CardTitle className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <Clock className="h-4 w-4 text-teal-600" /> Duty Attendance &amp; Leave
+                <Calendar className="h-4 w-4 text-teal-600" /> Leave Record Summary
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-4 space-y-4">
-              <div className="flex items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-100">
-                <div>
-                  <p className="text-xs text-slate-500">Current Status</p>
-                  <p className="text-sm font-bold text-emerald-700 flex items-center gap-1.5 mt-0.5">
-                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                    {isClockedIn ? "Duty On (08:00 AM)" : "Off Duty"}
-                  </p>
-                </div>
-                <Button
-                  size="sm"
-                  onClick={toggleClock}
-                  className={isClockedIn ? "bg-amber-600 hover:bg-amber-700 text-white text-xs" : "bg-teal-600 hover:bg-teal-700 text-white text-xs"}
-                >
-                  {isClockedIn ? "Clock Out" : "Clock In"}
-                </Button>
-              </div>
-
+            <CardContent className="p-4 space-y-3">
               <div className="grid grid-cols-2 gap-3 text-center">
                 <div className="p-3 bg-teal-50/60 rounded-lg border border-teal-100">
-                  <p className="text-xl font-black text-teal-900">{attendance?.attendanceRate || 96.4}%</p>
-                  <p className="text-[11px] font-medium text-teal-700">Attendance Rate</p>
+                  <p className="text-xl font-black text-teal-900">{attendance?.approvedLeaves ?? 1}</p>
+                  <p className="text-[11px] font-medium text-teal-700">Approved</p>
                 </div>
                 <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
-                  <p className="text-xl font-black text-slate-900">{attendance?.leavesTaken || 1}</p>
-                  <p className="text-[11px] font-medium text-slate-500">Leaves Used</p>
+                  <p className="text-xl font-black text-slate-900">{attendance?.pendingLeaves ?? 1}</p>
+                  <p className="text-[11px] font-medium text-slate-500">Pending</p>
                 </div>
               </div>
+              <p className="text-[11px] text-slate-500">
+                Leave applications and HOD decisions are maintained in the Leave Records section.
+              </p>
             </CardContent>
           </Card>
 
@@ -588,20 +602,29 @@ export function Dashboard() {
             <CardContent className="p-4 space-y-3">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-full bg-teal-100 text-teal-800 flex items-center justify-center font-bold text-sm">
-                  PG
+                  MM
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-slate-900">Prof. Dr. Piyush Gupta</h4>
+                  <h4 className="text-xs font-bold text-slate-900">Prof. Dr. Mohammad MTP</h4>
                   <p className="text-[11px] text-slate-500">HOD &amp; Professor of Paediatrics</p>
                 </div>
               </div>
               <p className="text-xs text-slate-600 bg-slate-50 p-2.5 rounded border border-slate-100">
-                Next appraisal review: <strong>31 Aug 2026</strong> (NMC Annexure-I Quarterly Appraisal)
+                Next appraisal review: <strong>31 Aug 2026</strong> (MCI Quarterly Appraisal)
               </p>
             </CardContent>
           </Card>
         </div>
       </div>
+    </div>
+  );
+}
+
+function ProfileField({ label, value }: { label: string; value?: string }) {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white/90 px-3 py-2.5">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{label}</p>
+      <p className="mt-0.5 text-xs font-bold text-slate-800">{value || "Not recorded"}</p>
     </div>
   );
 }
@@ -661,22 +684,25 @@ function renderLogStatusBadge(status: string) {
 function getFallbackMockData() {
   return {
     student: {
-      name: "Dr. Aarav Sharma",
+      name: "Dr. Adithya Nair",
       registrationNumber: "PG2024-PAED-014",
+      dateOfJoining: "2024-06-15",
+      kuhzId: "KUHZ-MD-PED-2024-014",
+      department: "Department of Paediatrics",
     },
     currentPosting: {
       postingName: "Pediatric Intensive Care Unit (PICU)",
       daysElapsed: 27,
       totalDays: 31,
-      inCharge: "Dr. Meenakshi Sundaram",
+      hodOrGuide: "Dr. Meenakshi Sundaram",
     },
     categories: [
-      { id: "cases", name: "Clinical Case Exposure", logged: 42, required: 50, verified: 38, status: "on_track", percentage: 84, unit: "cases" },
+      { id: "cases", name: "Clinical Cases Presented", logged: 42, required: 50, verified: 38, status: "on_track", percentage: 84, unit: "cases" },
       { id: "procedures", name: "Independent Procedures", logged: 9, required: 15, verified: 7, status: "behind", percentage: 60, unit: "procedures" },
       { id: "journal_clubs", name: "Journal Club Presentations", logged: 7, required: 8, verified: 6, status: "on_track", percentage: 87, unit: "clubs" },
       { id: "seminars", name: "Seminars Presented", logged: 5, required: 6, verified: 5, status: "on_track", percentage: 83, unit: "seminars" },
       { id: "bedside", name: "Bedside Case Presentations", logged: 14, required: 20, verified: 12, status: "at_risk", percentage: 70, unit: "presentations" },
-      { id: "mm_meetings", name: "M&M Meetings Attended", logged: 2, required: 4, verified: 2, status: "at_risk", percentage: 50, unit: "meetings" },
+      { id: "mortality_meetings", name: "Mortality Meetings Attended", logged: 2, required: 4, verified: 2, status: "at_risk", percentage: 50, unit: "meetings" },
     ],
     recentLogs: [
       {
@@ -686,6 +712,7 @@ function getFallbackMockData() {
         date: "2026-07-26",
         posting: "PICU",
         status: "pending",
+        patientUhid: "UHID-2026-004281",
         patientInfo: "7 yr / Male",
         detail: "Managed with Nebulized Salbutamol + Ipratropium",
       },
@@ -696,14 +723,15 @@ function getFallbackMockData() {
         date: "2026-07-24",
         posting: "PICU",
         status: "verified",
+        patientUhid: "UHID-2026-003944",
+        patientInfo: "Age: 7 years",
         competency: "Performed Independently",
         facultyRemarks: "Well performed with sterile technique.",
       },
     ],
     attendance: {
-      clockedIn: true,
-      attendanceRate: 96.4,
-      leavesTaken: 1,
+      approvedLeaves: 1,
+      pendingLeaves: 1,
     },
   };
 }

@@ -1,737 +1,216 @@
 import * as React from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Link } from "wouter";
 import {
   AlertTriangle,
+  ArrowRight,
+  Award,
+  BookOpen,
+  CalendarDays,
   CheckCircle2,
-  Clock,
-  PlusCircle,
-  Stethoscope,
+  ClipboardCheck,
   FileText,
   GraduationCap,
-  Calendar,
-  AlertCircle,
-  User,
-  Activity,
-  ArrowRight,
-  BookOpen,
+  Printer,
+  Stethoscope,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { formatLogbookDate } from "@/lib/logbook-config";
 
-import { toast } from "sonner";
-import { PROCEDURE_OPTIONS } from "@/lib/logbook-config";
+const student = {
+  name: "Dr. Adithya Nair",
+  department: "Department of Pediatrics",
+  registrationNumber: "PG2024-PAED-014",
+  dateOfJoining: "2024-06-03",
+  kuhsId: "KUHS-MD-PED-2024-014",
+  guide: "Prof. Dr. Mohammad MTP",
+};
+
+const categories = [
+  { label: "Clinical cases", logged: 42, required: 50, icon: FileText, href: "/cases", tone: "from-teal-500 to-cyan-500" },
+  { label: "Procedures", logged: 11, required: 15, icon: Stethoscope, href: "/procedures", tone: "from-cyan-500 to-sky-500" },
+  { label: "Academic activities", logged: 18, required: 20, icon: GraduationCap, href: "/academics", tone: "from-emerald-500 to-teal-500" },
+  { label: "Assessments", logged: 3, required: 4, icon: ClipboardCheck, href: "/assessments", tone: "from-amber-400 to-orange-400" },
+];
+
+const recent = [
+  { number: 1092, date: "2026-07-26", type: "Case", title: "Acute Severe Asthma Exacerbation", patientUhid: "UHID-2026-004281", status: "Pending" },
+  { number: 1088, date: "2026-07-24", type: "Procedure", title: "Endotracheal Intubation", patientUhid: "UHID-2026-003944", status: "Verified" },
+  { number: 1081, date: "2026-07-22", type: "Academic", title: "High-Flow Nasal Cannula versus CPAP", patientUhid: "—", status: "Verified" },
+  { number: 1075, date: "2026-07-20", type: "Procedure", title: "Lumbar Puncture", patientUhid: "UHID-2026-003771", status: "Revision" },
+];
 
 export function Dashboard() {
-  const [data, setData] = React.useState<any>(null);
-  const [loading, setLoading] = React.useState(true);
-  const [isCaseModalOpen, setIsCaseModalOpen] = React.useState(false);
-  const [isProcedureModalOpen, setIsProcedureModalOpen] = React.useState(false);
-
-  // Form states
-  const [caseForm, setCaseForm] = React.useState({
-    patientUhid: "",
-    patientAge: "7",
-    patientGender: "male",
-    diagnosisProvisional: "",
-    managementPlan: "",
-  });
-
-  const [procedureForm, setProcedureForm] = React.useState({
-    procedureName: "",
-    patientUhid: "",
-    patientAge: "",
-    competencyLevel: "performed_independently",
-  });
-
-  React.useEffect(() => {
-    async function fetchDashboard() {
-      try {
-        const res = await fetch("/api/student/dashboard");
-        if (res.ok) {
-          const json = await res.json();
-          setData(json);
-        } else {
-          setData(getFallbackMockData());
-        }
-      } catch (e) {
-        setData(getFallbackMockData());
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchDashboard();
-  }, []);
-
-  const handleCreateCase = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!caseForm.patientUhid || !caseForm.diagnosisProvisional) return;
-
-    const newLog = {
-      id: `LOG-${Math.floor(1000 + Math.random() * 9000)}`,
-      type: "Case Log",
-      title: caseForm.diagnosisProvisional,
-      date: new Date().toISOString().split("T")[0],
-      posting: data?.currentPosting?.postingName || "PICU",
-      status: "pending",
-      statusLabel: "Pending Faculty Review",
-      patientUhid: caseForm.patientUhid,
-      patientInfo: `${caseForm.patientAge} yr / ${caseForm.patientGender === "male" ? "Male" : "Female"}`,
-      detail: caseForm.managementPlan || "Managed as per ward protocols",
-    };
-
-    if (data) {
-      setData({
-        ...data,
-        recentLogs: [newLog, ...data.recentLogs],
-        categories: data.categories.map((c: any) =>
-          c.id === "cases" ? { ...c, logged: c.logged + 1, percentage: Math.min(100, Math.round(((c.logged + 1) / c.required) * 100)) } : c
-        ),
-      });
-    }
-
-    toast.success(`Case Entry ${newLog.id} submitted!`, {
-      description: `Diagnosis: ${newLog.title}. Sent to Prof. Dr. Mohammad MTP for verification.`,
-    });
-
-    setCaseForm({ patientUhid: "", patientAge: "7", patientGender: "male", diagnosisProvisional: "", managementPlan: "" });
-    setIsCaseModalOpen(false);
-  };
-
-  const handleCreateProcedure = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!procedureForm.procedureName || !procedureForm.patientUhid || !procedureForm.patientAge) return;
-
-    const newLog = {
-      id: `LOG-${Math.floor(1000 + Math.random() * 9000)}`,
-      type: "Procedure",
-      title: procedureForm.procedureName,
-      date: new Date().toISOString().split("T")[0],
-      posting: data?.currentPosting?.postingName || "PICU",
-      status: "pending",
-      statusLabel: "Pending Faculty Review",
-      patientUhid: procedureForm.patientUhid,
-      patientInfo: `Age: ${procedureForm.patientAge}`,
-      competency: "Performed Independently",
-      detail: `Patient UHID: ${procedureForm.patientUhid}`,
-    };
-
-    if (data) {
-      setData({
-        ...data,
-        recentLogs: [newLog, ...data.recentLogs],
-        categories: data.categories.map((c: any) =>
-          c.id === "procedures" ? { ...c, logged: c.logged + 1, percentage: Math.min(100, Math.round(((c.logged + 1) / c.required) * 100)) } : c
-        ),
-      });
-    }
-
-    toast.success(`Procedure Log ${newLog.id} submitted!`, {
-      description: `${newLog.title} (${procedureForm.competencyLevel.replace(/_/g, ' ')}) queued for faculty verification.`,
-    });
-
-    setProcedureForm({ procedureName: "", patientUhid: "", patientAge: "", competencyLevel: "performed_independently" });
-    setIsProcedureModalOpen(false);
-  };
-
-  if (loading) {
-    return (
-      <div className="flex h-64 w-full items-center justify-center">
-        <div className="flex flex-col items-center gap-2">
-          <Activity className="h-8 w-8 animate-spin text-teal-600" />
-          <p className="text-sm font-medium text-slate-500">Loading Student Dashboard & Analytics...</p>
-        </div>
-      </div>
-    );
-  }
-
-  const student = data?.student;
-  const posting = data?.currentPosting;
-  const categories = data?.categories || [];
-  const recentLogs = data?.recentLogs || [];
-  const attendance = data?.attendance;
+  const completion = Math.round(
+    categories.reduce((sum, item) => sum + item.logged / item.required, 0) / categories.length * 100,
+  );
 
   return (
     <div className="space-y-6 pb-12">
-      {/* Logbook cover and resident identity */}
-      <Card className="border border-teal-200 bg-gradient-to-br from-white to-teal-50/60 shadow-sm">
+      <Card className="overflow-hidden border-teal-100">
+        <div className="h-1.5 bg-gradient-to-r from-teal-500 via-cyan-400 to-emerald-400" />
         <CardContent className="p-6 md:p-8">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-            <div className="space-y-2">
-              <Badge className="bg-teal-700 text-white text-[10px] uppercase tracking-wider">MCI Logbook Guidelines</Badge>
-              <h1 className="text-2xl font-black text-slate-900">Postgraduate Electronic Logbook</h1>
-              <p className="flex items-center gap-2 text-sm font-semibold text-teal-800">
-                <BookOpen className="h-4 w-4" /> {student?.department || "Department of Paediatrics"}
-              </p>
-              <p className="max-w-2xl text-xs leading-relaxed text-slate-600">
-                Maintain dated, complete clinical and academic records with patient confidentiality, regular guide review, and verified competency entries in accordance with MCI logbook preparation guidelines.
+          <div className="flex flex-col gap-7 xl:flex-row xl:items-start xl:justify-between">
+            <div className="max-w-2xl">
+              <Badge className="border-0 bg-teal-50 text-[10px] font-bold uppercase tracking-[.16em] text-teal-800">MCI logbook guidelines</Badge>
+              <p className="mt-4 page-eyebrow">{student.department}</p>
+              <h1 className="mt-1 text-4xl font-bold leading-tight text-slate-900 md:text-5xl">Postgraduate Electronic Logbook</h1>
+              <p className="mt-4 text-sm leading-6 text-slate-600">
+                Maintain complete, dated clinical and academic records using patient UHID only. Submit entries regularly for HOD / Guide verification.
               </p>
             </div>
-            <div className="grid min-w-full grid-cols-1 gap-3 sm:grid-cols-2 lg:min-w-[520px]">
-              <ProfileField label="Resident" value={student?.name} />
-              <ProfileField label="Registration Number" value={student?.registrationNumber} />
-              <ProfileField label="Date of Joining" value={student?.dateOfJoining} />
-              <ProfileField label="KUHZ ID" value={student?.kuhzId} />
+            <div className="grid w-full gap-3 sm:grid-cols-2 xl:max-w-xl">
+              <ProfileField label="Resident" value={student.name} />
+              <ProfileField label="Registration number" value={student.registrationNumber} />
+              <ProfileField label="Date of joining" value={formatLogbookDate(student.dateOfJoining)} />
+              <ProfileField label="KUHS ID" value={student.kuhsId} />
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Top Banner: Current Posting & Resident Profile */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-teal-950 to-slate-900 p-6 md:p-8 text-white shadow-xl">
-        <div className="absolute top-0 right-0 -mt-8 -mr-8 h-64 w-64 rounded-full bg-teal-500/10 blur-3xl" />
-        
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-400 font-mono">
-                Days Elapsed: {posting?.daysElapsed}/{posting?.totalDays}
-              </span>
+      <div className="grid gap-4 xl:grid-cols-[1.55fr_.85fr]">
+        <Card className="overflow-hidden bg-gradient-to-br from-teal-700 via-teal-600 to-cyan-500 text-white">
+          <CardContent className="relative p-6 md:p-7">
+            <div className="absolute -right-14 -top-14 h-48 w-48 rounded-full border-[34px] border-white/10" />
+            <div className="relative flex flex-col justify-between gap-6 md:flex-row md:items-end">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[.18em] text-teal-100">Current clinical schedule</p>
+                <h2 className="mt-2 text-3xl font-bold">Pediatric Intensive Care Unit</h2>
+                <p className="mt-2 text-xs text-teal-50">01/07/26 – 31/07/26 • HOD / Guide: {student.guide}</p>
+                <div className="mt-5 flex flex-wrap gap-2">
+                  <Button asChild className="bg-white text-teal-800 hover:bg-teal-50">
+                    <Link href="/cases"><FileText className="h-4 w-4" /> Log a case</Link>
+                  </Button>
+                  <Button asChild variant="outline" className="border-white/30 bg-white/10 text-white hover:bg-white/20">
+                    <Link href="/procedures"><Stethoscope className="h-4 w-4" /> Log a procedure</Link>
+                  </Button>
+                </div>
+              </div>
+              <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-teal-100">Schedule progress</p>
+                <p className="mt-1 text-3xl font-bold">27/31</p>
+                <p className="text-[11px] text-teal-50">days completed</p>
+              </div>
             </div>
-            <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-              {posting?.postingName || "Pediatric Intensive Care Unit (PICU)"}
-            </h2>
-            <p className="text-sm text-slate-300 flex items-center gap-4 flex-wrap">
-              <span className="flex items-center gap-1.5">
-                <User className="h-4 w-4 text-teal-400" /> Resident: <strong className="text-white">{student?.name}</strong> ({student?.registrationNumber})
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Calendar className="h-4 w-4 text-teal-400" /> HOD / Guide: <strong className="text-white">{posting?.hodOrGuide}</strong>
-              </span>
-            </p>
-          </div>
+          </CardContent>
+        </Card>
 
-          {/* Quick Action Buttons */}
-          <div className="flex flex-wrap items-center gap-3">
-            <Dialog open={isCaseModalOpen} onOpenChange={setIsCaseModalOpen}>
-              <DialogTrigger asChild>
-                <Button className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold shadow-md shadow-emerald-900/30 gap-2">
-                  <PlusCircle className="h-4 w-4" /> Log Case
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px] bg-white">
-                <DialogHeader>
-                  <DialogTitle className="text-slate-900 flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-teal-600" /> Log New Clinical Case
-                  </DialogTitle>
-                  <DialogDescription className="text-slate-500">
-                    Record patient clinical details for verification. Use the hospital UHID; do not enter the patient's name.
-                  </DialogDescription>
-                </DialogHeader>
-                <form onSubmit={handleCreateCase} className="space-y-4 py-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="caseUhid">Patient UHID</Label>
-                    <Input
-                      id="caseUhid"
-                      placeholder="e.g. UHID-2026-004281"
-                      value={caseForm.patientUhid}
-                      onChange={(e) => setCaseForm({ ...caseForm, patientUhid: e.target.value })}
-                      required
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="age">Patient Age (Years)</Label>
-                      <Input
-                        id="age"
-                        type="number"
-                        value={caseForm.patientAge}
-                        onChange={(e) => setCaseForm({ ...caseForm, patientAge: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="gender">Gender</Label>
-                      <Select
-                        value={caseForm.patientGender}
-                        onValueChange={(val) => setCaseForm({ ...caseForm, patientGender: val })}
-                      >
-                        <SelectTrigger id="gender">
-                          <SelectValue placeholder="Select gender" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="male">Male</SelectItem>
-                          <SelectItem value="female">Female</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="diagnosis">Provisional / Final Diagnosis</Label>
-                    <Input
-                      id="diagnosis"
-                      placeholder="e.g. Acute Severe Asthma Exacerbation"
-                      value={caseForm.diagnosisProvisional}
-                      onChange={(e) => setCaseForm({ ...caseForm, diagnosisProvisional: e.target.value })}
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="management">Management Plan & Key Interventions</Label>
-                    <Textarea
-                      id="management"
-                      rows={3}
-                      placeholder="Outline diagnostic workup, oxygenation, pharmacotherapy..."
-                      value={caseForm.managementPlan}
-                      onChange={(e) => setCaseForm({ ...caseForm, managementPlan: e.target.value })}
-                    />
-                  </div>
-
-                  <DialogFooter className="pt-3">
-                    <Button type="button" variant="outline" onClick={() => setIsCaseModalOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button type="submit" className="bg-teal-600 hover:bg-teal-700 text-white">
-                      Submit Log
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
-
-            <Dialog open={isProcedureModalOpen} onOpenChange={setIsProcedureModalOpen}>
-              <DialogTrigger asChild>
-                <Button variant="secondary" className="bg-slate-800 hover:bg-slate-700 text-slate-100 font-semibold gap-2 border border-slate-700">
-                  <Stethoscope className="h-4 w-4 text-teal-400" /> Log Procedure
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px] bg-white">
-                <DialogHeader>
-                  <DialogTitle className="text-slate-900 flex items-center gap-2">
-                    <Stethoscope className="h-5 w-5 text-teal-600" /> Log Procedure Entry
-                  </DialogTitle>
-                  <DialogDescription className="text-slate-500">
-                    Log procedures performed or observed during your rotation for faculty verification.
-                  </DialogDescription>
-                </DialogHeader>
-                <form onSubmit={handleCreateProcedure} className="space-y-4 py-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="procName">Procedure Name</Label>
-                    <Select
-                      value={procedureForm.procedureName}
-                      onValueChange={(val) => setProcedureForm({ ...procedureForm, procedureName: val })}
-                    >
-                      <SelectTrigger id="procName">
-                        <SelectValue placeholder="Select a required procedure" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {PROCEDURE_OPTIONS.map((procedure) => (
-                          <SelectItem key={procedure} value={procedure}>{procedure}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="procedureUhid">Patient UHID</Label>
-                      <Input
-                        id="procedureUhid"
-                        placeholder="UHID-2026-004281"
-                        value={procedureForm.patientUhid}
-                        onChange={(e) => setProcedureForm({ ...procedureForm, patientUhid: e.target.value })}
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="procedureAge">Age</Label>
-                      <Input
-                        id="procedureAge"
-                        placeholder="e.g. 4 months"
-                        value={procedureForm.patientAge}
-                        onChange={(e) => setProcedureForm({ ...procedureForm, patientAge: e.target.value })}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="competency">Self-Declared Level</Label>
-                      <Select
-                        value={procedureForm.competencyLevel}
-                        onValueChange={(val) => setProcedureForm({ ...procedureForm, competencyLevel: val })}
-                      >
-                        <SelectTrigger id="competency">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="performed_independently">Performed Independently</SelectItem>
-                          <SelectItem value="performed_under_supervision">Under Supervision</SelectItem>
-                          <SelectItem value="assisted">Assisted</SelectItem>
-                          <SelectItem value="observed">Observed</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <DialogFooter className="pt-3">
-                    <Button type="button" variant="outline" onClick={() => setIsProcedureModalOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button type="submit" className="bg-teal-600 hover:bg-teal-700 text-white">
-                      Submit Procedure Log
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </div>
-        </div>
+        <Card className="border-teal-100">
+          <CardContent className="p-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="page-eyebrow">Overall completion</p>
+                <p className="mt-2 text-5xl font-bold text-teal-700">{completion}<span className="text-xl text-teal-400">%</span></p>
+              </div>
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-teal-50 text-teal-700"><BookOpen className="h-5 w-5" /></div>
+            </div>
+            <Progress value={completion} className="mt-5 h-2.5" />
+            <p className="mt-3 text-xs text-slate-500">Progress across cases, procedures, academics and assessments.</p>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Gap Analytics Alert Banner (PRD Section 4 & 6: Progress-first) */}
-      <div className="rounded-xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 p-4 shadow-sm">
-        <div className="flex items-start gap-4">
-          <div className="p-2 bg-amber-500/15 rounded-lg text-amber-700 mt-0.5">
-            <AlertTriangle className="h-5 w-5" />
-          </div>
-          <div className="flex-1">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <h3 className="text-sm font-bold text-amber-900 flex items-center gap-2">
-                MCI Logbook Target Gap Alert — MD Paediatrics
-                <Badge className="bg-amber-600 text-white text-[10px] uppercase font-semibold">
-                  Action Required
-                </Badge>
-              </h3>
-              <span className="text-xs text-amber-700 font-mono font-medium">
-                Shortfall Count: 2 Categories
-              </span>
-            </div>
-            <p className="text-xs text-amber-800 mt-1">
-              You are currently behind schedule on <strong>Independent Procedures (60%)</strong> and <strong>Mortality Meetings (50%)</strong> for your training phase. Increase procedure logging during your current PICU posting to maintain compliance.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Requirement Categories Visual Progress Grid */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-lg font-bold text-slate-900">Training Target Progression</h3>
-            <p className="text-xs text-slate-500">
-              Live tracking against MCI logbook preparation requirements
-            </p>
-          </div>
-          <span className="text-xs font-semibold text-teal-700 bg-teal-50 px-2.5 py-1 rounded-full border border-teal-200">
-            Overall Completion: 73%
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {categories.map((cat: any) => {
-            const statusConfig = getStatusBadge(cat.status);
-            return (
-              <Card key={cat.id} className="border border-slate-200 shadow-xs hover:shadow-md transition-shadow bg-white">
-                <CardHeader className="pb-3 pt-4 px-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-sm font-bold text-slate-800 leading-snug">
-                      {cat.name}
-                    </CardTitle>
-                    <Badge variant="outline" className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusConfig.className}`}>
-                      {statusConfig.label}
-                    </Badge>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {categories.map((item) => {
+          const Icon = item.icon;
+          const percent = Math.round(item.logged / item.required * 100);
+          return (
+            <Link key={item.label} href={item.href}>
+              <Card className="h-full cursor-pointer border-teal-100 transition hover:-translate-y-0.5 hover:shadow-lg">
+                <CardContent className="p-5">
+                  <div className="flex items-start justify-between">
+                    <div className={`flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br ${item.tone} text-white shadow-sm`}><Icon className="h-5 w-5" /></div>
+                    <span className="text-xs font-bold text-teal-700">{percent}%</span>
                   </div>
-                </CardHeader>
-                <CardContent className="pb-4 px-4 space-y-3">
-                  <div className="flex items-baseline justify-between">
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-2xl font-black text-slate-900">{cat.logged}</span>
-                      <span className="text-xs text-slate-500 font-medium">/ {cat.required} {cat.unit}</span>
-                    </div>
-                    <span className="text-xs font-bold text-slate-700">{cat.percentage}%</span>
-                  </div>
-
-                  <Progress
-                    value={cat.percentage}
-                    className={`h-2.5 rounded-full bg-slate-100 ${statusConfig.progressColor}`}
-                  />
-
-                  <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-100">
-                    <span>Faculty Verified: <strong className="text-slate-700">{cat.verified}</strong></span>
-                    <span className="text-slate-400">Target Min: {cat.required}</span>
-                  </div>
+                  <p className="mt-5 text-[11px] font-bold uppercase tracking-wider text-slate-500">{item.label}</p>
+                  <p className="mt-1 text-2xl font-bold text-slate-900">{item.logged}<span className="text-sm text-slate-400">/{item.required}</span></p>
+                  <Progress value={percent} className="mt-3 h-1.5" />
                 </CardContent>
               </Card>
-            );
-          })}
-        </div>
+            </Link>
+          );
+        })}
       </div>
 
-      {/* Two Column Layout: Recent Log Submissions & Attendance Overview */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Submissions Table (2 Columns wide) */}
-        <div className="lg:col-span-2 space-y-4">
-          <Card className="border border-slate-200 shadow-xs bg-white">
-            <CardHeader className="pb-3 border-b border-slate-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-base font-bold text-slate-900">
-                    Recent Submissions &amp; Review Queue
-                  </CardTitle>
-                  <CardDescription className="text-xs text-slate-500">
-                    Activity logs submitted for faculty verification
-                  </CardDescription>
-                </div>
-                <Button variant="ghost" size="sm" className="text-xs text-teal-700 hover:text-teal-800 gap-1 font-semibold">
-                  View All Logs <ArrowRight className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader className="bg-slate-50/80">
-                  <TableRow className="border-b border-slate-200">
-                    <TableHead className="text-xs font-semibold text-slate-600">Type &amp; Title</TableHead>
-                    <TableHead className="text-xs font-semibold text-slate-600">Date &amp; Rotation</TableHead>
-                    <TableHead className="text-xs font-semibold text-slate-600">Status</TableHead>
-                    <TableHead className="text-xs font-semibold text-slate-600 text-right">Remarks</TableHead>
+      <div className="grid gap-4 lg:grid-cols-[1.4fr_.6fr]">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between border-b border-teal-100">
+            <div>
+              <p className="page-eyebrow">Student activity</p>
+              <CardTitle className="mt-1 text-xl">Recent entries</CardTitle>
+            </div>
+            <Button variant="ghost" size="sm" asChild><Link href="/cases">View logs <ArrowRight className="h-4 w-4" /></Link></Button>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader><TableRow><TableHead>Number</TableHead><TableHead>Date</TableHead><TableHead>Type</TableHead><TableHead>Entry</TableHead><TableHead>Patient UHID</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+              <TableBody>
+                {recent.map((item) => (
+                  <TableRow key={item.number}>
+                    <TableCell className="font-bold">{item.number}</TableCell>
+                    <TableCell>{formatLogbookDate(item.date)}</TableCell>
+                    <TableCell><Badge variant="outline" className="border-teal-100 bg-teal-50 text-teal-800">{item.type}</Badge></TableCell>
+                    <TableCell className="max-w-xs font-semibold">{item.title}</TableCell>
+                    <TableCell className="text-xs font-semibold text-teal-800">{item.patientUhid}</TableCell>
+                    <TableCell><Status value={item.status} /></TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {recentLogs.map((log: any) => (
-                    <TableRow key={log.id} className="hover:bg-slate-50/60 border-b border-slate-100">
-                      <TableCell className="py-3">
-                        <div className="space-y-0.5">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-slate-100 text-slate-700 border-slate-200">
-                              {log.type}
-                            </Badge>
-                            <span className="font-semibold text-xs text-slate-900 truncate max-w-[240px]">
-                              {log.title}
-                            </span>
-                          </div>
-                          {log.patientInfo && (
-                            <p className="text-[11px] text-slate-500">Patient: {log.patientInfo}</p>
-                          )}
-                          {log.patientUhid && (
-                            <p className="text-[11px] font-medium text-teal-700">UHID: {log.patientUhid}</p>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-3 text-xs text-slate-600">
-                        <p className="font-medium text-slate-800">{log.date}</p>
-                        <p className="text-[11px] text-slate-400">{log.posting}</p>
-                      </TableCell>
-                      <TableCell className="py-3">
-                        {renderLogStatusBadge(log.status)}
-                      </TableCell>
-                      <TableCell className="py-3 text-right text-xs text-slate-500 max-w-[180px] truncate">
-                        {log.facultyRemarks || log.detail || "No remarks yet"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </div>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
 
-        {/* Right Sidebar Widget Column */}
-        <div className="space-y-6">
-          {/* Leave record summary */}
-          <Card className="border border-slate-200 shadow-xs bg-white">
-            <CardHeader className="pb-3 border-b border-slate-100">
-              <CardTitle className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-teal-600" /> Leave Record Summary
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 space-y-3">
-              <div className="grid grid-cols-2 gap-3 text-center">
-                <div className="p-3 bg-teal-50/60 rounded-lg border border-teal-100">
-                  <p className="text-xl font-black text-teal-900">{attendance?.approvedLeaves ?? 1}</p>
-                  <p className="text-[11px] font-medium text-teal-700">Approved</p>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
-                  <p className="text-xl font-black text-slate-900">{attendance?.pendingLeaves ?? 1}</p>
-                  <p className="text-[11px] font-medium text-slate-500">Pending</p>
-                </div>
-              </div>
-              <p className="text-[11px] text-slate-500">
-                Leave applications and HOD decisions are maintained in the Leave Records section.
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Academic Mentor Information */}
-          <Card className="border border-slate-200 shadow-xs bg-white">
-            <CardHeader className="pb-3 border-b border-slate-100">
-              <CardTitle className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <GraduationCap className="h-4 w-4 text-teal-600" /> Assigned Faculty Mentor
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-teal-100 text-teal-800 flex items-center justify-center font-bold text-sm">
-                  MM
-                </div>
+        <div className="space-y-4">
+          <Card className="border-amber-200 bg-amber-50/80">
+            <CardContent className="p-5">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="mt-0.5 h-5 w-5 text-amber-700" />
                 <div>
-                  <h4 className="text-xs font-bold text-slate-900">Prof. Dr. Mohammad MTP</h4>
-                  <p className="text-[11px] text-slate-500">HOD &amp; Professor of Paediatrics</p>
+                  <p className="text-sm font-bold text-amber-950">Procedure shortfall</p>
+                  <p className="mt-1 text-xs leading-5 text-amber-900/80">4 more required procedures should be completed and verified.</p>
+                  <Button asChild variant="link" className="mt-2 h-auto p-0 text-amber-800"><Link href="/procedures">Review requirements <ArrowRight className="h-3 w-3" /></Link></Button>
                 </div>
               </div>
-              <p className="text-xs text-slate-600 bg-slate-50 p-2.5 rounded border border-slate-100">
-                Next appraisal review: <strong>31 Aug 2026</strong> (MCI Quarterly Appraisal)
-              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-cyan-100">
+            <CardContent className="p-5">
+              <div className="flex items-start gap-3">
+                <Printer className="mt-0.5 h-5 w-5 text-cyan-700" />
+                <div>
+                  <p className="text-sm font-bold text-slate-900">Print at any point</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">Use Print PDF for a current copy. Incomplete records are automatically marked Draft; finalized records print as an official copy.</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
       </div>
+
+      <Card className="border-teal-100 bg-white/70">
+        <CardContent className="flex flex-col justify-between gap-4 p-5 sm:flex-row sm:items-center">
+          <div className="flex items-center gap-3">
+            <CalendarDays className="h-5 w-5 text-teal-600" />
+            <div><p className="text-sm font-bold">Next quarterly assessment</p><p className="text-xs text-slate-500">30/09/26 with Prof. Dr. Mohammad MTP</p></div>
+          </div>
+          <Button asChild variant="outline" size="sm"><Link href="/assessments"><Award className="h-4 w-4" /> View assessments</Link></Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }
 
-function ProfileField({ label, value }: { label: string; value?: string }) {
-  return (
-    <div className="rounded-lg border border-slate-200 bg-white/90 px-3 py-2.5">
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{label}</p>
-      <p className="mt-0.5 text-xs font-bold text-slate-800">{value || "Not recorded"}</p>
-    </div>
-  );
+function ProfileField({ label, value }: { label: string; value: string }) {
+  return <div className="rounded-2xl border border-teal-100 bg-teal-50/45 px-4 py-3"><p className="text-[9px] font-bold uppercase tracking-[.15em] text-teal-700">{label}</p><p className="mt-1 truncate text-sm font-bold text-slate-900">{value}</p></div>;
 }
 
-function getStatusBadge(status: string) {
-  switch (status) {
-    case "on_track":
-      return {
-        label: "On Track",
-        className: "bg-emerald-50 text-emerald-700 border-emerald-300",
-        progressColor: "[&>div]:bg-emerald-600",
-      };
-    case "at_risk":
-      return {
-        label: "At Risk",
-        className: "bg-amber-50 text-amber-700 border-amber-300",
-        progressColor: "[&>div]:bg-amber-500",
-      };
-    case "behind":
-      return {
-        label: "Behind Target",
-        className: "bg-rose-50 text-rose-700 border-rose-300",
-        progressColor: "[&>div]:bg-rose-600",
-      };
-    default:
-      return {
-        label: "Pending",
-        className: "bg-slate-50 text-slate-700 border-slate-300",
-        progressColor: "[&>div]:bg-teal-600",
-      };
-  }
-}
-
-function renderLogStatusBadge(status: string) {
-  switch (status) {
-    case "verified":
-      return (
-        <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]">
-          <CheckCircle2 className="h-3 w-3 mr-1 text-emerald-600" /> Faculty Verified
-        </Badge>
-      );
-    case "rejected":
-      return (
-        <Badge className="bg-rose-50 text-rose-700 border-rose-200 text-[10px]">
-          <AlertCircle className="h-3 w-3 mr-1 text-rose-600" /> Needs Revision
-        </Badge>
-      );
-    default:
-      return (
-        <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-[10px]">
-          <Clock className="h-3 w-3 mr-1 text-amber-600" /> Pending Review
-        </Badge>
-      );
-  }
-}
-
-function getFallbackMockData() {
-  return {
-    student: {
-      name: "Dr. Adithya Nair",
-      registrationNumber: "PG2024-PAED-014",
-      dateOfJoining: "2024-06-15",
-      kuhzId: "KUHZ-MD-PED-2024-014",
-      department: "Department of Paediatrics",
-    },
-    currentPosting: {
-      postingName: "Pediatric Intensive Care Unit (PICU)",
-      daysElapsed: 27,
-      totalDays: 31,
-      hodOrGuide: "Dr. Meenakshi Sundaram",
-    },
-    categories: [
-      { id: "cases", name: "Clinical Cases Presented", logged: 42, required: 50, verified: 38, status: "on_track", percentage: 84, unit: "cases" },
-      { id: "procedures", name: "Independent Procedures", logged: 9, required: 15, verified: 7, status: "behind", percentage: 60, unit: "procedures" },
-      { id: "journal_clubs", name: "Journal Club Presentations", logged: 7, required: 8, verified: 6, status: "on_track", percentage: 87, unit: "clubs" },
-      { id: "seminars", name: "Seminars Presented", logged: 5, required: 6, verified: 5, status: "on_track", percentage: 83, unit: "seminars" },
-      { id: "bedside", name: "Bedside Case Presentations", logged: 14, required: 20, verified: 12, status: "at_risk", percentage: 70, unit: "presentations" },
-      { id: "mortality_meetings", name: "Mortality Meetings Attended", logged: 2, required: 4, verified: 2, status: "at_risk", percentage: 50, unit: "meetings" },
-    ],
-    recentLogs: [
-      {
-        id: "LOG-1092",
-        type: "Case Log",
-        title: "Acute Severe Asthma Exacerbation in a 7yo Child",
-        date: "2026-07-26",
-        posting: "PICU",
-        status: "pending",
-        patientUhid: "UHID-2026-004281",
-        patientInfo: "7 yr / Male",
-        detail: "Managed with Nebulized Salbutamol + Ipratropium",
-      },
-      {
-        id: "LOG-1088",
-        type: "Procedure",
-        title: "Endotracheal Intubation (Pediatric)",
-        date: "2026-07-24",
-        posting: "PICU",
-        status: "verified",
-        patientUhid: "UHID-2026-003944",
-        patientInfo: "Age: 7 years",
-        competency: "Performed Independently",
-        facultyRemarks: "Well performed with sterile technique.",
-      },
-    ],
-    attendance: {
-      approvedLeaves: 1,
-      pendingLeaves: 1,
-    },
-  };
+function Status({ value }: { value: string }) {
+  if (value === "Verified") return <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700"><CheckCircle2 className="mr-1 h-3 w-3" /> Verified</Badge>;
+  if (value === "Revision") return <Badge className="border-rose-200 bg-rose-50 text-rose-700">Revision</Badge>;
+  return <Badge className="border-amber-200 bg-amber-50 text-amber-700">Pending</Badge>;
 }

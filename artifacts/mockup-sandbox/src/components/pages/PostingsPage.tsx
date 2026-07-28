@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { CalendarDays, CheckCircle2, Clock } from "lucide-react";
+import { formatLogbookDate } from "@/lib/logbook-config";
 
 export function PostingsPage() {
   const postings = [
@@ -12,7 +13,7 @@ export function PostingsPage() {
       startDate: "2026-07-01",
       endDate: "2026-07-31",
       duration: "31 Days",
-      hodOrGuide: "Dr. Meenakshi Sundaram",
+      hodOrGuide: "Dr. Radhamani KV",
       status: "active",
       statusLabel: "Current Rotation",
     },
@@ -32,7 +33,7 @@ export function PostingsPage() {
       startDate: "2026-08-01",
       endDate: "2026-08-31",
       duration: "31 Days",
-      hodOrGuide: "Dr. Sunita Kulkarni",
+      hodOrGuide: "Dr. Anilkumar A",
       status: "upcoming",
       statusLabel: "Upcoming",
     },
@@ -41,24 +42,21 @@ export function PostingsPage() {
   return (
     <div className="space-y-6 pb-12">
       <div>
-        <h2 className="text-2xl font-extrabold text-slate-900 flex items-center gap-2">
-          <CalendarDays className="h-6 w-6 text-teal-600" /> Rotation Postings Schedule
-        </h2>
-        <p className="text-xs text-slate-500">
-          Clinical postings with assigned HOD / Guide
-        </p>
+        <p className="page-eyebrow">Clinical training schedule</p>
+        <h2 className="page-title mt-1">Postings &amp; rotations</h2>
+        <p className="mt-2 text-sm text-slate-500">Department schedule with the assigned HOD / Guide.</p>
       </div>
 
-      <Card className="border border-slate-200 bg-white">
+      <Card>
         <CardHeader className="pb-3 border-b border-slate-100">
-          <CardTitle className="text-base font-bold text-slate-900">Clinical Postings Schedule (Batch 2024-2027)</CardTitle>
+          <CardTitle className="text-lg">Clinical schedule</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
             <TableHeader className="bg-slate-50">
               <TableRow>
                 <TableHead className="text-xs font-semibold">Posting Name</TableHead>
-                <TableHead className="text-xs font-semibold">Start &amp; End Dates</TableHead>
+                <TableHead className="text-xs font-semibold">Date range</TableHead>
                 <TableHead className="text-xs font-semibold">Duration</TableHead>
                 <TableHead className="text-xs font-semibold">HOD / Guide</TableHead>
                 <TableHead className="text-xs font-semibold">Status</TableHead>
@@ -68,7 +66,7 @@ export function PostingsPage() {
               {postings.map((p) => (
                 <TableRow key={p.id}>
                   <TableCell className="py-3 text-xs font-bold text-slate-900">{p.name}</TableCell>
-                  <TableCell className="py-3 text-xs text-slate-700">{p.startDate} to {p.endDate}</TableCell>
+                  <TableCell className="py-3 text-xs text-slate-700">{formatLogbookDate(p.startDate)} – {formatLogbookDate(p.endDate)}</TableCell>
                   <TableCell className="py-3 text-xs font-medium text-slate-800">{p.duration}</TableCell>
                   <TableCell className="py-3 text-xs text-teal-800 font-semibold">{p.hodOrGuide}</TableCell>
                   <TableCell className="py-3">

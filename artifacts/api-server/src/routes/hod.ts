@@ -2,122 +2,58 @@ import { Router, type IRouter } from "express";
 
 const router: IRouter = Router();
 
+const studentAccounts = [
+  { number: 14, name: "Dr. Adithya Nair", registrationNumber: "PG2024-PAED-014", kuhsId: "KUHS-MD-PED-2024-014", dateOfJoining: "2024-06-03", guide: "Prof. Dr. Mohammad MTP", accessStatus: "active" },
+  { number: 18, name: "Dr. Anilkumar A", registrationNumber: "PG2024-PAED-018", kuhsId: "KUHS-MD-PED-2024-018", dateOfJoining: "2024-06-03", guide: "Dr. Radhamani KV", accessStatus: "active" },
+];
+
 const mockHODData = {
   department: {
-    name: "Department of Paediatrics",
+    name: "Department of Pediatrics",
+    hod: "Dr. Radhamani KV",
     totalResidents: 18,
-    facultyCount: 8,
+    facultyCount: 3,
     onTrackCount: 11,
     atRiskCount: 5,
     behindCount: 2,
     inspectionReadiness: "84%",
   },
   residentsGapOverview: [
-    {
-      id: 1,
-      name: "Dr. Rohan Verma",
-      registrationNumber: "PG2023-PAED-005",
-      batch: "2023-2026",
-      mentor: "Prof. Dr. Mohammad MTP",
-      currentPosting: "General Wards",
-      casesCompleted: 28,
-      casesRequired: 60,
-      proceduresCompleted: 8,
-      proceduresRequired: 25,
-      shortfallSeverity: "behind",
-      shortfallNote: "Severely lagging in Independent Procedures (-17) & Bedside Presentations.",
-    },
-    {
-      id: 2,
-      name: "Dr. Kabir Mehta",
-      registrationNumber: "PG2023-PAED-009",
-      batch: "2023-2026",
-      mentor: "Dr. Meenakshi Sundaram",
-      currentPosting: "Pediatric Surgery",
-      casesCompleted: 35,
-      casesRequired: 60,
-      proceduresCompleted: 12,
-      proceduresRequired: 25,
-      shortfallSeverity: "behind",
-      shortfallNote: "Behind on Procedure target pace; requires re-posting in Emergency.",
-    },
-    {
-      id: 3,
-      name: "Dr. Adithya Nair",
-      registrationNumber: "PG2024-PAED-014",
-      batch: "2024-2027",
-      mentor: "Prof. Dr. Mohammad MTP",
-      currentPosting: "PICU",
-      casesCompleted: 42,
-      casesRequired: 50,
-      proceduresCompleted: 9,
-      proceduresRequired: 15,
-      shortfallSeverity: "at_risk",
-      shortfallNote: "Procedure target at 60%; needs 6 additional independent procedures.",
-    },
-    {
-      id: 4,
-      name: "Dr. Priyanshi Patel",
-      registrationNumber: "PG2024-PAED-019",
-      batch: "2024-2027",
-      mentor: "Dr. Sunita Kulkarni",
-      currentPosting: "Outpatient Dept (OPD)",
-      casesCompleted: 38,
-      casesRequired: 50,
-      proceduresCompleted: 10,
-      proceduresRequired: 15,
-      shortfallSeverity: "at_risk",
-      shortfallNote: "Mortality meeting attendance below minimum threshold.",
-    },
-    {
-      id: 5,
-      name: "Dr. Ananya Roy",
-      registrationNumber: "PG2024-PAED-018",
-      batch: "2024-2027",
-      mentor: "Prof. Dr. Mohammad MTP",
-      currentPosting: "NICU",
-      casesCompleted: 46,
-      casesRequired: 50,
-      proceduresCompleted: 14,
-      proceduresRequired: 15,
-      shortfallSeverity: "on_track",
-      shortfallNote: "Excellent logging pace; all requirements on schedule.",
-    },
+    { id: 1, name: "Dr. Adithya Nair", registrationNumber: "PG2024-PAED-014", guide: "Prof. Dr. Mohammad MTP", casesCompleted: 42, casesRequired: 50, proceduresCompleted: 11, proceduresRequired: 15, shortfallSeverity: "at_risk", shortfallNote: "Four required procedures remain." },
+    { id: 2, name: "Dr. Anilkumar A", registrationNumber: "PG2024-PAED-018", guide: "Dr. Radhamani KV", casesCompleted: 46, casesRequired: 50, proceduresCompleted: 14, proceduresRequired: 15, shortfallSeverity: "on_track", shortfallNote: "Requirements are on schedule." },
   ],
   pendingLeaves: [
-    {
-      id: "LV-401",
-      residentId: 1,
-      residentName: "Dr. Rohan Verma",
-      fromDate: "2026-08-05",
-      toDate: "2026-08-08",
-      totalDays: 4,
-      type: "Casual Leave",
-      reason: "Family medical emergency",
-      status: "pending",
-    },
-    {
-      id: "LV-402",
-      residentId: 3,
-      residentName: "Dr. Adithya Nair",
-      fromDate: "2026-08-12",
-      toDate: "2026-08-14",
-      totalDays: 3,
-      type: "Academic Leave",
-      reason: "Attending National Paediatric Pulmonary Conference (IAP)",
-      status: "pending",
-    },
+    { number: 402, residentId: 1, residentName: "Dr. Adithya Nair", fromDate: "2026-08-12", toDate: "2026-08-14", totalDays: 3, type: "Academic Leave", reason: "National Pediatric Pulmonary Conference", status: "pending" },
+    { number: 407, residentId: 2, residentName: "Dr. Anilkumar A", fromDate: "2026-08-22", toDate: "2026-08-22", totalDays: 1, type: "Casual Leave", reason: "Personal appointment", status: "pending" },
   ],
+  studentAccounts,
 };
 
-router.get("/dashboard", (_req, res) => {
-  res.json(mockHODData);
+router.get("/dashboard", (_req, res) => res.json(mockHODData));
+
+router.post("/students", (req, res) => {
+  const student = {
+    number: Math.max(...studentAccounts.map((item) => item.number)) + 1,
+    name: req.body.name,
+    registrationNumber: req.body.registrationNumber,
+    kuhsId: req.body.kuhsId,
+    dateOfJoining: req.body.dateOfJoining,
+    guide: req.body.guide,
+    accessStatus: "invite_issued",
+  };
+  studentAccounts.unshift(student);
+  res.status(201).json({
+    success: true,
+    student,
+    temporaryPasswordIssued: true,
+    requiresPasswordReset: true,
+  });
 });
 
 router.post("/leave/action", (req, res) => {
-  const { leaveId, action } = req.body;
-  mockHODData.pendingLeaves = mockHODData.pendingLeaves.filter((l) => l.id !== leaveId);
-  res.json({ success: true, message: `Leave ${leaveId} ${action}d` });
+  const targetNumber = Number(req.body.number ?? req.body.leaveId);
+  mockHODData.pendingLeaves = mockHODData.pendingLeaves.filter((leave) => leave.number !== targetNumber);
+  res.json({ success: true, message: `Leave number ${targetNumber} ${req.body.action}` });
 });
 
 export default router;

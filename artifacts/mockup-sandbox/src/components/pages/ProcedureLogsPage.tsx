@@ -1,234 +1,168 @@
 import * as React from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { AlertCircle, CheckCircle2, Clock, PlusCircle, Stethoscope } from "lucide-react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Stethoscope, PlusCircle, CheckCircle2, Clock, AlertCircle } from "lucide-react";
-import { toast } from "sonner";
-import { PROCEDURE_OPTIONS, REQUIRED_PROCEDURE_COUNT } from "@/lib/logbook-config";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { formatLogbookDate, PROCEDURE_GROUPS, REQUIRED_PROCEDURE_COUNT, todayForInput, type ProcedureGroup } from "@/lib/logbook-config";
+
+type ProcedureLog = {
+  number: number;
+  date: string;
+  group: ProcedureGroup;
+  patientUhid: string;
+  procedureName: string;
+  age: string;
+  experience: string;
+  verifiedCompetency: string;
+  status: "pending" | "verified" | "revision";
+};
+
+const seeded: ProcedureLog[] = [
+  { number: 1088, date: "2026-07-24", group: "emergency", patientUhid: "UHID-2026-003944", procedureName: "Endotracheal Intubation", age: "7 years", experience: "Performed under supervision", verifiedCompetency: "Performed under supervision", status: "verified" },
+  { number: 1075, date: "2026-07-20", group: "invasive", patientUhid: "UHID-2026-003771", procedureName: "Lumbar Puncture", age: "4 months", experience: "Assisted", verifiedCompetency: "Assisted", status: "revision" },
+  { number: 1062, date: "2026-07-14", group: "invasive", patientUhid: "UHID-2026-003502", procedureName: "Surfactant Administration via ETT", age: "32 weeks gestation", experience: "Observed / procedure seen", verifiedCompetency: "Observed", status: "verified" },
+  { number: 1058, date: "2026-07-08", group: "emergency", patientUhid: "UHID-2026-003321", procedureName: "Neonatal Resuscitation", age: "2 minutes", experience: "Assisted", verifiedCompetency: "Assisted", status: "verified" },
+  { number: 1051, date: "2026-07-02", group: "emergency", patientUhid: "UHID-2026-003140", procedureName: "Pediatric Basic Life Support", age: "5 years", experience: "Performed under supervision", verifiedCompetency: "Performed under supervision", status: "verified" },
+  { number: 1046, date: "2026-06-28", group: "emergency", patientUhid: "UHID-2026-003008", procedureName: "Bag-mask Ventilation", age: "3 days", experience: "Performed independently", verifiedCompetency: "Performed under supervision", status: "verified" },
+  { number: 1039, date: "2026-06-20", group: "emergency", patientUhid: "UHID-2026-002844", procedureName: "Intraosseous Access", age: "18 months", experience: "Observed / procedure seen", verifiedCompetency: "Observed", status: "verified" },
+  { number: 1032, date: "2026-06-12", group: "invasive", patientUhid: "UHID-2026-002605", procedureName: "Bone Marrow Aspiration", age: "8 years", experience: "Assisted", verifiedCompetency: "Assisted", status: "verified" },
+  { number: 1024, date: "2026-06-04", group: "invasive", patientUhid: "UHID-2026-002422", procedureName: "Umbilical Venous Catheterisation", age: "1 hour", experience: "Performed under supervision", verifiedCompetency: "Performed under supervision", status: "verified" },
+  { number: 1018, date: "2026-05-27", group: "invasive", patientUhid: "UHID-2026-002231", procedureName: "Pleural Aspiration", age: "6 years", experience: "Observed / procedure seen", verifiedCompetency: "Observed", status: "verified" },
+  { number: 1011, date: "2026-05-18", group: "invasive", patientUhid: "UHID-2026-001984", procedureName: "Lumbar Puncture", age: "2 years", experience: "Performed under supervision", verifiedCompetency: "Performed under supervision", status: "verified" },
+];
+
+const groupNames: Record<ProcedureGroup, string> = {
+  emergency: "Emergency procedures",
+  invasive: "Invasive procedures",
+};
 
 export function ProcedureLogsPage() {
-  const [isModalOpen, setIsModalOpen] = React.useState(false);
-  const [procedureLogs, setProcedureLogs] = React.useState([
-    {
-      id: "LOG-1088",
-      date: "2026-07-24",
-      posting: "PICU",
-      patientUhid: "UHID-2026-003944",
-      procedureName: "Endotracheal Intubation",
-      patientAge: "7 years",
-      selfCompetency: "Performed Independently",
-      facultyVerified: "Performed Independently",
-      status: "verified",
-      remarks: "Well performed with standard sterile technique under supervision.",
-    },
-    {
-      id: "LOG-1075",
-      date: "2026-07-20",
-      posting: "Emergency Ward",
-      patientUhid: "UHID-2026-003771",
-      procedureName: "Lumbar Puncture",
-      patientAge: "4 months",
-      selfCompetency: "Assisted",
-      facultyVerified: "Assisted",
-      status: "rejected",
-      remarks: "Please expand on CSF analysis findings and post-procedure monitoring notes.",
-    },
-    {
-      id: "LOG-1062",
-      date: "2026-07-14",
-      posting: "NICU",
-      patientUhid: "UHID-2026-003502",
-      procedureName: "Surfactant Administration via ETT",
-      patientAge: "32 weeks gestation",
-      selfCompetency: "Performed Under Supervision",
-      facultyVerified: "Performed Under Supervision",
-      status: "verified",
-      remarks: "Correct dosage calculation and post-instillation bag ventilation.",
-    },
-  ]);
-
+  const [open, setOpen] = React.useState(false);
+  const [logs, setLogs] = React.useState(seeded);
   const [form, setForm] = React.useState({
+    date: todayForInput(),
+    group: "emergency" as ProcedureGroup,
     procedureName: "",
     patientUhid: "",
-    patientAge: "",
-    competency: "performed_independently",
+    age: "",
+    experience: "Observed / procedure seen",
   });
 
-  const handleAddProcedure = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.procedureName || !form.patientUhid || !form.patientAge) return;
+  const setGroup = (group: ProcedureGroup) => setForm({ ...form, group, procedureName: "" });
 
-    const newLog = {
-      id: `LOG-${Math.floor(1000 + Math.random() * 9000)}`,
-      date: new Date().toISOString().split("T")[0],
-      posting: "PICU",
-      patientUhid: form.patientUhid,
-      procedureName: form.procedureName,
-      patientAge: form.patientAge,
-      selfCompetency: form.competency === "performed_independently" ? "Performed Independently" : "Performed Under Supervision",
-      facultyVerified: "Pending Review",
+  const submit = (event: React.FormEvent) => {
+    event.preventDefault();
+    const next: ProcedureLog = {
+      number: Math.max(...logs.map((log) => log.number)) + 1,
+      ...form,
+      verifiedCompetency: "Pending guide verification",
       status: "pending",
-      remarks: "Awaiting faculty verification",
     };
-
-    setProcedureLogs([newLog, ...procedureLogs]);
-    toast.success(`Procedure Log ${newLog.id} submitted!`, {
-      description: `${newLog.procedureName} queued for faculty review.`,
-    });
-
-    setForm({ procedureName: "", patientUhid: "", patientAge: "", competency: "performed_independently" });
-    setIsModalOpen(false);
+    setLogs([next, ...logs]);
+    setOpen(false);
+    toast.success(`Procedure number ${next.number} sent to guide`);
   };
 
   return (
     <div className="space-y-6 pb-12">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
-          <h2 className="text-2xl font-extrabold text-slate-900 flex items-center gap-2">
-            <Stethoscope className="h-6 w-6 text-teal-600" /> Procedure Logbook
-          </h2>
-          <p className="text-xs text-slate-500">
-            Procedural skills and competency self-declarations submitted for faculty verification
-          </p>
+          <p className="page-eyebrow">Procedures seen and performed</p>
+          <h2 className="page-title mt-1">Procedure log</h2>
+          <p className="mt-2 text-sm text-slate-500">Emergency and invasive procedure exposure, with competency verified only by the reviewing guide.</p>
         </div>
-
-        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs gap-2">
-              <PlusCircle className="h-4 w-4" /> Log Procedure Entry
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px] bg-white">
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild><Button><PlusCircle className="h-4 w-4" /> Log procedure</Button></DialogTrigger>
+          <DialogContent className="rounded-2xl bg-white sm:max-w-xl">
             <DialogHeader>
-              <DialogTitle className="text-slate-900 flex items-center gap-2">
-                <Stethoscope className="h-5 w-5 text-teal-600" /> Log Procedure Entry
-              </DialogTitle>
-              <DialogDescription className="text-slate-500">
-                Log procedures performed or observed for faculty verification.
-              </DialogDescription>
+              <DialogTitle>New procedure entry</DialogTitle>
+              <DialogDescription>Select the required procedure and record the level of exposure.</DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleAddProcedure} className="space-y-4 py-2">
-              <div className="space-y-2">
-                <Label>Procedure Name</Label>
-                <Select
-                  value={form.procedureName}
-                  onValueChange={(val) => setForm({ ...form, procedureName: val })}
-                >
+            <form onSubmit={submit} className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Date"><Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required /></Field>
+                <Field label="Procedure group">
+                  <Select value={form.group} onValueChange={(value: ProcedureGroup) => setGroup(value)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent><SelectItem value="emergency">Emergency procedures</SelectItem><SelectItem value="invasive">Invasive procedures</SelectItem></SelectContent>
+                  </Select>
+                </Field>
+              </div>
+              <Field label="Procedure">
+                <Select value={form.procedureName} onValueChange={(value) => setForm({ ...form, procedureName: value })}>
                   <SelectTrigger><SelectValue placeholder="Select a required procedure" /></SelectTrigger>
+                  <SelectContent>{PROCEDURE_GROUPS[form.group].map((procedure) => <SelectItem key={procedure} value={procedure}>{procedure}</SelectItem>)}</SelectContent>
+                </Select>
+              </Field>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Patient UHID"><Input value={form.patientUhid} onChange={(e) => setForm({ ...form, patientUhid: e.target.value })} required /></Field>
+                <Field label="Age"><Input value={form.age} onChange={(e) => setForm({ ...form, age: e.target.value })} placeholder="e.g. 4 months" required /></Field>
+              </div>
+              <Field label="Procedure experience">
+                <Select value={form.experience} onValueChange={(value) => setForm({ ...form, experience: value })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {PROCEDURE_OPTIONS.map((procedure) => (
-                      <SelectItem key={procedure} value={procedure}>{procedure}</SelectItem>
-                    ))}
+                    <SelectItem value="Observed / procedure seen">Observed / procedure seen</SelectItem>
+                    <SelectItem value="Assisted">Assisted</SelectItem>
+                    <SelectItem value="Performed under supervision">Performed under supervision</SelectItem>
+                    <SelectItem value="Performed independently">Performed independently</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Patient UHID</Label>
-                  <Input
-                    placeholder="UHID-2026-004281"
-                    value={form.patientUhid}
-                    onChange={(e) => setForm({ ...form, patientUhid: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Age</Label>
-                  <Input
-                    placeholder="e.g. 4 months"
-                    value={form.patientAge}
-                    onChange={(e) => setForm({ ...form, patientAge: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4">
-                <div className="space-y-2">
-                  <Label>Self-Declared Competency</Label>
-                  <Select value={form.competency} onValueChange={(val) => setForm({ ...form, competency: val })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="performed_independently">Performed Independently</SelectItem>
-                      <SelectItem value="performed_under_supervision">Under Supervision</SelectItem>
-                      <SelectItem value="assisted">Assisted</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <DialogFooter className="pt-2">
-                <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-                <Button type="submit" className="bg-teal-600 text-white">Submit Procedure Log</Button>
-              </DialogFooter>
+              </Field>
+              <p className="rounded-xl border border-teal-100 bg-teal-50 p-3 text-[11px] leading-5 text-teal-800">
+                Verified competency is not self-selected. It is assigned by the guide during procedure review.
+              </p>
+              <DialogFooter><Button type="button" variant="outline" onClick={() => setOpen(false)}>Save draft</Button><Button type="submit">Send to guide</Button></DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
       </div>
 
-      <div className="p-4 rounded-xl border border-amber-200 bg-amber-50 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <AlertCircle className="h-5 w-5 text-amber-700" />
-          <p className="text-xs text-amber-900">
-            <strong>Requirement Gap Warning:</strong> You have logged <strong>{procedureLogs.length}/{REQUIRED_PROCEDURE_COUNT}</strong> procedures. New entries must be selected from the required procedure list.
-          </p>
-        </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        {(Object.keys(PROCEDURE_GROUPS) as ProcedureGroup[]).map((group) => {
+          const completed = logs.filter((log) => log.group === group).length;
+          return (
+            <Card key={group} className={group === "emergency" ? "border-cyan-100" : "border-teal-100"}>
+              <CardContent className="flex items-center justify-between p-5">
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">{groupNames[group]}</p>
+                  <p className="mt-1 text-2xl font-bold text-slate-900">{completed} logged</p>
+                </div>
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-teal-50 text-teal-700"><Stethoscope className="h-5 w-5" /></div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
-      <Card className="border border-slate-200 bg-white">
-        <CardHeader className="pb-3 border-b border-slate-100">
-          <CardTitle className="text-base font-bold text-slate-900">Logged Procedures</CardTitle>
-        </CardHeader>
+      <div className="flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50/80 p-4">
+        <AlertCircle className="h-5 w-5 text-amber-700" />
+        <p className="text-xs text-amber-900"><strong>{logs.length}/{REQUIRED_PROCEDURE_COUNT}</strong> required procedures logged. Continue adding procedures from the departmental list.</p>
+      </div>
+
+      <Card>
+        <CardHeader className="border-b border-teal-100"><CardTitle className="text-lg">Procedure entries sent</CardTitle></CardHeader>
         <CardContent className="p-0">
           <Table>
-            <TableHeader className="bg-slate-50">
-              <TableRow>
-                <TableHead className="text-xs font-semibold">Log ID &amp; Date</TableHead>
-                <TableHead className="text-xs font-semibold">Procedure Name</TableHead>
-                <TableHead className="text-xs font-semibold">Patient UHID</TableHead>
-                <TableHead className="text-xs font-semibold">Age</TableHead>
-                <TableHead className="text-xs font-semibold">Declared Competency</TableHead>
-                <TableHead className="text-xs font-semibold">Faculty Verified</TableHead>
-                <TableHead className="text-xs font-semibold">Status</TableHead>
-              </TableRow>
-            </TableHeader>
+            <TableHeader><TableRow><TableHead>Number</TableHead><TableHead>Date</TableHead><TableHead>Group</TableHead><TableHead>Procedure</TableHead><TableHead>Patient UHID</TableHead><TableHead>Age</TableHead><TableHead>Experience</TableHead><TableHead>Verified competency</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
             <TableBody>
-              {procedureLogs.map((log) => (
-                <TableRow key={log.id} className="hover:bg-slate-50/60">
-                  <TableCell className="py-3 text-xs font-bold text-slate-900">
-                    {log.id}
-                    <p className="text-[11px] text-slate-400 font-normal">{log.date}</p>
-                  </TableCell>
-                  <TableCell className="py-3 text-xs font-bold text-slate-900">
-                    {log.procedureName}
-                    <p className="text-[11px] text-slate-500 font-normal">{log.posting}</p>
-                  </TableCell>
-                  <TableCell className="py-3 text-xs font-semibold text-teal-800">{log.patientUhid}</TableCell>
-                  <TableCell className="py-3 text-xs text-slate-700">{log.patientAge}</TableCell>
-                  <TableCell className="py-3 text-xs text-teal-800 font-semibold">{log.selfCompetency}</TableCell>
-                  <TableCell className="py-3 text-xs text-slate-700">{log.facultyVerified}</TableCell>
-                  <TableCell className="py-3">{renderStatusBadge(log.status)}</TableCell>
+              {logs.map((log) => (
+                <TableRow key={log.number}>
+                  <TableCell className="font-bold">{log.number}</TableCell>
+                  <TableCell>{formatLogbookDate(log.date)}</TableCell>
+                  <TableCell><Badge variant="outline" className="border-teal-100 bg-teal-50 text-teal-800">{groupNames[log.group]}</Badge></TableCell>
+                  <TableCell className="font-semibold">{log.procedureName}</TableCell>
+                  <TableCell className="font-semibold text-teal-800">{log.patientUhid}</TableCell>
+                  <TableCell>{log.age}</TableCell>
+                  <TableCell className="text-xs">{log.experience}</TableCell>
+                  <TableCell className="text-xs">{log.verifiedCompetency}</TableCell>
+                  <TableCell>{statusBadge(log.status)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -239,13 +173,12 @@ export function ProcedureLogsPage() {
   );
 }
 
-function renderStatusBadge(status: string) {
-  switch (status) {
-    case "verified":
-      return <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]"><CheckCircle2 className="h-3 w-3 mr-1 text-emerald-600" /> Verified</Badge>;
-    case "rejected":
-      return <Badge className="bg-rose-50 text-rose-700 border-rose-200 text-[10px]"><AlertCircle className="h-3 w-3 mr-1 text-rose-600" /> Revision</Badge>;
-    default:
-      return <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-[10px]"><Clock className="h-3 w-3 mr-1 text-amber-600" /> Pending</Badge>;
-  }
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return <div className="space-y-2"><Label>{label}</Label>{children}</div>;
+}
+
+function statusBadge(status: ProcedureLog["status"]) {
+  if (status === "verified") return <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700"><CheckCircle2 className="mr-1 h-3 w-3" /> Verified</Badge>;
+  if (status === "revision") return <Badge className="border-rose-200 bg-rose-50 text-rose-700"><AlertCircle className="mr-1 h-3 w-3" /> Revision</Badge>;
+  return <Badge className="border-amber-200 bg-amber-50 text-amber-700"><Clock className="mr-1 h-3 w-3" /> Pending</Badge>;
 }

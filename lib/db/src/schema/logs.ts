@@ -1,23 +1,26 @@
 import { pgTable, serial, text, integer, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { studentsTable } from "./students.js";
-import { postingsTable } from "./postings.js";
 import { usersTable } from "./users.js";
 
 export const caseLogsTable = pgTable("case_logs", {
   id: serial("id").primaryKey(),
   studentId: integer("student_id").notNull().references(() => studentsTable.id),
-  postingId: integer("posting_id").references(() => postingsTable.id),
   date: text("date").notNull(),
   attemptNumber: integer("attempt_number").notNull().default(1),
   patientUhid: text("patient_uhid").notNull(),
-  patientAge: integer("patient_age").notNull(),
+  patientAge: text("patient_age").notNull(),
   patientGender: text("patient_gender", { enum: ["male", "female", "other"] }).notNull(),
+  chiefComplaints: text("chief_complaints").notNull(),
   diagnosisProvisional: text("diagnosis_provisional").notNull(),
   diagnosisFinal: text("diagnosis_final"),
   history: text("history"),
+  examination: text("examination"),
   investigations: text("investigations"),
+  differentialDiagnosis: text("differential_diagnosis"),
   managementPlan: text("management_plan"),
+  outcome: text("outcome"),
+  learningPoints: text("learning_points"),
   status: text("status", { enum: ["pending", "verified", "rejected"] }).notNull().default("pending"),
   facultyRemarks: text("faculty_remarks"),
   facultyGrade: text("faculty_grade"),
@@ -31,7 +34,7 @@ export type CaseLog = typeof caseLogsTable.$inferSelect;
 export const procedureLogsTable = pgTable("procedure_logs", {
   id: serial("id").primaryKey(),
   studentId: integer("student_id").notNull().references(() => studentsTable.id),
-  postingId: integer("posting_id").references(() => postingsTable.id),
+  procedureGroup: text("procedure_group", { enum: ["emergency", "invasive"] }).notNull(),
   procedureName: text("procedure_name").notNull(),
   date: text("date").notNull(),
   patientUhid: text("patient_uhid").notNull(),
@@ -53,8 +56,9 @@ export const academicLogsTable = pgTable("academic_logs", {
   id: serial("id").primaryKey(),
   studentId: integer("student_id").notNull().references(() => studentsTable.id),
   activityType: text("activity_type", {
-    enum: ["journal_club", "seminar", "symposia", "bedside_presentation", "mortality_meeting"]
+    enum: ["journal_club", "seminar", "symposia", "bedside_presentation", "mortality_meeting", "conference_attended", "conference_presentation"]
   }).notNull(),
+  presentationType: text("presentation_type", { enum: ["poster", "paper", "case_presentation"] }),
   topic: text("topic").notNull(),
   date: text("date").notNull(),
   presenter: text("presenter"),

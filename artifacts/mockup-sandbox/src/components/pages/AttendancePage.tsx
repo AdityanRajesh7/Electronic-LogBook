@@ -14,11 +14,12 @@ import {
 } from "@/components/ui/select";
 import { CalendarDays, CheckCircle2, Clock, XCircle } from "lucide-react";
 import { toast } from "sonner";
+import { formatLogbookDate, todayForInput } from "@/lib/logbook-config";
 
 type LeaveStatus = "pending" | "approved" | "rejected";
 
 type LeaveRecord = {
-  id: string;
+  number: number;
   appliedOn: string;
   fromDate: string;
   toDate: string;
@@ -37,7 +38,7 @@ export function AttendancePage() {
 
   const [leaves, setLeaves] = React.useState<LeaveRecord[]>([
     {
-      id: "LV-402",
+      number: 402,
       appliedOn: "2026-07-27",
       fromDate: "2026-08-12",
       toDate: "2026-08-14",
@@ -48,7 +49,7 @@ export function AttendancePage() {
       approvedBy: "Awaiting HOD",
     },
     {
-      id: "LV-388",
+      number: 388,
       appliedOn: "2026-06-04",
       fromDate: "2026-06-10",
       toDate: "2026-06-11",
@@ -59,7 +60,7 @@ export function AttendancePage() {
       approvedBy: "Prof. Dr. Mohammad MTP",
     },
     {
-      id: "LV-371",
+      number: 371,
       appliedOn: "2026-05-10",
       fromDate: "2026-05-18",
       toDate: "2026-05-18",
@@ -81,8 +82,8 @@ export function AttendancePage() {
     }
 
     const newLeave: LeaveRecord = {
-      id: `LV-${Math.floor(400 + Math.random() * 500)}`,
-      appliedOn: new Date().toISOString().split("T")[0],
+      number: Math.max(...leaves.map((leave) => leave.number)) + 1,
+      appliedOn: todayForInput(),
       fromDate,
       toDate,
       totalDays,
@@ -93,8 +94,8 @@ export function AttendancePage() {
     };
 
     setLeaves([newLeave, ...leaves]);
-    toast.success(`Leave Application ${newLeave.id} submitted!`, {
-      description: `Sent to HOD / Guide for approval (${fromDate} to ${toDate}).`,
+    toast.success(`Leave application number ${newLeave.number} submitted`, {
+      description: `Sent to HOD / Guide for approval (${formatLogbookDate(fromDate)} to ${formatLogbookDate(toDate)}).`,
     });
     setReason("");
   };
@@ -108,12 +109,9 @@ export function AttendancePage() {
   return (
     <div className="space-y-6 pb-12">
       <div>
-        <h2 className="flex items-center gap-2 text-2xl font-extrabold text-slate-900">
-          <CalendarDays className="h-6 w-6 text-teal-600" /> Leave Record System
-        </h2>
-        <p className="text-xs text-slate-500">
-          Apply for leave and maintain a complete record of HOD / Guide decisions
-        </p>
+        <p className="page-eyebrow">Attendance administration</p>
+        <h2 className="page-title mt-1">Leave records</h2>
+        <p className="mt-2 text-sm text-slate-500">Apply for leave and maintain the complete HOD / Guide decision record.</p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -185,14 +183,14 @@ export function AttendancePage() {
             </TableHeader>
             <TableBody>
               {leaves.map((leave) => (
-                <TableRow key={leave.id}>
+                <TableRow key={leave.number}>
                   <TableCell className="py-3 text-xs font-bold text-slate-900">
-                    {leave.id}
-                    <p className="text-[10px] font-normal text-slate-400">Applied {leave.appliedOn}</p>
+                    {leave.number}
+                    <p className="text-[10px] font-normal text-slate-400">Applied {formatLogbookDate(leave.appliedOn)}</p>
                   </TableCell>
                   <TableCell className="py-3 text-xs font-medium text-slate-700">{leave.leaveType}</TableCell>
                   <TableCell className="py-3 text-xs text-slate-700">
-                    {leave.fromDate} to {leave.toDate}
+                    {formatLogbookDate(leave.fromDate)} to {formatLogbookDate(leave.toDate)}
                     <p className="text-[10px] text-slate-400">{leave.totalDays} day(s)</p>
                   </TableCell>
                   <TableCell className="max-w-[260px] py-3 text-xs text-slate-600">{leave.reason}</TableCell>

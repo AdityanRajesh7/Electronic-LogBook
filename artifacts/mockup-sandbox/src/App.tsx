@@ -4,13 +4,14 @@ import { AppLayout, type RoleType } from "@/components/layout/AppLayout";
 import { Dashboard } from "@/components/Dashboard";
 import { ProfessorPortal } from "@/components/ProfessorPortal";
 import { HODPortal } from "@/components/HODPortal";
-import { DeanPortal } from "@/components/DeanPortal";
+import { LoginPage } from "@/components/LoginPage";
 import { CaseLogsPage } from "@/components/pages/CaseLogsPage";
 import { ProcedureLogsPage } from "@/components/pages/ProcedureLogsPage";
 import { AcademicLogsPage } from "@/components/pages/AcademicLogsPage";
 import { PostingsPage } from "@/components/pages/PostingsPage";
 import { AttendancePage } from "@/components/pages/AttendancePage";
 import { MilestonesPage } from "@/components/pages/MilestonesPage";
+import { AssessmentsPage } from "@/components/pages/AssessmentsPage";
 
 import { modules as discoveredModules } from "./.generated/mockup-components";
 
@@ -117,6 +118,9 @@ function getPreviewPath(): string | null {
 function App() {
   const previewPath = getPreviewPath();
   const [activeRole, setActiveRole] = useState<RoleType>("Student");
+  const [isAuthenticated, setIsAuthenticated] = useState(
+    () => window.sessionStorage.getItem("elogbook-authenticated") === "true",
+  );
 
   if (previewPath) {
     return (
@@ -127,8 +131,26 @@ function App() {
     );
   }
 
+  if (!isAuthenticated) {
+    return (
+      <LoginPage
+        onSignIn={() => {
+          window.sessionStorage.setItem("elogbook-authenticated", "true");
+          setIsAuthenticated(true);
+        }}
+      />
+    );
+  }
+
   return (
-    <AppLayout activeRole={activeRole} setActiveRole={setActiveRole}>
+    <AppLayout
+      activeRole={activeRole}
+      setActiveRole={setActiveRole}
+      onSignOut={() => {
+        window.sessionStorage.removeItem("elogbook-authenticated");
+        setIsAuthenticated(false);
+      }}
+    >
       {activeRole === "Professor" && (
         <Switch>
           <Route path="/mentees" component={() => <ProfessorPortal activeTab="mentees" />} />
@@ -140,16 +162,9 @@ function App() {
         <Switch>
           <Route path="/postings-builder" component={() => <HODPortal activeTab="posting-schedules" />} />
           <Route path="/mentor-matching" component={() => <HODPortal activeTab="mentor-matching" />} />
+          <Route path="/student-access" component={() => <HODPortal activeTab="student-access" />} />
           <Route path="/leave-approvals" component={() => <HODPortal activeTab="leave-approvals" />} />
           <Route component={() => <HODPortal activeTab="gap-dashboard" />} />
-        </Switch>
-      )}
-      {activeRole === "Dean" && (
-        <Switch>
-          <Route path="/user-provisioning" component={() => <DeanPortal activeTab="user-provisioning" />} />
-          <Route path="/mci-guidelines" component={() => <DeanPortal activeTab="mci-master" />} />
-          <Route path="/nmc-master" component={() => <DeanPortal activeTab="mci-master" />} />
-          <Route component={() => <DeanPortal activeTab="heatmap" />} />
         </Switch>
       )}
       {activeRole === "Student" && (
@@ -161,6 +176,7 @@ function App() {
           <Route path="/academics" component={AcademicLogsPage} />
           <Route path="/postings" component={PostingsPage} />
           <Route path="/attendance" component={AttendancePage} />
+          <Route path="/assessments" component={AssessmentsPage} />
           <Route path="/milestones" component={MilestonesPage} />
           <Route component={Dashboard} />
         </Switch>

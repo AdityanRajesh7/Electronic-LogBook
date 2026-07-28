@@ -53,6 +53,7 @@ import {
   User,
   FileText,
 } from "lucide-react";
+import { formatLogbookDate } from "@/lib/logbook-config";
 
 export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
   const [location, setLocation] = useLocation();
@@ -120,8 +121,10 @@ export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
       [currentItem.id]: { status: "verified", remarks: remarks || "Approved without conditions.", grade },
     });
 
-    toast.success(`Log ${currentItem.id} Verified!`, {
-      description: `Assigned Grade: ${grade}. Competency level updated.`,
+    toast.success(`Number ${currentItem.id} verified`, {
+      description: currentItem.type === "Procedure"
+        ? `Grade ${grade}; verified competency saved.`
+        : `Grade ${grade}; guide review saved.`,
     });
 
     setRemarks("");
@@ -234,10 +237,10 @@ export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
                       <div>
                         <h3 className="text-lg font-bold text-slate-900">{currentItem.title}</h3>
                         <p className="text-xs text-slate-500 mt-0.5">
-                          Submitted by <strong className="text-slate-800">{currentItem.studentName}</strong> ({currentItem.batch}) • Posting: <strong>{currentItem.posting}</strong>
+                          Submitted by <strong className="text-slate-800">{currentItem.studentName}</strong>
                         </p>
                       </div>
-                      <span className="text-xs text-slate-400 font-mono">{currentItem.date}</span>
+                      <span className="text-xs text-slate-400 font-mono">{formatLogbookDate(currentItem.date)}</span>
                     </div>
 
                     <div className="bg-slate-50 p-4 rounded-xl space-y-2 border border-slate-200/60">
@@ -275,20 +278,23 @@ export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="p-4 space-y-4">
-                    <div className="space-y-2">
-                      <label className="text-xs font-semibold text-slate-700">Verified Competency Level</label>
-                      <Select value={competencyOverride} onValueChange={setCompetencyOverride}>
-                        <SelectTrigger className="text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="performed_independently">Performed Independently</SelectItem>
-                          <SelectItem value="performed_under_supervision">Performed Under Supervision</SelectItem>
-                          <SelectItem value="assisted">Assisted</SelectItem>
-                          <SelectItem value="observed">Observed</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    {currentItem.type === "Procedure" && (
+                      <div className="space-y-2">
+                        <label className="text-xs font-semibold text-slate-700">Verified Competency Level</label>
+                        <Select value={competencyOverride} onValueChange={setCompetencyOverride}>
+                          <SelectTrigger className="text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="performed_independently">Performed Independently</SelectItem>
+                            <SelectItem value="performed_under_supervision">Performed Under Supervision</SelectItem>
+                            <SelectItem value="assisted">Assisted</SelectItem>
+                            <SelectItem value="observed">Observed</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <p className="text-[10px] text-slate-500">Available only while reviewing procedure logs.</p>
+                      </div>
+                    )}
 
                     <div className="space-y-2">
                       <label className="text-xs font-semibold text-slate-700">Scholastic Grade</label>
@@ -352,7 +358,6 @@ export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
                 <TableHeader className="bg-slate-50">
                   <TableRow>
                     <TableHead className="text-xs font-semibold">Resident Name</TableHead>
-                    <TableHead className="text-xs font-semibold">Batch &amp; Posting</TableHead>
                     <TableHead className="text-xs font-semibold">Requirement Progress</TableHead>
                     <TableHead className="text-xs font-semibold">Shortfall Status</TableHead>
                     <TableHead className="text-xs font-semibold text-right">Action</TableHead>
@@ -364,10 +369,6 @@ export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
                       <TableCell className="font-bold text-xs text-slate-900">
                         {m.name}
                         <p className="text-[11px] text-slate-500 font-normal">{m.registrationNumber}</p>
-                      </TableCell>
-                      <TableCell className="text-xs text-slate-700">
-                        {m.batch}
-                        <p className="text-[11px] text-teal-700 font-semibold">{m.currentPosting}</p>
                       </TableCell>
                       <TableCell className="text-xs w-48">
                         <div className="flex items-center justify-between text-[11px] mb-1">
@@ -415,8 +416,8 @@ export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
                       <SelectValue placeholder="Select Resident" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="1">Dr. Adithya Nair (MD Paediatrics - PG II)</SelectItem>
-                      <SelectItem value="2">Dr. Ananya Roy (MD Paediatrics - PG II)</SelectItem>
+                      <SelectItem value="1">Dr. Adithya Nair (MD Pediatrics - PG II)</SelectItem>
+                      <SelectItem value="2">Dr. Anilkumar A (MD Pediatrics - PG II)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -496,12 +497,9 @@ export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
                   <span className="flex items-center gap-2">
                     <BookOpen className="h-5 w-5 text-teal-600" /> Logbook Record: {selectedMentee.name}
                   </span>
-                  <Badge variant="outline" className="text-xs bg-teal-50 text-teal-800">
-                    {selectedMentee.batch}
-                  </Badge>
                 </DialogTitle>
                 <DialogDescription className="text-slate-500">
-                  Registration: {selectedMentee.registrationNumber} • Current Posting: {selectedMentee.currentPosting}
+                  Registration: {selectedMentee.registrationNumber}
                 </DialogDescription>
               </DialogHeader>
 
@@ -532,7 +530,7 @@ export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
                     </TableHeader>
                     <TableBody>
                       <TableRow>
-                        <TableCell className="text-xs font-medium">2026-07-26</TableCell>
+                        <TableCell className="text-xs font-medium">26/07/26</TableCell>
                         <TableCell className="text-xs font-bold text-slate-900">Acute Severe Asthma Exacerbation</TableCell>
                         <TableCell className="text-xs text-slate-600">
                           <p className="font-semibold text-teal-800">UHID-2026-004281</p>
@@ -543,7 +541,7 @@ export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
                         </TableCell>
                       </TableRow>
                       <TableRow>
-                        <TableCell className="text-xs font-medium">2026-07-23</TableCell>
+                        <TableCell className="text-xs font-medium">23/07/26</TableCell>
                         <TableCell className="text-xs font-bold text-slate-900">Severe Dengue Hemorrhagic Fever</TableCell>
                         <TableCell className="text-xs text-slate-600">
                           <p className="font-semibold text-teal-800">UHID-2026-004097</p>
@@ -625,13 +623,14 @@ function renderShortfallBadge(status: string) {
 
 function getFallbackProfData() {
   return {
-    faculty: { name: "Prof. Dr. Mohammad MTP", role: "Professor & HOD", department: "Department of Paediatrics" },
+    faculty: { name: "Prof. Dr. Mohammad MTP", role: "Professor & Guide", department: "Department of Pediatrics" },
     pendingReviews: [
-      { id: "LOG-1092", studentName: "Dr. Adithya Nair", batch: "2024-2027", type: "Case Log", title: "Acute Severe Asthma Exacerbation in a 7yo Child", date: "2026-07-26", posting: "PICU", detail: "Managed with Nebulized Salbutamol + Ipratropium", patientUhid: "UHID-2026-004281", patientInfo: "7 yr / Male" },
+      { id: 1092, studentName: "Dr. Adithya Nair", type: "Case Log", title: "Acute Severe Asthma Exacerbation in a 7yo Child", date: "2026-07-26", detail: "Managed with nebulized salbutamol and ipratropium; detailed history, examination, investigations, outcome and learning points attached.", patientUhid: "UHID-2026-004281", patientInfo: "7 yr / Male" },
+      { id: 1088, studentName: "Dr. Adithya Nair", type: "Procedure", title: "Endotracheal Intubation", date: "2026-07-24", detail: "Emergency procedure completed under direct supervision.", patientUhid: "UHID-2026-003944", patientInfo: "7 yr / Male", declaredCompetency: "Performed under supervision" },
     ],
     assignedMentees: [
-      { id: 1, name: "Dr. Adithya Nair", registrationNumber: "PG2024-PAED-014", batch: "2024-2027", currentPosting: "PICU", overallCompletion: 73, shortfallStatus: "at_risk" },
-      { id: 2, name: "Dr. Ananya Roy", registrationNumber: "PG2024-PAED-018", batch: "2024-2027", currentPosting: "NICU", overallCompletion: 88, shortfallStatus: "on_track" },
+      { id: 1, name: "Dr. Adithya Nair", registrationNumber: "PG2024-PAED-014", overallCompletion: 73, shortfallStatus: "at_risk" },
+      { id: 2, name: "Dr. Anilkumar A", registrationNumber: "PG2024-PAED-018", overallCompletion: 88, shortfallStatus: "on_track" },
     ],
   };
 }

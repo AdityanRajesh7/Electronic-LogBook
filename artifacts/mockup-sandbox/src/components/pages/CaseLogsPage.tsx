@@ -1,260 +1,229 @@
 import * as React from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { AlertCircle, CheckCircle2, Clock, Eye, FileText, PlusCircle, Search } from "lucide-react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogFooter,
 } from "@/components/ui/dialog";
-import { FileText, PlusCircle, Search, CheckCircle2, Clock, AlertCircle } from "lucide-react";
-import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
+import { formatLogbookDate, todayForInput } from "@/lib/logbook-config";
+
+type CaseLog = {
+  number: number;
+  date: string;
+  patientUhid: string;
+  age: string;
+  gender: string;
+  chiefComplaints: string;
+  history: string;
+  examination: string;
+  investigations: string;
+  diagnosis: string;
+  differentialDiagnosis: string;
+  management: string;
+  outcome: string;
+  learningPoints: string;
+  status: "pending" | "verified" | "revision";
+  remarks: string;
+};
+
+const caseSeed: CaseLog[] = [
+  {
+    number: 1092,
+    date: "2026-07-26",
+    patientUhid: "UHID-2026-004281",
+    age: "7 years",
+    gender: "Male",
+    chiefComplaints: "Breathlessness and wheeze for 8 hours; nocturnal cough for 3 days.",
+    history: "Known asthma for 2 years with two prior admissions. Missed controller medication for one week. No fever, choking episode or drug allergy.",
+    examination: "Alert but anxious; RR 42/min, HR 132/min, SpO₂ 89% on room air. Intercostal retractions, reduced bilateral air entry and diffuse expiratory wheeze.",
+    investigations: "PEFR 35% of predicted; ABG: pH 7.34, pCO₂ 43 mmHg. Chest radiograph showed hyperinflation without focal infiltrate.",
+    diagnosis: "Acute Severe Asthma Exacerbation",
+    differentialDiagnosis: "Foreign-body aspiration; bronchopneumonia; anaphylaxis.",
+    management: "Oxygen, back-to-back salbutamol–ipratropium nebulisation, IV hydrocortisone, IV magnesium sulphate and continuous cardiorespiratory monitoring.",
+    outcome: "SpO₂ improved to 97% and respiratory distress settled over 6 hours. Shifted to ward on inhaled bronchodilator and controller therapy.",
+    learningPoints: "Applied severity classification, documented response after each bronchodilator cycle and counselled family on spacer technique and an asthma action plan.",
+    status: "pending",
+    remarks: "Awaiting Prof. Dr. Mohammad MTP review.",
+  },
+  {
+    number: 1085,
+    date: "2026-07-23",
+    patientUhid: "UHID-2026-004097",
+    age: "3 years",
+    gender: "Female",
+    chiefComplaints: "High fever for 5 days, abdominal pain and reduced urine output.",
+    history: "No bleeding manifestations. Oral intake reduced. No previous major illness.",
+    examination: "Cold extremities, delayed capillary refill, narrow pulse pressure and tender hepatomegaly.",
+    investigations: "Rising hematocrit, platelet count 42,000/mm³ and positive dengue NS1 antigen.",
+    diagnosis: "Severe Dengue with Plasma Leakage",
+    differentialDiagnosis: "Septic shock; enteric fever.",
+    management: "Judicious IV crystalloid resuscitation with serial hematocrit, urine-output and perfusion monitoring.",
+    outcome: "Hemodynamically stable after 24 hours; fluids tapered without overload.",
+    learningPoints: "Used dynamic clinical endpoints to guide fluids and recognised the critical phase early.",
+    status: "verified",
+    remarks: "Clear fluid-balance documentation and monitoring plan.",
+  },
+  {
+    number: 1079,
+    date: "2026-07-19",
+    patientUhid: "UHID-2026-003812",
+    age: "10 months",
+    gender: "Male",
+    chiefComplaints: "Loose stools and vomiting for 2 days.",
+    history: "Eight watery stools, three episodes of vomiting, no blood in stool.",
+    examination: "Irritable, thirsty, sunken eyes and reduced skin turgor.",
+    investigations: "Serum electrolytes within normal limits.",
+    diagnosis: "Acute Gastroenteritis with Some Dehydration",
+    differentialDiagnosis: "Urinary tract infection; surgical abdomen.",
+    management: "ORS Plan B, zinc supplementation and continued breastfeeding.",
+    outcome: "Hydration restored and discharged with danger-sign counselling.",
+    learningPoints: "Classified dehydration clinically and demonstrated ORS preparation to caregiver.",
+    status: "verified",
+    remarks: "Appropriate dehydration assessment.",
+  },
+];
+
+const emptyForm = {
+  date: todayForInput(),
+  patientUhid: "",
+  age: "",
+  gender: "Male",
+  chiefComplaints: "",
+  history: "",
+  examination: "",
+  investigations: "",
+  diagnosis: "",
+  differentialDiagnosis: "",
+  management: "",
+  outcome: "",
+  learningPoints: "",
+};
 
 export function CaseLogsPage() {
   const [searchTerm, setSearchTerm] = React.useState("");
   const [isModalOpen, setIsModalOpen] = React.useState(false);
-  const [caseLogs, setCaseLogs] = React.useState([
-    {
-      id: "LOG-1092",
-      date: "2026-07-26",
-      posting: "PICU",
-      patientUhid: "UHID-2026-004281",
-      patientInfo: "7 yr / Male",
-      diagnosis: "Acute Severe Asthma Exacerbation",
-      management: "Nebulized Salbutamol + Ipratropium, IV Hydrocortisone, supplemental O2",
+  const [selectedLog, setSelectedLog] = React.useState<CaseLog | null>(null);
+  const [caseLogs, setCaseLogs] = React.useState(caseSeed);
+  const [form, setForm] = React.useState(emptyForm);
+
+  const handleAddCase = (event: React.FormEvent) => {
+    event.preventDefault();
+    const next: CaseLog = {
+      number: Math.max(...caseLogs.map((item) => item.number)) + 1,
+      ...form,
       status: "pending",
-      remarks: "Awaiting Prof. Dr. Mohammad MTP review",
-    },
-    {
-      id: "LOG-1085",
-      date: "2026-07-23",
-      posting: "PICU",
-      patientUhid: "UHID-2026-004097",
-      patientInfo: "3 yr / Female",
-      diagnosis: "Severe Dengue Hemorrhagic Fever with Plasma Leakage",
-      management: "IV Fluid resuscitation as per WHO Dengue protocol, hematocrit tracking",
-      status: "verified",
-      remarks: "Excellent fluid balance management and monitoring notes.",
-    },
-    {
-      id: "LOG-1079",
-      date: "2026-07-19",
-      posting: "Paediatric Wards",
-      patientUhid: "UHID-2026-003812",
-      patientInfo: "10 mo / Male",
-      diagnosis: "Acute Gastroenteritis with Moderate Dehydration",
-      management: "ORS rehydration, Zinc supplementation, ongoing breastfeeding guidance",
-      status: "verified",
-      remarks: "Appropriate assessment of dehydration parameters.",
-    },
-    {
-      id: "LOG-1070",
-      date: "2026-07-15",
-      posting: "Emergency Ward",
-      patientUhid: "UHID-2026-003641",
-      patientInfo: "5 yr / Female",
-      diagnosis: "Febrile Seizure (First Episode)",
-      management: "Intranasal Midazolam, antipyretic measures, EEG scheduling",
-      status: "rejected",
-      remarks: "Please document lumbar puncture findings to rule out CNS infection.",
-    },
-  ]);
-
-  const [form, setForm] = React.useState({
-    patientUhid: "",
-    patientAge: "5",
-    patientGender: "male",
-    posting: "PICU",
-    diagnosis: "",
-    management: "",
-  });
-
-  const handleAddCase = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.patientUhid || !form.diagnosis) return;
-
-    const newLog = {
-      id: `LOG-${Math.floor(1000 + Math.random() * 9000)}`,
-      date: new Date().toISOString().split("T")[0],
-      posting: form.posting,
-      patientUhid: form.patientUhid,
-      patientInfo: `${form.patientAge} yr / ${form.patientGender === "male" ? "Male" : "Female"}`,
-      diagnosis: form.diagnosis,
-      management: form.management || "Managed as per clinical ward protocol",
-      status: "pending",
-      remarks: "Submitted for faculty review",
+      remarks: "Submitted for guide review.",
     };
-
-    setCaseLogs([newLog, ...caseLogs]);
-    toast.success(`Case ${newLog.id} logged!`, {
-      description: `${newLog.diagnosis} added to Case Logbook.`,
-    });
-
-    setForm({ patientUhid: "", patientAge: "5", patientGender: "male", posting: "PICU", diagnosis: "", management: "" });
+    setCaseLogs([next, ...caseLogs]);
+    setForm({ ...emptyForm, date: todayForInput() });
     setIsModalOpen(false);
+    toast.success(`Case number ${next.number} submitted`);
   };
 
-  const filteredLogs = caseLogs.filter(
-    (log) =>
-      log.diagnosis.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.posting.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.patientUhid.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.id.toLowerCase().includes(searchTerm.toLowerCase())
+  const search = searchTerm.toLowerCase();
+  const filteredLogs = caseLogs.filter((log) =>
+    [log.number, log.diagnosis, log.patientUhid, log.chiefComplaints]
+      .some((value) => String(value).toLowerCase().includes(search)),
   );
+
+  const setField = (field: keyof typeof form, value: string) => setForm({ ...form, [field]: value });
 
   return (
     <div className="space-y-6 pb-12">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
-          <h2 className="text-2xl font-extrabold text-slate-900 flex items-center gap-2">
-            <FileText className="h-6 w-6 text-teal-600" /> Clinical Case Logbook
-          </h2>
-          <p className="text-xs text-slate-500">
-            Clinical cases presented and maintained according to MCI logbook preparation guidelines
+          <p className="page-eyebrow">Clinical case exposure</p>
+          <h2 className="page-title mt-1">Cases presented</h2>
+          <p className="mt-2 max-w-2xl text-sm text-slate-500">
+            Structured histories, examinations, investigations, management and learning reflections for every presented case.
           </p>
         </div>
-
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs gap-2">
-              <PlusCircle className="h-4 w-4" /> Log New Case Entry
-            </Button>
+            <Button><PlusCircle className="h-4 w-4" /> Log clinical case</Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px] bg-white">
+          <DialogContent className="max-h-[90vh] overflow-y-auto rounded-2xl bg-white sm:max-w-3xl">
             <DialogHeader>
-              <DialogTitle className="text-slate-900 flex items-center gap-2">
-                <FileText className="h-5 w-5 text-teal-600" /> Log Clinical Case Entry
-              </DialogTitle>
-              <DialogDescription className="text-slate-500">
-                Record clinical presentation details for faculty verification.
-              </DialogDescription>
+              <DialogTitle className="flex items-center gap-2 text-xl"><FileText className="h-5 w-5 text-teal-600" /> New clinical case</DialogTitle>
+              <DialogDescription>Complete the clinical record before sending it to the guide.</DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleAddCase} className="space-y-4 py-2">
-              <div className="space-y-2">
-                <Label>Patient UHID</Label>
-                <Input
-                  placeholder="e.g. UHID-2026-004281"
-                  value={form.patientUhid}
-                  onChange={(e) => setForm({ ...form, patientUhid: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Patient Age (Years)</Label>
-                  <Input
-                    type="number"
-                    value={form.patientAge}
-                    onChange={(e) => setForm({ ...form, patientAge: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Gender</Label>
-                  <Select value={form.patientGender} onValueChange={(val) => setForm({ ...form, patientGender: val })}>
+            <form onSubmit={handleAddCase} className="space-y-5">
+              <div className="grid gap-4 sm:grid-cols-4">
+                <Field label="Date"><Input type="date" value={form.date} onChange={(e) => setField("date", e.target.value)} required /></Field>
+                <Field label="Patient UHID"><Input value={form.patientUhid} onChange={(e) => setField("patientUhid", e.target.value)} placeholder="UHID-2026-…" required /></Field>
+                <Field label="Age"><Input value={form.age} onChange={(e) => setField("age", e.target.value)} placeholder="e.g. 7 years" required /></Field>
+                <Field label="Gender">
+                  <Select value={form.gender} onValueChange={(value) => setField("gender", value)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="male">Male</SelectItem>
-                      <SelectItem value="female">Female</SelectItem>
-                    </SelectContent>
+                    <SelectContent><SelectItem value="Male">Male</SelectItem><SelectItem value="Female">Female</SelectItem><SelectItem value="Other">Other</SelectItem></SelectContent>
                   </Select>
-                </div>
+                </Field>
               </div>
-
-              <div className="space-y-2">
-                <Label>Provisional / Final Diagnosis</Label>
-                <Input
-                  placeholder="e.g. Acute Severe Asthma Exacerbation"
-                  value={form.diagnosis}
-                  onChange={(e) => setForm({ ...form, diagnosis: e.target.value })}
-                  required
-                />
+              <Field label="Chief complaints"><Textarea rows={2} value={form.chiefComplaints} onChange={(e) => setField("chiefComplaints", e.target.value)} required /></Field>
+              <Field label="Relevant history"><Textarea rows={3} value={form.history} onChange={(e) => setField("history", e.target.value)} required /></Field>
+              <Field label="Clinical examination"><Textarea rows={3} value={form.examination} onChange={(e) => setField("examination", e.target.value)} required /></Field>
+              <Field label="Investigations"><Textarea rows={2} value={form.investigations} onChange={(e) => setField("investigations", e.target.value)} required /></Field>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Final diagnosis"><Input value={form.diagnosis} onChange={(e) => setField("diagnosis", e.target.value)} required /></Field>
+                <Field label="Differential diagnosis"><Input value={form.differentialDiagnosis} onChange={(e) => setField("differentialDiagnosis", e.target.value)} /></Field>
               </div>
-
-              <div className="space-y-2">
-                <Label>Management Plan &amp; Interventions</Label>
-                <Textarea
-                  rows={3}
-                  placeholder="Outline management plan..."
-                  value={form.management}
-                  onChange={(e) => setForm({ ...form, management: e.target.value })}
-                />
-              </div>
-
-              <DialogFooter className="pt-2">
-                <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-                <Button type="submit" className="bg-teal-600 text-white">Submit Case Entry</Button>
+              <Field label="Management and interventions"><Textarea rows={3} value={form.management} onChange={(e) => setField("management", e.target.value)} required /></Field>
+              <Field label="Outcome / follow-up"><Textarea rows={2} value={form.outcome} onChange={(e) => setField("outcome", e.target.value)} /></Field>
+              <Field label="Learning points"><Textarea rows={2} value={form.learningPoints} onChange={(e) => setField("learningPoints", e.target.value)} required /></Field>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Save draft</Button>
+                <Button type="submit">Send to guide</Button>
               </DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
       </div>
 
-      <Card className="border border-slate-200 bg-white">
-        <CardHeader className="pb-3 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-            <Input
-              placeholder="Search diagnosis, posting, UHID, or log ID..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 text-xs"
-            />
+      <Card>
+        <CardHeader className="flex flex-col justify-between gap-4 border-b border-teal-100 md:flex-row md:items-center">
+          <div className="relative w-full max-w-md">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-teal-600" />
+            <Input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" placeholder="Search number, diagnosis, UHID or complaint…" />
           </div>
-          <span className="text-xs font-semibold text-teal-800 bg-teal-50 px-3 py-1 rounded-full border border-teal-200">
-            Total Cases Logged: {caseLogs.length} / 50 Target
-          </span>
+          <Badge variant="outline" className="w-fit border-teal-100 bg-teal-50 px-3 py-1 text-teal-800">{caseLogs.length} of 50 cases logged</Badge>
         </CardHeader>
-
         <CardContent className="p-0">
           <Table>
-            <TableHeader className="bg-slate-50">
+            <TableHeader>
               <TableRow>
-                <TableHead className="text-xs font-semibold">Log ID &amp; Date</TableHead>
-                <TableHead className="text-xs font-semibold">Diagnosis &amp; Rotation</TableHead>
-                <TableHead className="text-xs font-semibold">Patient UHID &amp; Info</TableHead>
-                <TableHead className="text-xs font-semibold">Management Plan</TableHead>
-                <TableHead className="text-xs font-semibold">Review Status</TableHead>
-                <TableHead className="text-xs font-semibold text-right">Faculty Remarks</TableHead>
+                <TableHead>Number</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Patient UHID</TableHead>
+                <TableHead>Age</TableHead>
+                <TableHead>Diagnosis</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Record</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredLogs.map((log) => (
-                <TableRow key={log.id} className="hover:bg-slate-50/60">
-                  <TableCell className="py-3 text-xs font-bold text-slate-900">
-                    {log.id}
-                    <p className="text-[11px] text-slate-400 font-normal">{log.date}</p>
-                  </TableCell>
-                  <TableCell className="py-3 text-xs">
-                    <p className="font-bold text-slate-900">{log.diagnosis}</p>
-                    <Badge variant="outline" className="text-[10px] mt-0.5 bg-slate-100 text-slate-700">
-                      {log.posting}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="py-3 text-xs text-slate-700 font-medium">
-                    <p className="font-bold text-teal-800">{log.patientUhid}</p>
-                    <p className="text-[11px] font-normal text-slate-500">{log.patientInfo}</p>
-                  </TableCell>
-                  <TableCell className="py-3 text-xs text-slate-600 max-w-[280px] truncate">{log.management}</TableCell>
-                  <TableCell className="py-3">{renderStatusBadge(log.status)}</TableCell>
-                  <TableCell className="py-3 text-right text-xs text-slate-500 max-w-[180px] truncate">
-                    {log.remarks}
+                <TableRow key={log.number}>
+                  <TableCell className="font-bold">{log.number}</TableCell>
+                  <TableCell>{formatLogbookDate(log.date)}</TableCell>
+                  <TableCell className="font-semibold text-teal-800">{log.patientUhid}</TableCell>
+                  <TableCell>{log.age}</TableCell>
+                  <TableCell><p className="max-w-sm font-semibold text-slate-900">{log.diagnosis}</p></TableCell>
+                  <TableCell>{statusBadge(log.status)}</TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="sm" onClick={() => setSelectedLog(log)}><Eye className="h-4 w-4" /> Details</Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -262,17 +231,51 @@ export function CaseLogsPage() {
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog open={Boolean(selectedLog)} onOpenChange={(open) => !open && setSelectedLog(null)}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto rounded-2xl bg-white sm:max-w-3xl">
+          {selectedLog && (
+            <>
+              <DialogHeader>
+                <p className="page-eyebrow">Case number {selectedLog.number} • {formatLogbookDate(selectedLog.date)}</p>
+                <DialogTitle className="text-2xl">{selectedLog.diagnosis}</DialogTitle>
+                <DialogDescription>{selectedLog.patientUhid} • {selectedLog.age} • {selectedLog.gender}</DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4">
+                <Detail label="Chief complaints" value={selectedLog.chiefComplaints} />
+                <Detail label="Relevant history" value={selectedLog.history} />
+                <Detail label="Clinical examination" value={selectedLog.examination} />
+                <Detail label="Investigations" value={selectedLog.investigations} />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Detail label="Final diagnosis" value={selectedLog.diagnosis} />
+                  <Detail label="Differential diagnosis" value={selectedLog.differentialDiagnosis} />
+                </div>
+                <Detail label="Management and interventions" value={selectedLog.management} />
+                <Detail label="Outcome / follow-up" value={selectedLog.outcome} />
+                <Detail label="Learning points" value={selectedLog.learningPoints} />
+                <div className="rounded-2xl border border-teal-100 bg-teal-50/70 p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-teal-700">Guide remarks</p>
+                  <p className="mt-1 text-sm text-teal-950">{selectedLog.remarks}</p>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
-function renderStatusBadge(status: string) {
-  switch (status) {
-    case "verified":
-      return <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]"><CheckCircle2 className="h-3 w-3 mr-1 text-emerald-600" /> Verified</Badge>;
-    case "rejected":
-      return <Badge className="bg-rose-50 text-rose-700 border-rose-200 text-[10px]"><AlertCircle className="h-3 w-3 mr-1 text-rose-600" /> Revision</Badge>;
-    default:
-      return <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-[10px]"><Clock className="h-3 w-3 mr-1 text-amber-600" /> Pending</Badge>;
-  }
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return <div className="space-y-2"><Label>{label}</Label>{children}</div>;
+}
+
+function Detail({ label, value }: { label: string; value: string }) {
+  return <div><p className="text-[10px] font-bold uppercase tracking-wider text-teal-700">{label}</p><p className="mt-1 text-sm leading-6 text-slate-700">{value || "Not recorded"}</p></div>;
+}
+
+function statusBadge(status: CaseLog["status"]) {
+  if (status === "verified") return <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700"><CheckCircle2 className="mr-1 h-3 w-3" /> Verified</Badge>;
+  if (status === "revision") return <Badge className="border-rose-200 bg-rose-50 text-rose-700"><AlertCircle className="mr-1 h-3 w-3" /> Revision</Badge>;
+  return <Badge className="border-amber-200 bg-amber-50 text-amber-700"><Clock className="mr-1 h-3 w-3" /> Pending</Badge>;
 }

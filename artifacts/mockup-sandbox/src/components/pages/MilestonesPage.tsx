@@ -1,223 +1,147 @@
 import * as React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Award, CheckCircle2, Edit3, FileText, PlusCircle } from "lucide-react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Award, PlusCircle, CheckCircle2, Upload, FileText, X } from "lucide-react";
-import { toast } from "sonner";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { formatLogbookDate } from "@/lib/logbook-config";
+
+type Thesis = {
+  topic: string;
+  guide: string;
+  coGuide: string;
+  protocolSubmissionDate: string;
+  iecClearanceDate: string;
+  dataCollectionStartDate: string;
+  dataCollectionEndDate: string;
+  submissionDate: string;
+};
+
+const initialThesis: Thesis = {
+  topic: "Clinical profile and predictors of severe acute asthma in children admitted to a tertiary-care centre",
+  guide: "Prof. Dr. Mohammad MTP",
+  coGuide: "Dr. Radhamani KV",
+  protocolSubmissionDate: "2025-08-12",
+  iecClearanceDate: "2025-10-06",
+  dataCollectionStartDate: "2025-11-01",
+  dataCollectionEndDate: "2026-10-31",
+  submissionDate: "2027-03-15",
+};
 
 export function MilestonesPage() {
-  const [isModalOpen, setIsModalOpen] = React.useState(false);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
-
-  const [certs, setCerts] = React.useState([
-    { name: "PALS (Pediatric Advanced Life Support)", provider: "Indian Academy of Pediatrics", expiry: "2027-10-15", status: "Active", fileName: "pals_cert_2025.pdf" },
-    { name: "NRP (Neonatal Resuscitation Program)", provider: "NVKP & IAP", expiry: "2027-04-20", status: "Active", fileName: "nrp_cert.pdf" },
-    { name: "BLS (Basic Life Support)", provider: "AHA", expiry: "2026-12-01", status: "Active", fileName: "bls_card_2024.pdf" },
+  const [thesis, setThesis] = React.useState(initialThesis);
+  const [draft, setDraft] = React.useState(initialThesis);
+  const [thesisOpen, setThesisOpen] = React.useState(false);
+  const [certificateOpen, setCertificateOpen] = React.useState(false);
+  const [certificates, setCertificates] = React.useState([
+    { number: 3, name: "PALS — Pediatric Advanced Life Support", provider: "Indian Academy of Pediatrics", expiry: "2027-10-15" },
+    { number: 2, name: "NRP — Neonatal Resuscitation Program", provider: "IAP", expiry: "2027-04-20" },
+    { number: 1, name: "BLS — Basic Life Support", provider: "AHA", expiry: "2026-12-01" },
   ]);
+  const [certificate, setCertificate] = React.useState({ name: "", provider: "", expiry: "2028-01-01" });
 
-  const [form, setForm] = React.useState({
-    name: "",
-    provider: "",
-    expiry: "2028-01-01",
-  });
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setSelectedFile(file);
-      toast.info(`File attached: ${file.name}`, {
-        description: `${(file.size / 1024).toFixed(1)} KB`,
-      });
-    }
+  const saveThesis = (event: React.FormEvent) => {
+    event.preventDefault();
+    setThesis(draft);
+    setThesisOpen(false);
+    toast.success("Thesis milestones updated");
   };
 
-  const handleUploadCert = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.name || !form.provider) return;
-
-    const newCert = {
-      name: form.name,
-      provider: form.provider,
-      expiry: form.expiry,
-      status: "Active",
-      fileName: selectedFile ? selectedFile.name : "certificate_doc.pdf",
-    };
-
-    setCerts([newCert, ...certs]);
-    toast.success(`Certificate uploaded & verified!`, {
-      description: `${newCert.name} (${newCert.fileName}) saved to resident profile.`,
-    });
-
-    setForm({ name: "", provider: "", expiry: "2028-01-01" });
-    setSelectedFile(null);
-    setIsModalOpen(false);
+  const saveCertificate = (event: React.FormEvent) => {
+    event.preventDefault();
+    setCertificates([{ number: certificates.length + 1, ...certificate }, ...certificates]);
+    setCertificateOpen(false);
+    toast.success("Certificate added");
   };
+
+  const fields: Array<[keyof Thesis, string]> = [
+    ["protocolSubmissionDate", "Protocol submission"],
+    ["iecClearanceDate", "IEC clearance"],
+    ["dataCollectionStartDate", "Data collection start"],
+    ["dataCollectionEndDate", "Data collection end"],
+    ["submissionDate", "Thesis submission"],
+  ];
 
   return (
     <div className="space-y-6 pb-12">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-extrabold text-slate-900 flex items-center gap-2">
-            <Award className="h-6 w-6 text-teal-600" /> Certifications &amp; Thesis Milestones
-          </h2>
-          <p className="text-xs text-slate-500">
-            Mandatory certifications (BLS, NRP, PALS) and PG dissertation submission tracker
-          </p>
-        </div>
-
-        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs gap-2">
-              <PlusCircle className="h-4 w-4" /> Upload Certificate
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px] bg-white">
-            <DialogHeader>
-              <DialogTitle className="text-slate-900 flex items-center gap-2">
-                <Upload className="h-5 w-5 text-teal-600" /> Upload Certification Document
-              </DialogTitle>
-              <DialogDescription className="text-slate-500">
-                Upload official certification proof (BLS / NRP / PALS / ACLS).
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleUploadCert} className="space-y-4 py-2">
-              <div className="space-y-2">
-                <Label>Certificate Title</Label>
-                <Input
-                  placeholder="e.g. ACLS Advanced Cardiac Life Support"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Issuing Body / Provider</Label>
-                  <Input
-                    placeholder="e.g. AHA / IAP"
-                    value={form.provider}
-                    onChange={(e) => setForm({ ...form, provider: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Expiry Date</Label>
-                  <Input
-                    type="date"
-                    value={form.expiry}
-                    onChange={(e) => setForm({ ...form, expiry: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
-
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf,.png,.jpg,.jpeg"
-                className="hidden"
-                onChange={handleFileSelect}
-              />
-
-              {/* File Attachment Dropzone */}
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className={`border-2 border-dashed p-4 rounded-xl text-center cursor-pointer transition-colors ${
-                  selectedFile
-                    ? "border-teal-500 bg-teal-50/60"
-                    : "border-slate-300 hover:border-teal-400 hover:bg-slate-50"
-                }`}
-              >
-                {selectedFile ? (
-                  <div className="flex items-center justify-between gap-3 text-left">
-                    <div className="flex items-center gap-2 overflow-hidden">
-                      <FileText className="h-6 w-6 text-teal-600 shrink-0" />
-                      <div className="truncate">
-                        <p className="text-xs font-bold text-slate-900 truncate">{selectedFile.name}</p>
-                        <p className="text-[11px] text-slate-500">{(selectedFile.size / 1024).toFixed(1)} KB • Attached</p>
-                      </div>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedFile(null);
-                      }}
-                      className="h-7 w-7 p-0 text-slate-400 hover:text-rose-600"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ) : (
-                  <>
-                    <Upload className="h-6 w-6 text-slate-400 mx-auto mb-1" />
-                    <p className="text-xs font-semibold text-slate-700">Click to Attach Certificate File (PDF / PNG / JPG)</p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">Maximum file size 10MB</p>
-                  </>
-                )}
-              </div>
-
-              <DialogFooter className="pt-2">
-                <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-                <Button type="submit" className="bg-teal-600 text-white">Save &amp; Upload Certificate</Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+      <div>
+        <p className="page-eyebrow">Research and mandatory training</p>
+        <h2 className="page-title mt-1">Thesis & certifications</h2>
+        <p className="mt-2 text-sm text-slate-500">Track the complete thesis timeline and required life-support certificates.</p>
       </div>
 
-      <Card className="border border-slate-200 bg-white">
-        <CardHeader className="pb-3 border-b border-slate-100">
-          <CardTitle className="text-base font-bold text-slate-900">Life Support Certifications</CardTitle>
+      <Card className="overflow-hidden border-teal-100">
+        <CardHeader className="flex flex-row items-start justify-between border-b border-teal-100 bg-gradient-to-r from-teal-50 to-cyan-50">
+          <div>
+            <p className="page-eyebrow">Thesis milestone tracker</p>
+            <CardTitle className="mt-2 max-w-3xl text-2xl leading-8">{thesis.topic}</CardTitle>
+            <p className="mt-2 text-xs text-slate-600"><strong>Guide:</strong> {thesis.guide} &nbsp;•&nbsp; <strong>Co-guide:</strong> {thesis.coGuide}</p>
+          </div>
+          <Dialog open={thesisOpen} onOpenChange={setThesisOpen}>
+            <DialogTrigger asChild><Button variant="outline" size="sm"><Edit3 className="h-4 w-4" /> Edit</Button></DialogTrigger>
+            <DialogContent className="max-h-[90vh] overflow-y-auto rounded-2xl bg-white sm:max-w-2xl">
+              <DialogHeader><DialogTitle>Edit thesis milestones</DialogTitle><DialogDescription>Maintain departmental research and submission dates.</DialogDescription></DialogHeader>
+              <form onSubmit={saveThesis} className="space-y-4">
+                <Field label="Topic"><Input value={draft.topic} onChange={(e) => setDraft({ ...draft, topic: e.target.value })} /></Field>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label="Guide"><Input value={draft.guide} onChange={(e) => setDraft({ ...draft, guide: e.target.value })} /></Field>
+                  <Field label="Co-guide"><Input value={draft.coGuide} onChange={(e) => setDraft({ ...draft, coGuide: e.target.value })} /></Field>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {fields.map(([key, label]) => <Field key={key} label={label}><Input type="date" value={draft[key]} onChange={(e) => setDraft({ ...draft, [key]: e.target.value })} /></Field>)}
+                </div>
+                <DialogFooter><Button type="button" variant="outline" onClick={() => setThesisOpen(false)}>Cancel</Button><Button type="submit">Save milestones</Button></DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </CardHeader>
+        <CardContent className="p-6">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            {fields.map(([key, label], index) => (
+              <div key={key} className="relative rounded-2xl border border-teal-100 bg-white p-4">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-teal-600 text-xs font-bold text-white">{index + 1}</span>
+                <p className="mt-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">{label}</p>
+                <p className="mt-1 text-sm font-bold text-slate-900">{formatLogbookDate(thesis[key])}</p>
+                {new Date(thesis[key]) <= new Date() && <CheckCircle2 className="absolute right-3 top-3 h-4 w-4 text-emerald-600" />}
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between border-b border-teal-100">
+          <CardTitle className="flex items-center gap-2 text-lg"><Award className="h-5 w-5 text-teal-600" /> Life-support certifications</CardTitle>
+          <Dialog open={certificateOpen} onOpenChange={setCertificateOpen}>
+            <DialogTrigger asChild><Button size="sm"><PlusCircle className="h-4 w-4" /> Add certificate</Button></DialogTrigger>
+            <DialogContent className="rounded-2xl bg-white sm:max-w-md">
+              <DialogHeader><DialogTitle>Add certificate</DialogTitle><DialogDescription>Record a mandatory training certificate.</DialogDescription></DialogHeader>
+              <form onSubmit={saveCertificate} className="space-y-4">
+                <Field label="Certificate"><Input value={certificate.name} onChange={(e) => setCertificate({ ...certificate, name: e.target.value })} required /></Field>
+                <Field label="Issuing body"><Input value={certificate.provider} onChange={(e) => setCertificate({ ...certificate, provider: e.target.value })} required /></Field>
+                <Field label="Expiry date"><Input type="date" value={certificate.expiry} onChange={(e) => setCertificate({ ...certificate, expiry: e.target.value })} /></Field>
+                <DialogFooter><Button type="button" variant="outline" onClick={() => setCertificateOpen(false)}>Cancel</Button><Button type="submit">Save certificate</Button></DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
-            <TableHeader className="bg-slate-50">
-              <TableRow>
-                <TableHead className="text-xs font-semibold">Certificate Title</TableHead>
-                <TableHead className="text-xs font-semibold">Issuing Body</TableHead>
-                <TableHead className="text-xs font-semibold">Attached File</TableHead>
-                <TableHead className="text-xs font-semibold">Expiry Date</TableHead>
-                <TableHead className="text-xs font-semibold">Status</TableHead>
-              </TableRow>
-            </TableHeader>
+            <TableHeader><TableRow><TableHead>Number</TableHead><TableHead>Certificate</TableHead><TableHead>Issuing body</TableHead><TableHead>Expiry date</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
             <TableBody>
-              {certs.map((c, i) => (
-                <TableRow key={i}>
-                  <TableCell className="py-3 text-xs font-bold text-slate-900">{c.name}</TableCell>
-                  <TableCell className="py-3 text-xs text-slate-700">{c.provider}</TableCell>
-                  <TableCell className="py-3 text-xs text-teal-700 font-mono flex items-center gap-1">
-                    <FileText className="h-3.5 w-3.5" /> {c.fileName}
-                  </TableCell>
-                  <TableCell className="py-3 text-xs text-slate-600">{c.expiry}</TableCell>
-                  <TableCell className="py-3">
-                    <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]">
-                      <CheckCircle2 className="h-3 w-3 mr-1 text-emerald-600" /> {c.status}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {certificates.map((item) => <TableRow key={item.number}><TableCell className="font-bold">{item.number}</TableCell><TableCell className="font-semibold"><span className="flex items-center gap-2"><FileText className="h-4 w-4 text-teal-600" /> {item.name}</span></TableCell><TableCell>{item.provider}</TableCell><TableCell>{formatLogbookDate(item.expiry)}</TableCell><TableCell><Badge className="border-emerald-200 bg-emerald-50 text-emerald-700"><CheckCircle2 className="mr-1 h-3 w-3" /> Active</Badge></TableCell></TableRow>)}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
     </div>
   );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return <div className="space-y-2"><Label>{label}</Label>{children}</div>;
 }

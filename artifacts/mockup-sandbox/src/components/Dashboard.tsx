@@ -4,7 +4,6 @@ import {
   AlertTriangle,
   ArrowRight,
   Award,
-  BookOpen,
   CalendarDays,
   CheckCircle2,
   ClipboardCheck,
@@ -21,23 +20,24 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { formatLogbookDate } from "@/lib/logbook-config";
 
 const student = {
-  name: "Dr. Adithya Nair",
+  name: "Dr. Anilkumar A",
   department: "Department of Pediatrics",
   registrationNumber: "PG2024-PAED-014",
   dateOfJoining: "2024-06-03",
-  kuhsId: "KUHS-MD-PED-2024-014",
-  guide: "Prof. Dr. Mohammad MTP",
+  joiningYear: "2024",
+  expectedCompletion: "2027-06-03",
+  registrationStatus: "Paid & active",
 };
 
 const categories = [
   { label: "Clinical cases", logged: 42, required: 50, icon: FileText, href: "/cases", tone: "from-teal-500 to-cyan-500" },
-  { label: "Procedures", logged: 11, required: 15, icon: Stethoscope, href: "/procedures", tone: "from-cyan-500 to-sky-500" },
-  { label: "Academic activities", logged: 18, required: 20, icon: GraduationCap, href: "/academics", tone: "from-emerald-500 to-teal-500" },
+  { label: "Procedures", logged: 11, required: 101, icon: Stethoscope, href: "/procedures", tone: "from-cyan-500 to-sky-500" },
+  { label: "Case discussions", logged: 18, required: 50, icon: GraduationCap, href: "/academics", tone: "from-emerald-500 to-teal-500" },
   { label: "Assessments", logged: 3, required: 4, icon: ClipboardCheck, href: "/assessments", tone: "from-amber-400 to-orange-400" },
 ];
 
 const recent = [
-  { number: 1092, date: "2026-07-26", type: "Case", title: "Acute Severe Asthma Exacerbation", patientUhid: "UHID-2026-004281", status: "Pending" },
+  { number: 3, date: "2026-07-26", type: "Case", title: "Acute Severe Asthma Exacerbation", patientUhid: "UHID-2026-004281", status: "Pending" },
   { number: 1088, date: "2026-07-24", type: "Procedure", title: "Endotracheal Intubation", patientUhid: "UHID-2026-003944", status: "Verified" },
   { number: 1081, date: "2026-07-22", type: "Academic", title: "High-Flow Nasal Cannula versus CPAP", patientUhid: "—", status: "Verified" },
   { number: 1075, date: "2026-07-20", type: "Procedure", title: "Lumbar Puncture", patientUhid: "UHID-2026-003771", status: "Revision" },
@@ -59,28 +59,30 @@ export function Dashboard() {
               <p className="mt-4 page-eyebrow">{student.department}</p>
               <h1 className="mt-1 text-4xl font-bold leading-tight text-slate-900 md:text-5xl">Postgraduate Electronic Logbook</h1>
               <p className="mt-4 text-sm leading-6 text-slate-600">
-                Maintain complete, dated clinical and academic records using patient UHID only. Submit entries regularly for HOD / Guide verification.
+                Maintain complete, dated clinical and academic records using patient UHID only. Submit entries regularly for professor verification.
               </p>
             </div>
             <div className="grid w-full gap-3 sm:grid-cols-2 xl:max-w-xl">
               <ProfileField label="Resident" value={student.name} />
               <ProfileField label="Registration number" value={student.registrationNumber} />
               <ProfileField label="Date of joining" value={formatLogbookDate(student.dateOfJoining)} />
-              <ProfileField label="KUHS ID" value={student.kuhsId} />
+              <ProfileField label="Joining year" value={student.joiningYear} />
+              <ProfileField label="Expected completion" value={formatLogbookDate(student.expectedCompletion)} />
+              <ProfileField label="Registration status" value={student.registrationStatus} />
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 xl:grid-cols-[1.55fr_.85fr]">
+      <div>
         <Card className="overflow-hidden bg-gradient-to-br from-teal-700 via-teal-600 to-cyan-500 text-white">
           <CardContent className="relative p-6 md:p-7">
             <div className="absolute -right-14 -top-14 h-48 w-48 rounded-full border-[34px] border-white/10" />
             <div className="relative flex flex-col justify-between gap-6 md:flex-row md:items-end">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[.18em] text-teal-100">Current clinical schedule</p>
-                <h2 className="mt-2 text-3xl font-bold">Pediatric Intensive Care Unit</h2>
-                <p className="mt-2 text-xs text-teal-50">01/07/26 – 31/07/26 • HOD / Guide: {student.guide}</p>
+                <p className="text-[10px] font-bold uppercase tracking-[.18em] text-teal-100">Overall logbook completion</p>
+                <h2 className="mt-2 text-4xl font-bold">{completion}<span className="text-xl text-teal-100">%</span></h2>
+                <p className="mt-2 max-w-xl text-xs leading-5 text-teal-50">Progress across cases, the complete procedure target, case discussions and assessments.</p>
                 <div className="mt-5 flex flex-wrap gap-2">
                   <Button asChild className="bg-white text-teal-800 hover:bg-teal-50">
                     <Link href="/cases"><FileText className="h-4 w-4" /> Log a case</Link>
@@ -88,28 +90,18 @@ export function Dashboard() {
                   <Button asChild variant="outline" className="border-white/30 bg-white/10 text-white hover:bg-white/20">
                     <Link href="/procedures"><Stethoscope className="h-4 w-4" /> Log a procedure</Link>
                   </Button>
+                  <Button asChild variant="outline" className="border-white/30 bg-white/10 text-white hover:bg-white/20">
+                    <Link href="/postings"><CalendarDays className="h-4 w-4" /> Add posting / rotation</Link>
+                  </Button>
                 </div>
               </div>
-              <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-teal-100">Schedule progress</p>
-                <p className="mt-1 text-3xl font-bold">27/31</p>
-                <p className="text-[11px] text-teal-50">days completed</p>
+              <div className="min-w-52 rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-teal-100">Registration</p>
+                <p className="mt-1 text-lg font-bold">{student.registrationStatus}</p>
+                <p className="mt-1 text-[11px] text-teal-50">Programme ends {formatLogbookDate(student.expectedCompletion)}</p>
               </div>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-teal-100">
-          <CardContent className="p-6">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="page-eyebrow">Overall completion</p>
-                <p className="mt-2 text-5xl font-bold text-teal-700">{completion}<span className="text-xl text-teal-400">%</span></p>
-              </div>
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-teal-50 text-teal-700"><BookOpen className="h-5 w-5" /></div>
-            </div>
-            <Progress value={completion} className="mt-5 h-2.5" />
-            <p className="mt-3 text-xs text-slate-500">Progress across cases, procedures, academics and assessments.</p>
+            <Progress value={completion} className="relative mt-6 h-2.5 bg-white/20" />
           </CardContent>
         </Card>
       </div>
@@ -171,7 +163,7 @@ export function Dashboard() {
                 <AlertTriangle className="mt-0.5 h-5 w-5 text-amber-700" />
                 <div>
                   <p className="text-sm font-bold text-amber-950">Procedure shortfall</p>
-                  <p className="mt-1 text-xs leading-5 text-amber-900/80">4 more required procedures should be completed and verified.</p>
+                  <p className="mt-1 text-xs leading-5 text-amber-900/80">Complete and verify every named procedure requirement; the combined target is 101.</p>
                   <Button asChild variant="link" className="mt-2 h-auto p-0 text-amber-800"><Link href="/procedures">Review requirements <ArrowRight className="h-3 w-3" /></Link></Button>
                 </div>
               </div>
@@ -196,7 +188,7 @@ export function Dashboard() {
         <CardContent className="flex flex-col justify-between gap-4 p-5 sm:flex-row sm:items-center">
           <div className="flex items-center gap-3">
             <CalendarDays className="h-5 w-5 text-teal-600" />
-            <div><p className="text-sm font-bold">Next quarterly assessment</p><p className="text-xs text-slate-500">30/09/26 with Prof. Dr. Mohammad MTP</p></div>
+            <div><p className="text-sm font-bold">Next quarterly assessment</p><p className="text-xs text-slate-500">30/09/26 with Dr. Mohamad</p></div>
           </div>
           <Button asChild variant="outline" size="sm"><Link href="/assessments"><Award className="h-4 w-4" /> View assessments</Link></Button>
         </CardContent>

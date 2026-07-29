@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export function LoginPage({ onSignIn }: { onSignIn: () => void }) {
+export function LoginPage({ onSignIn, onRegister }: { onSignIn: () => void; onRegister: () => void }) {
   const [registrationNumber, setRegistrationNumber] = React.useState("PG2024-PAED-014");
   const [password, setPassword] = React.useState("Demo@2026");
 
@@ -33,9 +33,9 @@ export function LoginPage({ onSignIn }: { onSignIn: () => void }) {
 
             <div className="mt-12 grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
               {[
-                ["1", "HOD creates the student account"],
-                ["2", "Temporary password is issued"],
-                ["3", "Student signs in and resets it"],
+                ["1", "Student completes self-registration"],
+                ["2", "Registration payment is completed"],
+                ["3", "Account activates for sign in"],
               ].map(([number, text]) => (
                 <div key={number} className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur">
                   <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-xs font-bold text-teal-700">{number}</span>
@@ -48,13 +48,13 @@ export function LoginPage({ onSignIn }: { onSignIn: () => void }) {
 
         <section className="bg-white/80 p-8 md:p-12">
           <div className="mx-auto max-w-sm">
-            <p className="page-eyebrow">KUHS secure access</p>
+            <p className="page-eyebrow">Secure student access</p>
             <h2 className="mt-2 text-4xl font-bold text-slate-900">Welcome back</h2>
-            <p className="mt-2 text-sm text-slate-500">Sign in with the credentials issued by your department HOD.</p>
+            <p className="mt-2 text-sm text-slate-500">Sign in with your university registration number and password.</p>
 
             <form onSubmit={signIn} className="mt-9 space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="registration">Registration number / KUHS ID</Label>
+                <Label htmlFor="registration">Registration number</Label>
                 <div className="relative">
                   <UserPlus className="absolute left-3 top-3 h-4 w-4 text-teal-600" />
                   <Input
@@ -84,6 +84,15 @@ export function LoginPage({ onSignIn }: { onSignIn: () => void }) {
                 <ShieldCheck className="h-4 w-4" /> Sign in to E-Logbook
               </Button>
             </form>
+
+            <div className="my-6 flex items-center gap-3">
+              <div className="h-px flex-1 bg-teal-100" />
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">New student</span>
+              <div className="h-px flex-1 bg-teal-100" />
+            </div>
+            <Button type="button" variant="outline" onClick={onRegister} className="h-11 w-full border-teal-200 text-teal-800">
+              <UserPlus className="h-4 w-4" /> Register and pay
+            </Button>
 
             <div className="mt-6 rounded-2xl border border-teal-100 bg-teal-50/75 p-4">
               <p className="flex items-center gap-2 text-xs font-bold text-teal-900">

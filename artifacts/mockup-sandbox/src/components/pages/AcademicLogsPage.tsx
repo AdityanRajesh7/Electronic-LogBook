@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatLogbookDate, todayForInput } from "@/lib/logbook-config";
+import { ACADEMIC_REQUIREMENTS, formatLogbookDate, todayForInput } from "@/lib/logbook-config";
 
 type AcademicLog = {
   number: number;
@@ -22,11 +22,14 @@ type AcademicLog = {
 };
 
 const logsSeed: AcademicLog[] = [
-  { number: 1081, date: "2026-07-22", type: "Journal Club", presentationType: "—", topic: "High-Flow Nasal Cannula versus CPAP in Pediatric Bronchiolitis", faculty: "Prof. Dr. Mohammad MTP", status: "verified" },
-  { number: 1072, date: "2026-07-16", type: "Symposia", presentationType: "Paper", topic: "Approach to Neonatal Cholestasis and Biliary Atresia", faculty: "Dr. Radhamani KV", status: "verified" },
-  { number: 1065, date: "2026-07-10", type: "Conference Presentation", presentationType: "Case presentation", topic: "Nephrotic Syndrome with Anasarca in a Four-Year-Old", faculty: "Dr. Anilkumar A", status: "pending" },
-  { number: 1059, date: "2026-06-28", type: "Conference Attended", presentationType: "—", topic: "Kerala Pediatric Pulmonology Update 2026", faculty: "Prof. Dr. Mohammad MTP", status: "verified" },
-  { number: 1054, date: "2026-06-20", type: "Mortality Meeting", presentationType: "Case presentation", topic: "Refractory Septic Shock: Systems and Clinical Review", faculty: "Dr. Radhamani KV", status: "verified" },
+  { number: 8, date: "2026-07-26", type: "Case Discussion", presentationType: "—", topic: "Acute Severe Asthma Exacerbation", faculty: "Dr. Mohammed", status: "verified" },
+  { number: 7, date: "2026-07-22", type: "Journal Club", presentationType: "—", topic: "High-Flow Nasal Cannula versus CPAP in Pediatric Bronchiolitis", faculty: "Dr. Mohammed", status: "verified" },
+  { number: 6, date: "2026-07-19", type: "Seminar", presentationType: "—", topic: "Approach to Pediatric Shock", faculty: "Dr. Mohamad", status: "verified" },
+  { number: 5, date: "2026-07-16", type: "Symposia", presentationType: "Paper", topic: "Approach to Neonatal Cholestasis and Biliary Atresia", faculty: "Dr. Urmila", status: "verified" },
+  { number: 4, date: "2026-07-10", type: "Conference Presentation", presentationType: "Case presentation", topic: "Nephrotic Syndrome with Anasarca in a Four-Year-Old", faculty: "Dr. Mohammed", status: "pending" },
+  { number: 3, date: "2026-07-04", type: "Interesting Case Presentation", presentationType: "—", topic: "Recurrent Hypoglycaemia in Infancy", faculty: "Dr. Urmila", status: "verified" },
+  { number: 2, date: "2026-06-28", type: "Conference Attended", presentationType: "—", topic: "Kerala Pediatric Pulmonology Update 2026", faculty: "Dr. Mohammed", status: "verified" },
+  { number: 1, date: "2026-06-20", type: "Mortality Meeting", presentationType: "Case presentation", topic: "Refractory Septic Shock: Systems and Clinical Review", faculty: "Dr. Mohamad", status: "verified" },
 ];
 
 const conferenceTypes = new Set(["Conference Presentation", "Symposia"]);
@@ -39,7 +42,7 @@ export function AcademicLogsPage() {
     type: "Journal Club",
     presentationType: "Paper",
     topic: "",
-    faculty: "Prof. Dr. Mohammad MTP",
+    faculty: "Dr. Mohammed",
   });
 
   const submit = (event: React.FormEvent) => {
@@ -68,7 +71,7 @@ export function AcademicLogsPage() {
           <DialogContent className="rounded-2xl bg-white sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>New academic activity</DialogTitle>
-              <DialogDescription>Add attendance or presentation details for guide verification.</DialogDescription>
+              <DialogDescription>Add attendance or presentation details for professor verification.</DialogDescription>
             </DialogHeader>
             <form onSubmit={submit} className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
@@ -79,6 +82,8 @@ export function AcademicLogsPage() {
                     <SelectContent>
                       <SelectItem value="Journal Club">Journal club</SelectItem>
                       <SelectItem value="Seminar">Seminar</SelectItem>
+                      <SelectItem value="Case Discussion">Case discussion</SelectItem>
+                      <SelectItem value="Interesting Case Presentation">Interesting case presentation</SelectItem>
                       <SelectItem value="Symposia">Symposia</SelectItem>
                       <SelectItem value="Bedside Case Presentation">Bedside case presentation</SelectItem>
                       <SelectItem value="Mortality Meeting">Mortality meeting</SelectItem>
@@ -103,17 +108,17 @@ export function AcademicLogsPage() {
               <Field label={form.type === "Conference Attended" ? "Conference name" : "Topic / title"}>
                 <Input value={form.topic} onChange={(e) => setForm({ ...form, topic: e.target.value })} required />
               </Field>
-              <Field label="HOD / Guide">
+              <Field label="Reviewing professor">
                 <Select value={form.faculty} onValueChange={(value) => setForm({ ...form, faculty: value })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Prof. Dr. Mohammad MTP">Prof. Dr. Mohammad MTP</SelectItem>
-                    <SelectItem value="Dr. Radhamani KV">Dr. Radhamani KV</SelectItem>
-                    <SelectItem value="Dr. Anilkumar A">Dr. Anilkumar A</SelectItem>
+                    <SelectItem value="Dr. Mohammed">Dr. Mohammed</SelectItem>
+                    <SelectItem value="Dr. Mohamad">Dr. Mohamad</SelectItem>
+                    <SelectItem value="Dr. Urmila">Dr. Urmila</SelectItem>
                   </SelectContent>
                 </Select>
               </Field>
-              <DialogFooter><Button type="button" variant="outline" onClick={() => setOpen(false)}>Save draft</Button><Button type="submit">Send to guide</Button></DialogFooter>
+              <DialogFooter><Button type="button" variant="outline" onClick={() => setOpen(false)}>Save draft</Button><Button type="submit">Send to professor</Button></DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
@@ -126,10 +131,29 @@ export function AcademicLogsPage() {
       </div>
 
       <Card>
+        <CardHeader className="border-b border-teal-100">
+          <CardTitle className="text-lg">Mandatory academic requirements</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-4">
+          {ACADEMIC_REQUIREMENTS.map((requirement) => {
+            const logged = logs.filter((log) => log.type === requirement.name).length;
+            return (
+              <div key={requirement.name} className="rounded-2xl border border-teal-100 bg-teal-50/50 p-4">
+                <p className="text-sm font-bold text-slate-900">{requirement.name}</p>
+                <p className="mt-3 text-2xl font-bold text-teal-700">{requirement.target}</p>
+                <p className="text-xs text-slate-500">{requirement.requirement}</p>
+                <p className="mt-3 text-xs font-semibold text-slate-700">{logged} logged in this demo</p>
+              </div>
+            );
+          })}
+        </CardContent>
+      </Card>
+
+      <Card>
         <CardHeader className="border-b border-teal-100"><CardTitle className="flex items-center gap-2 text-lg"><GraduationCap className="h-5 w-5 text-teal-600" /> Academic activity record</CardTitle></CardHeader>
         <CardContent className="p-0">
           <Table>
-            <TableHeader><TableRow><TableHead>Number</TableHead><TableHead>Date</TableHead><TableHead>Activity</TableHead><TableHead>Presentation</TableHead><TableHead>Topic / conference</TableHead><TableHead>HOD / Guide</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+            <TableHeader><TableRow><TableHead>Number</TableHead><TableHead>Date</TableHead><TableHead>Activity</TableHead><TableHead>Presentation</TableHead><TableHead>Topic / conference</TableHead><TableHead>Reviewing professor</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
             <TableBody>
               {logs.map((log) => (
                 <TableRow key={log.number}>

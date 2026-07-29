@@ -57,7 +57,7 @@ export function AttendancePage() {
       leaveType: "Casual Leave",
       reason: "Personal leave",
       status: "approved",
-      approvedBy: "Prof. Dr. Mohammad MTP",
+      approvedBy: "Dr. Mohamad",
     },
     {
       number: 371,
@@ -68,7 +68,7 @@ export function AttendancePage() {
       leaveType: "Casual Leave",
       reason: "Personal appointment",
       status: "rejected",
-      approvedBy: "Prof. Dr. Mohammad MTP",
+      approvedBy: "Dr. Mohamad",
     },
   ]);
 
@@ -95,7 +95,7 @@ export function AttendancePage() {
 
     setLeaves([newLeave, ...leaves]);
     toast.success(`Leave application number ${newLeave.number} submitted`, {
-      description: `Sent to HOD / Guide for approval (${formatLogbookDate(fromDate)} to ${formatLogbookDate(toDate)}).`,
+      description: `Sent to the HOD for approval (${formatLogbookDate(fromDate)} to ${formatLogbookDate(toDate)}).`,
     });
     setReason("");
   };
@@ -111,7 +111,7 @@ export function AttendancePage() {
       <div>
         <p className="page-eyebrow">Attendance administration</p>
         <h2 className="page-title mt-1">Leave records</h2>
-        <p className="mt-2 text-sm text-slate-500">Apply for leave and maintain the complete HOD / Guide decision record.</p>
+        <p className="mt-2 text-sm text-slate-500">Apply for leave and maintain the complete HOD decision record.</p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -177,7 +177,7 @@ export function AttendancePage() {
                 <TableHead className="text-xs font-semibold">Leave Type</TableHead>
                 <TableHead className="text-xs font-semibold">Leave Period</TableHead>
                 <TableHead className="text-xs font-semibold">Reason</TableHead>
-                <TableHead className="text-xs font-semibold">HOD / Guide</TableHead>
+                <TableHead className="text-xs font-semibold">HOD decision</TableHead>
                 <TableHead className="text-xs font-semibold">Status</TableHead>
               </TableRow>
             </TableHeader>
@@ -247,7 +247,7 @@ function renderLeaveStatus(status: LeaveStatus) {
 
   return (
     <Badge className="border-amber-200 bg-amber-50 text-[10px] text-amber-700">
-      <Clock className="mr-1 h-3 w-3" /> Pending HOD / Guide
+      <Clock className="mr-1 h-3 w-3" /> Pending HOD
     </Badge>
   );
 }

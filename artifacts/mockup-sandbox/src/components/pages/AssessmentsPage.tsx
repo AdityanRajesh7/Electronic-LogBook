@@ -30,9 +30,9 @@ type Assessment = {
 };
 
 const seededAssessments: Assessment[] = [
-  { number: 3, type: "Quarterly", date: "2026-06-30", marks: 78, maximum: 100, assessor: "Prof. Dr. Mohammad MTP", remarks: "Good progress in clinical reasoning; strengthen procedure documentation." },
-  { number: 2, type: "Quarterly", date: "2026-03-31", marks: 74, maximum: 100, assessor: "Dr. Radhamani KV", remarks: "Satisfactory progress with consistent ward participation." },
-  { number: 1, type: "Annual", date: "2025-12-20", marks: 71, maximum: 100, assessor: "Dr. Anilkumar A", remarks: "Meets year-one outcomes. Focus on structured case presentation." },
+  { number: 3, type: "Quarterly", date: "2026-06-30", marks: 78, maximum: 100, assessor: "Dr. Mohamad", remarks: "Good progress in clinical reasoning; strengthen procedure documentation." },
+  { number: 2, type: "Quarterly", date: "2026-03-31", marks: 74, maximum: 100, assessor: "Dr. Mohammed", remarks: "Satisfactory progress with consistent ward participation." },
+  { number: 1, type: "Annual", date: "2025-12-20", marks: 71, maximum: 100, assessor: "Dr. Urmila", remarks: "Meets year-one outcomes. Focus on structured case presentation." },
 ];
 
 export function AssessmentsPage() {
@@ -48,7 +48,7 @@ export function AssessmentsPage() {
       date: form.date,
       marks: Number(form.marks),
       maximum: Number(form.maximum),
-      assessor: "Prof. Dr. Mohammad MTP",
+      assessor: "Dr. Mohamad",
       remarks: "Assessment submitted; detailed faculty remarks pending.",
     };
     setAssessments([next, ...assessments]);

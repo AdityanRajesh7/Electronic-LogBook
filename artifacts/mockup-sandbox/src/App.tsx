@@ -5,6 +5,7 @@ import { Dashboard } from "@/components/Dashboard";
 import { ProfessorPortal } from "@/components/ProfessorPortal";
 import { HODPortal } from "@/components/HODPortal";
 import { LoginPage } from "@/components/LoginPage";
+import { RegistrationPage } from "@/components/RegistrationPage";
 import { CaseLogsPage } from "@/components/pages/CaseLogsPage";
 import { ProcedureLogsPage } from "@/components/pages/ProcedureLogsPage";
 import { AcademicLogsPage } from "@/components/pages/AcademicLogsPage";
@@ -121,6 +122,7 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(
     () => window.sessionStorage.getItem("elogbook-authenticated") === "true",
   );
+  const [authScreen, setAuthScreen] = useState<"login" | "register">("login");
 
   if (previewPath) {
     return (
@@ -132,8 +134,19 @@ function App() {
   }
 
   if (!isAuthenticated) {
+    if (authScreen === "register") {
+      return (
+        <RegistrationPage
+          onBack={() => setAuthScreen("login")}
+          onRegistered={() => {
+            setAuthScreen("login");
+          }}
+        />
+      );
+    }
     return (
       <LoginPage
+        onRegister={() => setAuthScreen("register")}
         onSignIn={() => {
           window.sessionStorage.setItem("elogbook-authenticated", "true");
           setIsAuthenticated(true);
@@ -160,8 +173,6 @@ function App() {
       )}
       {activeRole === "HOD" && (
         <Switch>
-          <Route path="/postings-builder" component={() => <HODPortal activeTab="posting-schedules" />} />
-          <Route path="/mentor-matching" component={() => <HODPortal activeTab="mentor-matching" />} />
           <Route path="/student-access" component={() => <HODPortal activeTab="student-access" />} />
           <Route path="/leave-approvals" component={() => <HODPortal activeTab="leave-approvals" />} />
           <Route component={() => <HODPortal activeTab="gap-dashboard" />} />

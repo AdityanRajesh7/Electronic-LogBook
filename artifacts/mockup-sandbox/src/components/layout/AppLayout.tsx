@@ -70,8 +70,8 @@ type NavigationItem = {
 function navigationForRole(role: RoleType): NavigationItem[] {
   if (role === "Professor") {
     return [
-      { title: "Evaluation Queue", icon: FileText, href: "/", badge: "4 pending" },
-      { title: "Assigned Mentees", icon: UserCheck, href: "/mentees" },
+      { title: "Evaluation Queue", icon: FileText, href: "/", badge: "3 pending" },
+      { title: "All Students", icon: UserCheck, href: "/mentees" },
       { title: "Assessments", icon: ClipboardCheck, href: "/appraisals" },
     ];
   }
@@ -79,9 +79,7 @@ function navigationForRole(role: RoleType): NavigationItem[] {
   if (role === "HOD") {
     return [
       { title: "Department Overview", icon: AlertTriangle, href: "/", badge: "MCI live" },
-      { title: "Posting Schedules", icon: CalendarDays, href: "/postings-builder" },
-      { title: "Mentor Allocation", icon: Users, href: "/mentor-matching" },
-      { title: "Student Access", icon: UserPlus, href: "/student-access" },
+      { title: "Student Registrations", icon: UserPlus, href: "/student-access" },
       { title: "Leave Approvals", icon: CheckCircle2, href: "/leave-approvals", badge: "2 new" },
     ];
   }
@@ -90,7 +88,7 @@ function navigationForRole(role: RoleType): NavigationItem[] {
     { title: "Dashboard", icon: LayoutDashboard, href: "/", badge: "MCI guide" },
     { title: "Postings & Rotations", icon: CalendarDays, href: "/postings", badge: "PICU" },
     { title: "Case Logs", icon: FileText, href: "/cases", badge: "42/50" },
-    { title: "Procedure Logs", icon: Stethoscope, href: "/procedures", badge: "11/15" },
+    { title: "Procedure Logs", icon: Stethoscope, href: "/procedures", badge: "11/101" },
     { title: "Academic Activities", icon: GraduationCap, href: "/academics" },
     { title: "Assessments", icon: ClipboardCheck, href: "/assessments" },
     { title: "Thesis & Certifications", icon: Award, href: "/milestones" },
@@ -210,13 +208,13 @@ export function AppLayout({
                   <DropdownMenuLabel className="text-xs text-slate-500">Switch prototype portal</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => handleRoleChange("Student")} className="cursor-pointer rounded-xl text-xs">
-                    <UserCheck className="mr-2 h-4 w-4 text-teal-600" /> Student — Dr. Adithya Nair
+                    <UserCheck className="mr-2 h-4 w-4 text-teal-600" /> Student — Dr. Anilkumar A
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleRoleChange("Professor")} className="cursor-pointer rounded-xl text-xs">
-                    <Stethoscope className="mr-2 h-4 w-4 text-teal-600" /> Guide — Prof. Dr. Mohammad MTP
+                    <Stethoscope className="mr-2 h-4 w-4 text-teal-600" /> Professor — Dr. Mohammed
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleRoleChange("HOD")} className="cursor-pointer rounded-xl text-xs">
-                    <Building className="mr-2 h-4 w-4 text-teal-600" /> HOD — Dr. Radhamani KV
+                    <Building className="mr-2 h-4 w-4 text-teal-600" /> HOD — Dr. Mohamad
                   </DropdownMenuItem>
                   {onSignOut && (
                     <>
@@ -241,7 +239,7 @@ export function AppLayout({
                     Department of Pediatrics
                   </p>
                   <p className="truncate text-[11px] font-medium text-slate-500">
-                    KUHS postgraduate training • {activeRole} view
+                    Postgraduate training • {activeRole} view
                   </p>
                 </div>
               </div>
@@ -280,7 +278,7 @@ export function AppLayout({
 
             <main className="mx-auto w-full max-w-[1380px] flex-1 p-4 md:p-6 lg:p-8">
               <div className="print-only mb-6 border-b border-slate-300 pb-4">
-                <p className="page-eyebrow">Department of Pediatrics • KUHS</p>
+                <p className="page-eyebrow">Department of Pediatrics</p>
                 <h1 className="mt-1 text-2xl font-bold">Postgraduate Electronic Logbook</h1>
               </div>
               {children}
@@ -294,13 +292,13 @@ export function AppLayout({
 }
 
 function getNameForRole(role: RoleType) {
-  if (role === "Professor") return "Prof. Dr. Mohammad MTP";
-  if (role === "HOD") return "Dr. Radhamani KV";
-  return "Dr. Adithya Nair";
+  if (role === "Professor") return "Dr. Mohammed";
+  if (role === "HOD") return "Dr. Mohamad";
+  return "Dr. Anilkumar A";
 }
 
 function getInitialsForRole(role: RoleType) {
   if (role === "Professor") return "MM";
-  if (role === "HOD") return "RK";
+  if (role === "HOD") return "DM";
   return "AN";
 }

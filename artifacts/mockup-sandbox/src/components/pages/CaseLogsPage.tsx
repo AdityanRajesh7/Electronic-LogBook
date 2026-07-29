@@ -41,7 +41,7 @@ type CaseLog = {
 
 const caseSeed: CaseLog[] = [
   {
-    number: 1092,
+    number: 3,
     date: "2026-07-26",
     patientUhid: "UHID-2026-004281",
     age: "7 years",
@@ -56,10 +56,10 @@ const caseSeed: CaseLog[] = [
     outcome: "SpO₂ improved to 97% and respiratory distress settled over 6 hours. Shifted to ward on inhaled bronchodilator and controller therapy.",
     learningPoints: "Applied severity classification, documented response after each bronchodilator cycle and counselled family on spacer technique and an asthma action plan.",
     status: "pending",
-    remarks: "Awaiting Prof. Dr. Mohammad MTP review.",
+    remarks: "Awaiting Dr. Mohammed review.",
   },
   {
-    number: 1085,
+    number: 2,
     date: "2026-07-23",
     patientUhid: "UHID-2026-004097",
     age: "3 years",
@@ -77,7 +77,7 @@ const caseSeed: CaseLog[] = [
     remarks: "Clear fluid-balance documentation and monitoring plan.",
   },
   {
-    number: 1079,
+    number: 1,
     date: "2026-07-19",
     patientUhid: "UHID-2026-003812",
     age: "10 months",
@@ -125,7 +125,7 @@ export function CaseLogsPage() {
       number: Math.max(...caseLogs.map((item) => item.number)) + 1,
       ...form,
       status: "pending",
-      remarks: "Submitted for guide review.",
+      remarks: "Submitted for professor review.",
     };
     setCaseLogs([next, ...caseLogs]);
     setForm({ ...emptyForm, date: todayForInput() });
@@ -158,7 +158,7 @@ export function CaseLogsPage() {
           <DialogContent className="max-h-[90vh] overflow-y-auto rounded-2xl bg-white sm:max-w-3xl">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-xl"><FileText className="h-5 w-5 text-teal-600" /> New clinical case</DialogTitle>
-              <DialogDescription>Complete the clinical record before sending it to the guide.</DialogDescription>
+              <DialogDescription>Complete the clinical record before sending it to a professor.</DialogDescription>
             </DialogHeader>
             <form onSubmit={handleAddCase} className="space-y-5">
               <div className="grid gap-4 sm:grid-cols-4">
@@ -185,7 +185,7 @@ export function CaseLogsPage() {
               <Field label="Learning points"><Textarea rows={2} value={form.learningPoints} onChange={(e) => setField("learningPoints", e.target.value)} required /></Field>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Save draft</Button>
-                <Button type="submit">Send to guide</Button>
+                <Button type="submit">Send to professor</Button>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -254,7 +254,7 @@ export function CaseLogsPage() {
                 <Detail label="Outcome / follow-up" value={selectedLog.outcome} />
                 <Detail label="Learning points" value={selectedLog.learningPoints} />
                 <div className="rounded-2xl border border-teal-100 bg-teal-50/70 p-4">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-teal-700">Guide remarks</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-teal-700">Professor remarks</p>
                   <p className="mt-1 text-sm text-teal-950">{selectedLog.remarks}</p>
                 </div>
               </div>

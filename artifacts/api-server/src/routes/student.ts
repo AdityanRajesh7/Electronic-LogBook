@@ -2,9 +2,54 @@ import { Router, type IRouter } from "express";
 
 const router: IRouter = Router();
 
-const caseLogs = [
+const departments = ["Pediatrics", "General Medicine", "General Surgery", "Obstetrics & Gynecology", "Orthopedics", "Radiodiagnosis"];
+const postingChiefs: Record<string, string> = {
+  "Ward Posting U1": "Dr. Mohamad",
+  "Ward Posting U2": "Dr. Mohamad",
+  PICU: "Dr. Mohammed",
+  NICU: "Dr. Urmila",
+  DRP: "Dr. Mohamad",
+};
+const procedureRequirements = [
+  { name: "Endotracheal Intubation", required: 15, group: "emergency" },
+  { name: "Lumbar Puncture", required: 20, group: "invasive" },
+  { name: "ICD Insertion", required: 5, group: "emergency" },
+  { name: "Bone Marrow Aspiration", required: 3, group: "invasive" },
+  { name: "Central Venous Line Insertion", required: 3, group: "invasive" },
+  { name: "Peritoneal Dialysis", required: 2, group: "invasive" },
+  { name: "Umbilical Venous Catheterisation", required: 20, group: "invasive" },
+  { name: "Arterial Blood Gas", required: 3, group: "emergency" },
+  { name: "Mechanical Ventilation Setup", required: 20, group: "emergency" },
+  { name: "CPAP / HFNC", required: 10, group: "emergency" },
+];
+const academicRequirements = [
+  { name: "Case Discussion", required: 50, period: "total" },
+  { name: "Journal Club", required: 2, period: "month" },
+  { name: "Seminar", required: 2, period: "month" },
+  { name: "Interesting Case Presentation", required: 1, period: "month" },
+];
+
+type CaseLog = {
+  number: number;
+  date: string;
+  patientUhid: string;
+  age: string;
+  gender: string;
+  chiefComplaints: string;
+  history: string;
+  examination: string;
+  investigations: string;
+  diagnosis: string;
+  differentialDiagnosis: string;
+  management: string;
+  outcome: string;
+  learningPoints: string;
+  status: string;
+};
+
+const caseLogs: CaseLog[] = [
   {
-    number: 1092,
+    number: 3,
     date: "2026-07-26",
     patientUhid: "UHID-2026-004281",
     age: "7 years",
@@ -20,29 +65,122 @@ const caseLogs = [
     learningPoints: "Applied severity classification and documented serial response.",
     status: "pending",
   },
+  {
+    number: 2,
+    date: "2026-07-23",
+    patientUhid: "UHID-2026-004097",
+    age: "3 years",
+    gender: "Female",
+    chiefComplaints: "High fever for five days and reduced urine output.",
+    history: "Reduced oral intake with no previous major illness.",
+    examination: "Cold extremities, delayed capillary refill and tender hepatomegaly.",
+    investigations: "Rising haematocrit, platelet count 42,000/mm³ and positive dengue NS1.",
+    diagnosis: "Severe Dengue with Plasma Leakage",
+    differentialDiagnosis: "Septic shock; enteric fever.",
+    management: "Judicious IV crystalloid with serial perfusion, haematocrit and urine-output monitoring.",
+    outcome: "Haemodynamically stable after 24 hours.",
+    learningPoints: "Used dynamic clinical endpoints to guide fluids.",
+    status: "verified",
+  },
+  {
+    number: 1,
+    date: "2026-07-19",
+    patientUhid: "UHID-2026-003812",
+    age: "10 months",
+    gender: "Male",
+    chiefComplaints: "Loose stools and vomiting for two days.",
+    history: "Eight watery stools, three episodes of vomiting and no blood in stool.",
+    examination: "Irritable, thirsty, sunken eyes and reduced skin turgor.",
+    investigations: "Serum electrolytes within normal limits.",
+    diagnosis: "Acute Gastroenteritis with Some Dehydration",
+    differentialDiagnosis: "Urinary tract infection; surgical abdomen.",
+    management: "ORS Plan B, zinc supplementation and continued breastfeeding.",
+    outcome: "Hydration restored and discharged with danger-sign counselling.",
+    learningPoints: "Classified dehydration clinically and demonstrated ORS preparation.",
+    status: "verified",
+  },
 ];
 
-const procedureLogs = [
-  { number: 1088, date: "2026-07-24", procedureGroup: "emergency", procedureName: "Endotracheal Intubation", patientUhid: "UHID-2026-003944", age: "7 years", experience: "Performed under supervision", facultyVerifiedLevel: "Performed under supervision", status: "verified" },
-  { number: 1075, date: "2026-07-20", procedureGroup: "invasive", procedureName: "Lumbar Puncture", patientUhid: "UHID-2026-003771", age: "4 months", experience: "Assisted", facultyVerifiedLevel: "Assisted", status: "revision" },
+type ProcedureLog = {
+  number: number;
+  date: string;
+  procedureGroup: string;
+  procedureName: string;
+  patientUhid: string;
+  age: string;
+  experience: string;
+  facultyVerifiedLevel: string;
+  status: string;
+};
+
+const procedureNames = [
+  ["Endotracheal Intubation", "emergency"],
+  ["Lumbar Puncture", "invasive"],
+  ["ICD Insertion", "emergency"],
+  ["Bone Marrow Aspiration", "invasive"],
+  ["Central Venous Line Insertion", "invasive"],
+  ["Peritoneal Dialysis", "invasive"],
+  ["Umbilical Venous Catheterisation", "invasive"],
+  ["Arterial Blood Gas", "emergency"],
+  ["Mechanical Ventilation Setup", "emergency"],
+  ["CPAP / HFNC", "emergency"],
+  ["Endotracheal Intubation", "emergency"],
+] as const;
+
+const procedureLogs: ProcedureLog[] = procedureNames.map(([procedureName, procedureGroup], index) => ({
+  number: index + 1,
+  date: `2026-07-${String(index + 10).padStart(2, "0")}`,
+  procedureGroup,
+  procedureName,
+  patientUhid: `UHID-2026-${String(3900 + index).padStart(6, "0")}`,
+  age: index % 2 === 0 ? "7 years" : "4 months",
+  experience: "Performed under supervision",
+  facultyVerifiedLevel: "Performed under supervision",
+  status: "verified",
+})).reverse();
+
+type AcademicLog = {
+  number: number;
+  date: string;
+  activityType: string;
+  presentationType: string | null;
+  topic: string;
+  professor: string;
+  status: string;
+};
+
+const academicLogs: AcademicLog[] = [
+  { number: 4, date: "2026-07-26", activityType: "Case Discussion", presentationType: null, topic: "Acute Severe Asthma Exacerbation", professor: "Dr. Mohammed", status: "verified" },
+  { number: 3, date: "2026-07-22", activityType: "Journal Club", presentationType: null, topic: "High-Flow Nasal Cannula versus CPAP", professor: "Dr. Mohammed", status: "verified" },
+  { number: 2, date: "2026-07-16", activityType: "Seminar", presentationType: null, topic: "Approach to Pediatric Shock", professor: "Dr. Mohamad", status: "verified" },
+  { number: 1, date: "2026-07-04", activityType: "Interesting Case Presentation", presentationType: null, topic: "Recurrent Hypoglycaemia in Infancy", professor: "Dr. Urmila", status: "verified" },
 ];
 
-const academicLogs = [
-  { number: 1081, date: "2026-07-22", activityType: "Journal Club", presentationType: null, topic: "High-Flow Nasal Cannula versus CPAP in Pediatric Bronchiolitis", guide: "Prof. Dr. Mohammad MTP", status: "verified" },
-  { number: 1072, date: "2026-07-16", activityType: "Symposia", presentationType: "Paper", topic: "Approach to Neonatal Cholestasis", guide: "Dr. Radhamani KV", status: "verified" },
-  { number: 1065, date: "2026-07-10", activityType: "Conference Presentation", presentationType: "Case presentation", topic: "Nephrotic Syndrome with Anasarca", guide: "Dr. Anilkumar A", status: "pending" },
+type Posting = {
+  number: number;
+  postingName: string;
+  startDate: string;
+  endDate: string;
+  chief: string;
+  status: string;
+};
+
+const postings: Posting[] = [
+  { number: 1, postingName: "Ward Posting U1", startDate: "2026-03-01", endDate: "2026-04-30", chief: "Dr. Mohamad", status: "completed" },
+  { number: 2, postingName: "NICU", startDate: "2026-05-01", endDate: "2026-06-30", chief: "Dr. Urmila", status: "completed" },
+  { number: 3, postingName: "PICU", startDate: "2026-07-01", endDate: "2026-07-31", chief: "Dr. Mohammed", status: "submitted" },
 ];
 
 const assessments = [
-  { number: 3, assessmentType: "Quarterly", date: "2026-06-30", marks: 78, maximumMarks: 100, assessor: "Prof. Dr. Mohammad MTP", remarks: "Good progress in clinical reasoning." },
-  { number: 2, assessmentType: "Quarterly", date: "2026-03-31", marks: 74, maximumMarks: 100, assessor: "Dr. Radhamani KV", remarks: "Satisfactory progress." },
-  { number: 1, assessmentType: "Annual", date: "2025-12-20", marks: 71, maximumMarks: 100, assessor: "Dr. Anilkumar A", remarks: "Meets year-one outcomes." },
+  { number: 3, assessmentType: "Quarterly", date: "2026-06-30", marks: 78, maximumMarks: 100, assessor: "Dr. Mohamad", remarks: "Good progress in clinical reasoning." },
+  { number: 2, assessmentType: "Quarterly", date: "2026-03-31", marks: 74, maximumMarks: 100, assessor: "Dr. Mohammed", remarks: "Satisfactory progress." },
+  { number: 1, assessmentType: "Annual", date: "2025-12-20", marks: 71, maximumMarks: 100, assessor: "Dr. Urmila", remarks: "Meets year-one outcomes." },
 ];
 
 const thesis = {
   topic: "Clinical profile and predictors of severe acute asthma in children admitted to a tertiary-care centre",
-  guide: "Prof. Dr. Mohammad MTP",
-  coGuide: "Dr. Radhamani KV",
+  guide: "Dr. Mohamad",
+  coGuide: "Dr. Mohammed",
   protocolSubmissionDate: "2025-08-12",
   iecClearanceDate: "2025-10-06",
   dataCollectionStartDate: "2025-11-01",
@@ -50,50 +188,100 @@ const thesis = {
   submissionDate: "2027-03-15",
 };
 
-const leaveRecords = [
-  { number: 402, appliedOn: "2026-07-27", fromDate: "2026-08-12", toDate: "2026-08-14", totalDays: 3, leaveType: "Academic Leave", reason: "National Pediatric Pulmonary Conference", status: "pending", approvedBy: "Awaiting HOD" },
-  { number: 388, appliedOn: "2026-06-04", fromDate: "2026-06-10", toDate: "2026-06-11", totalDays: 2, leaveType: "Casual Leave", reason: "Personal leave", status: "approved", approvedBy: "Prof. Dr. Mohammad MTP" },
+type LeaveRecord = {
+  number: number;
+  appliedOn: string;
+  fromDate: string;
+  toDate: string;
+  totalDays: number;
+  leaveType: string;
+  reason: string;
+  status: string;
+  approvedBy: string;
+};
+
+const leaveRecords: LeaveRecord[] = [
+  { number: 2, appliedOn: "2026-07-27", fromDate: "2026-08-12", toDate: "2026-08-14", totalDays: 3, leaveType: "Academic Leave", reason: "National Pediatric Pulmonary Conference", status: "pending", approvedBy: "Awaiting HOD" },
+  { number: 1, appliedOn: "2026-06-04", fromDate: "2026-06-10", toDate: "2026-06-11", totalDays: 2, leaveType: "Casual Leave", reason: "Personal leave", status: "approved", approvedBy: "Dr. Mohamad" },
 ];
+
+function expectedCompletion(dateOfJoining: string) {
+  const date = new Date(`${dateOfJoining}T00:00:00Z`);
+  date.setUTCFullYear(date.getUTCFullYear() + 3);
+  return date.toISOString().slice(0, 10);
+}
+
+router.post("/register", (req, res) => {
+  const { fullName, email, department, registrationNumber, joiningDate, password, paymentMethod } = req.body;
+  if (!fullName || !email || !departments.includes(department) || !registrationNumber || !joiningDate || !password || !paymentMethod) {
+    res.status(400).json({ success: false, message: "Complete student, course, password and payment details are required." });
+    return;
+  }
+  const parsedDate = new Date(`${joiningDate}T00:00:00Z`);
+  if (Number.isNaN(parsedDate.getTime())) {
+    res.status(400).json({ success: false, message: "A valid joining day, month and year are required." });
+    return;
+  }
+  res.status(201).json({
+    success: true,
+    student: {
+      fullName,
+      email,
+      department,
+      registrationNumber,
+      joiningDate,
+      joiningYear: parsedDate.getUTCFullYear(),
+      expectedCompletionDate: expectedCompletion(joiningDate),
+      paymentStatus: "paid",
+      paymentReference: `PAY-${Date.now()}`,
+      registrationStatus: "pending_verification",
+    },
+  });
+});
 
 router.post("/auth/sign-in", (req, res) => {
   if (!req.body.registrationNumber || !req.body.password) {
     res.status(400).json({ success: false, message: "Registration number and password are required." });
     return;
   }
-  res.json({ success: true, requiresPasswordReset: req.body.password !== "Demo@2026", role: "student" });
+  res.json({ success: true, role: "student" });
 });
 
 router.get("/dashboard", (_req, res) => {
   res.json({
     student: {
       id: 1,
-      name: "Dr. Adithya Nair",
+      name: "Dr. Anilkumar A",
       registrationNumber: "PG2024-PAED-014",
       dateOfJoining: "2024-06-03",
-      kuhsId: "KUHS-MD-PED-2024-014",
+      joiningYear: 2024,
+      expectedCompletionDate: "2027-06-03",
+      paymentStatus: "paid",
+      registrationStatus: "active",
       specialty: "MD Pediatrics",
       department: "Department of Pediatrics",
-      guide: "Prof. Dr. Mohammad MTP",
     },
     categories: [
       { id: "cases", name: "Clinical Cases Presented", logged: 42, required: 50, verified: 38, percentage: 84 },
-      { id: "procedures", name: "Required Procedures", logged: 11, required: 15, verified: 9, percentage: 73 },
-      { id: "academics", name: "Academic Activities", logged: 18, required: 20, verified: 15, percentage: 90 },
+      { id: "procedures", name: "Required Procedures", logged: 11, required: 101, verified: 10, percentage: 11 },
+      { id: "academics", name: "Case Discussions", logged: 18, required: 50, verified: 15, percentage: 36 },
       { id: "assessments", name: "Assessments", logged: 3, required: 4, verified: 3, percentage: 75 },
     ],
-    recentLogs: [...caseLogs, ...procedureLogs, ...academicLogs].sort((a, b) => b.number - a.number),
+    recentLogs: [caseLogs[0], procedureLogs[0], academicLogs[0]],
   });
 });
 
+router.get("/requirements", (_req, res) => res.json({ procedureRequirements, academicRequirements }));
 router.get("/logs/cases", (_req, res) => res.json({ data: caseLogs }));
 router.get("/logs/procedures", (_req, res) => res.json({ data: procedureLogs }));
 router.get("/logs/academics", (_req, res) => res.json({ data: academicLogs }));
+router.get("/postings", (_req, res) => res.json({ options: Object.keys(postingChiefs), data: postings }));
 router.get("/assessments", (_req, res) => res.json({ data: assessments }));
 router.get("/thesis", (_req, res) => res.json({ data: thesis }));
 router.get("/leave-records", (_req, res) => res.json({ data: leaveRecords }));
 
 router.post("/logs/case", (req, res) => {
-  const entry = {
+  const entry: CaseLog = {
     number: Math.max(...caseLogs.map((item) => item.number)) + 1,
     date: req.body.date,
     patientUhid: req.body.patientUhid,
@@ -115,7 +303,12 @@ router.post("/logs/case", (req, res) => {
 });
 
 router.post("/logs/procedure", (req, res) => {
-  const entry = {
+  const requirement = procedureRequirements.find((item) => item.name === req.body.procedureName);
+  if (!requirement || requirement.group !== req.body.procedureGroup || !req.body.patientUhid) {
+    res.status(400).json({ success: false, message: "Select a valid required procedure and include patient UHID." });
+    return;
+  }
+  const entry: ProcedureLog = {
     number: Math.max(...procedureLogs.map((item) => item.number)) + 1,
     date: req.body.date,
     procedureGroup: req.body.procedureGroup,
@@ -123,7 +316,7 @@ router.post("/logs/procedure", (req, res) => {
     patientUhid: req.body.patientUhid,
     age: req.body.age,
     experience: req.body.experience,
-    facultyVerifiedLevel: "Pending guide verification",
+    facultyVerifiedLevel: "Pending professor verification",
     status: "pending",
   };
   procedureLogs.unshift(entry);
@@ -131,17 +324,37 @@ router.post("/logs/procedure", (req, res) => {
 });
 
 router.post("/logs/academic", (req, res) => {
-  const entry = {
+  const entry: AcademicLog = {
     number: Math.max(...academicLogs.map((item) => item.number)) + 1,
     date: req.body.date,
     activityType: req.body.activityType,
     presentationType: req.body.presentationType ?? null,
     topic: req.body.topic,
-    guide: req.body.guide,
+    professor: req.body.professor,
     status: "pending",
   };
   academicLogs.unshift(entry);
   res.status(201).json({ success: true, log: entry });
+});
+
+router.post("/postings", (req, res) => {
+  const chief = postingChiefs[req.body.postingName];
+  const start = new Date(`${req.body.startDate}T00:00:00Z`).getTime();
+  const end = new Date(`${req.body.endDate}T00:00:00Z`).getTime();
+  if (!chief || !Number.isFinite(start) || !Number.isFinite(end) || end < start) {
+    res.status(400).json({ success: false, message: "Select a valid posting and start/end dates." });
+    return;
+  }
+  const entry: Posting = {
+    number: Math.max(...postings.map((item) => item.number)) + 1,
+    postingName: req.body.postingName,
+    startDate: req.body.startDate,
+    endDate: req.body.endDate,
+    chief,
+    status: "submitted",
+  };
+  postings.push(entry);
+  res.status(201).json({ success: true, posting: entry });
 });
 
 router.post("/leave-records", (req, res) => {
@@ -151,7 +364,7 @@ router.post("/leave-records", (req, res) => {
     res.status(400).json({ success: false, message: "A valid leave period, leave type and reason are required." });
     return;
   }
-  const entry = {
+  const entry: LeaveRecord = {
     number: Math.max(...leaveRecords.map((item) => item.number)) + 1,
     appliedOn: new Date().toISOString().slice(0, 10),
     fromDate: req.body.fromDate,

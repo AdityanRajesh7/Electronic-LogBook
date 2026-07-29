@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatLogbookDate, PROCEDURE_GROUPS, REQUIRED_PROCEDURE_COUNT, todayForInput, type ProcedureGroup } from "@/lib/logbook-config";
+import { formatLogbookDate, PROCEDURE_GROUPS, PROCEDURE_REQUIREMENTS, REQUIRED_PROCEDURE_COUNT, todayForInput, type ProcedureGroup } from "@/lib/logbook-config";
 
 type ProcedureLog = {
   number: number;
@@ -24,17 +24,17 @@ type ProcedureLog = {
 };
 
 const seeded: ProcedureLog[] = [
-  { number: 1088, date: "2026-07-24", group: "emergency", patientUhid: "UHID-2026-003944", procedureName: "Endotracheal Intubation", age: "7 years", experience: "Performed under supervision", verifiedCompetency: "Performed under supervision", status: "verified" },
-  { number: 1075, date: "2026-07-20", group: "invasive", patientUhid: "UHID-2026-003771", procedureName: "Lumbar Puncture", age: "4 months", experience: "Assisted", verifiedCompetency: "Assisted", status: "revision" },
-  { number: 1062, date: "2026-07-14", group: "invasive", patientUhid: "UHID-2026-003502", procedureName: "Surfactant Administration via ETT", age: "32 weeks gestation", experience: "Observed / procedure seen", verifiedCompetency: "Observed", status: "verified" },
-  { number: 1058, date: "2026-07-08", group: "emergency", patientUhid: "UHID-2026-003321", procedureName: "Neonatal Resuscitation", age: "2 minutes", experience: "Assisted", verifiedCompetency: "Assisted", status: "verified" },
-  { number: 1051, date: "2026-07-02", group: "emergency", patientUhid: "UHID-2026-003140", procedureName: "Pediatric Basic Life Support", age: "5 years", experience: "Performed under supervision", verifiedCompetency: "Performed under supervision", status: "verified" },
-  { number: 1046, date: "2026-06-28", group: "emergency", patientUhid: "UHID-2026-003008", procedureName: "Bag-mask Ventilation", age: "3 days", experience: "Performed independently", verifiedCompetency: "Performed under supervision", status: "verified" },
-  { number: 1039, date: "2026-06-20", group: "emergency", patientUhid: "UHID-2026-002844", procedureName: "Intraosseous Access", age: "18 months", experience: "Observed / procedure seen", verifiedCompetency: "Observed", status: "verified" },
-  { number: 1032, date: "2026-06-12", group: "invasive", patientUhid: "UHID-2026-002605", procedureName: "Bone Marrow Aspiration", age: "8 years", experience: "Assisted", verifiedCompetency: "Assisted", status: "verified" },
-  { number: 1024, date: "2026-06-04", group: "invasive", patientUhid: "UHID-2026-002422", procedureName: "Umbilical Venous Catheterisation", age: "1 hour", experience: "Performed under supervision", verifiedCompetency: "Performed under supervision", status: "verified" },
-  { number: 1018, date: "2026-05-27", group: "invasive", patientUhid: "UHID-2026-002231", procedureName: "Pleural Aspiration", age: "6 years", experience: "Observed / procedure seen", verifiedCompetency: "Observed", status: "verified" },
-  { number: 1011, date: "2026-05-18", group: "invasive", patientUhid: "UHID-2026-001984", procedureName: "Lumbar Puncture", age: "2 years", experience: "Performed under supervision", verifiedCompetency: "Performed under supervision", status: "verified" },
+  { number: 11, date: "2026-07-24", group: "emergency", patientUhid: "UHID-2026-003944", procedureName: "Endotracheal Intubation", age: "7 years", experience: "Performed under supervision", verifiedCompetency: "Performed under supervision", status: "verified" },
+  { number: 10, date: "2026-07-20", group: "invasive", patientUhid: "UHID-2026-003771", procedureName: "Lumbar Puncture", age: "4 months", experience: "Assisted", verifiedCompetency: "Assisted", status: "revision" },
+  { number: 9, date: "2026-07-14", group: "emergency", patientUhid: "UHID-2026-003502", procedureName: "ICD Insertion", age: "8 years", experience: "Observed / procedure seen", verifiedCompetency: "Observed", status: "verified" },
+  { number: 8, date: "2026-07-08", group: "invasive", patientUhid: "UHID-2026-003321", procedureName: "Bone Marrow Aspiration", age: "5 years", experience: "Assisted", verifiedCompetency: "Assisted", status: "verified" },
+  { number: 7, date: "2026-07-02", group: "invasive", patientUhid: "UHID-2026-003140", procedureName: "Central Venous Line Insertion", age: "5 years", experience: "Performed under supervision", verifiedCompetency: "Performed under supervision", status: "verified" },
+  { number: 6, date: "2026-06-28", group: "invasive", patientUhid: "UHID-2026-003008", procedureName: "Peritoneal Dialysis", age: "3 days", experience: "Observed / procedure seen", verifiedCompetency: "Observed", status: "verified" },
+  { number: 5, date: "2026-06-20", group: "invasive", patientUhid: "UHID-2026-002844", procedureName: "Umbilical Venous Catheterisation", age: "1 hour", experience: "Performed under supervision", verifiedCompetency: "Performed under supervision", status: "verified" },
+  { number: 4, date: "2026-06-12", group: "emergency", patientUhid: "UHID-2026-002605", procedureName: "Arterial Blood Gas", age: "8 years", experience: "Assisted", verifiedCompetency: "Assisted", status: "verified" },
+  { number: 3, date: "2026-06-04", group: "emergency", patientUhid: "UHID-2026-002422", procedureName: "Mechanical Ventilation Setup", age: "1 year", experience: "Performed under supervision", verifiedCompetency: "Performed under supervision", status: "verified" },
+  { number: 2, date: "2026-05-27", group: "emergency", patientUhid: "UHID-2026-002231", procedureName: "CPAP / HFNC", age: "6 months", experience: "Observed / procedure seen", verifiedCompetency: "Observed", status: "verified" },
+  { number: 1, date: "2026-05-18", group: "emergency", patientUhid: "UHID-2026-001984", procedureName: "Endotracheal Intubation", age: "2 years", experience: "Performed under supervision", verifiedCompetency: "Performed under supervision", status: "verified" },
 ];
 
 const groupNames: Record<ProcedureGroup, string> = {
@@ -53,6 +53,13 @@ export function ProcedureLogsPage() {
     age: "",
     experience: "Observed / procedure seen",
   });
+  const loggedCounts = React.useMemo(
+    () => Object.fromEntries(PROCEDURE_REQUIREMENTS.map((requirement) => [
+      requirement.name,
+      logs.filter((log) => log.procedureName === requirement.name).length,
+    ])),
+    [logs],
+  );
 
   const setGroup = (group: ProcedureGroup) => setForm({ ...form, group, procedureName: "" });
 
@@ -61,12 +68,12 @@ export function ProcedureLogsPage() {
     const next: ProcedureLog = {
       number: Math.max(...logs.map((log) => log.number)) + 1,
       ...form,
-      verifiedCompetency: "Pending guide verification",
+      verifiedCompetency: "Pending professor verification",
       status: "pending",
     };
     setLogs([next, ...logs]);
     setOpen(false);
-    toast.success(`Procedure number ${next.number} sent to guide`);
+    toast.success(`Procedure number ${next.number} sent to professor`);
   };
 
   return (
@@ -75,7 +82,7 @@ export function ProcedureLogsPage() {
         <div>
           <p className="page-eyebrow">Procedures seen and performed</p>
           <h2 className="page-title mt-1">Procedure log</h2>
-          <p className="mt-2 text-sm text-slate-500">Emergency and invasive procedure exposure, with competency verified only by the reviewing guide.</p>
+          <p className="mt-2 text-sm text-slate-500">Emergency and invasive procedure exposure, with competency verified only by the reviewing professor.</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button><PlusCircle className="h-4 w-4" /> Log procedure</Button></DialogTrigger>
@@ -116,9 +123,9 @@ export function ProcedureLogsPage() {
                 </Select>
               </Field>
               <p className="rounded-xl border border-teal-100 bg-teal-50 p-3 text-[11px] leading-5 text-teal-800">
-                Verified competency is not self-selected. It is assigned by the guide during procedure review.
+                Verified competency is not self-selected. It is assigned by a professor during procedure review.
               </p>
-              <DialogFooter><Button type="button" variant="outline" onClick={() => setOpen(false)}>Save draft</Button><Button type="submit">Send to guide</Button></DialogFooter>
+              <DialogFooter><Button type="button" variant="outline" onClick={() => setOpen(false)}>Save draft</Button><Button type="submit">Send to professor</Button></DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
@@ -145,6 +152,39 @@ export function ProcedureLogsPage() {
         <AlertCircle className="h-5 w-5 text-amber-700" />
         <p className="text-xs text-amber-900"><strong>{logs.length}/{REQUIRED_PROCEDURE_COUNT}</strong> required procedures logged. Continue adding procedures from the departmental list.</p>
       </div>
+
+      <Card>
+        <CardHeader className="border-b border-teal-100">
+          <CardTitle className="text-lg">Number of procedures required</CardTitle>
+          <p className="text-xs text-slate-500">The total is calculated from every required emergency and invasive procedure.</p>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow><TableHead>Procedure</TableHead><TableHead>Group</TableHead><TableHead>Logged</TableHead><TableHead>Required</TableHead><TableHead>Remaining</TableHead></TableRow>
+            </TableHeader>
+            <TableBody>
+              {PROCEDURE_REQUIREMENTS.map((requirement) => {
+                const logged = loggedCounts[requirement.name] ?? 0;
+                return (
+                  <TableRow key={requirement.name}>
+                    <TableCell className="font-semibold">{requirement.name}</TableCell>
+                    <TableCell><Badge variant="outline" className="border-teal-100 bg-teal-50 text-teal-800">{groupNames[requirement.group]}</Badge></TableCell>
+                    <TableCell>{logged}</TableCell>
+                    <TableCell className="font-bold text-teal-800">{requirement.required}</TableCell>
+                    <TableCell>{Math.max(requirement.required - logged, 0)}</TableCell>
+                  </TableRow>
+                );
+              })}
+              <TableRow className="bg-teal-50/60">
+                <TableCell className="font-bold" colSpan={3}>Combined target</TableCell>
+                <TableCell className="font-bold text-teal-800">{REQUIRED_PROCEDURE_COUNT}</TableCell>
+                <TableCell className="font-bold">{Math.max(REQUIRED_PROCEDURE_COUNT - logs.length, 0)}</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader className="border-b border-teal-100"><CardTitle className="text-lg">Procedure entries sent</CardTitle></CardHeader>

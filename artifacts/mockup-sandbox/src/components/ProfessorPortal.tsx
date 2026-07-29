@@ -53,7 +53,7 @@ import {
   User,
   FileText,
 } from "lucide-react";
-import { formatLogbookDate } from "@/lib/logbook-config";
+import { DEPARTMENTS, formatLogbookDate } from "@/lib/logbook-config";
 
 export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
   const [location, setLocation] = useLocation();
@@ -64,6 +64,7 @@ export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
   const [grade, setGrade] = React.useState("A");
   const [competencyOverride, setCompetencyOverride] = React.useState("performed_independently");
   const [evaluatedLogs, setEvaluatedLogs] = React.useState<Record<string, any>>({});
+  const [departmentFilter, setDepartmentFilter] = React.useState("all");
   
   // Selected mentee for Logbook Inspector Modal
   const [selectedMentee, setSelectedMentee] = React.useState<any | null>(null);
@@ -111,7 +112,10 @@ export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
   }
 
   const reviews = data?.pendingReviews || [];
-  const mentees = data?.assignedMentees || [];
+  const allStudents = data?.assignedMentees || [];
+  const mentees = departmentFilter === "all"
+    ? allStudents
+    : allStudents.filter((student: any) => student.department === departmentFilter);
   const currentItem = reviews[currentIndex];
 
   const handleApprove = () => {
@@ -158,9 +162,9 @@ export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
           <Badge className="bg-teal-500/20 text-teal-300 border-teal-500/30 text-xs font-semibold mb-2">
             Faculty &amp; Evaluator Portal
           </Badge>
-          <h2 className="text-2xl font-black">Welcome, {data?.faculty?.name || "Prof. Dr. Mohammad MTP"}</h2>
+          <h2 className="text-2xl font-black">Welcome, {data?.faculty?.name || "Dr. Mohammed"}</h2>
           <p className="text-xs text-slate-300">
-            {data?.faculty?.role} • {data?.faculty?.department} • Assigned Mentees: <strong>{mentees.length} Residents</strong>
+            {data?.faculty?.role} • All Departments • Full access: <strong>{allStudents.length} Students</strong>
           </p>
         </div>
 
@@ -178,7 +182,7 @@ export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
             <FileCheck className="h-4 w-4" /> Sequential Review Queue ({reviews.length - Object.keys(evaluatedLogs).length})
           </TabsTrigger>
           <TabsTrigger value="mentees" className="gap-2 text-xs font-semibold">
-            <UserCheck className="h-4 w-4" /> Assigned Mentees ({mentees.length})
+            <UserCheck className="h-4 w-4" /> All Students ({allStudents.length})
           </TabsTrigger>
           <TabsTrigger value="appraisals" className="gap-2 text-xs font-semibold">
             <Award className="h-4 w-4" /> MCI Quarterly Appraisal
@@ -347,17 +351,33 @@ export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
           )}
         </TabsContent>
 
-        {/* Tab 2: Assigned Mentees List with Full Logbook Inspector */}
+        {/* Tab 2: All Students List with Full Logbook Inspector */}
         <TabsContent value="mentees" className="pt-4 space-y-4">
+          <Card className="border-cyan-100 bg-cyan-50/60">
+            <CardContent className="flex flex-col justify-between gap-4 p-5 sm:flex-row sm:items-center">
+              <div>
+                <p className="font-bold text-slate-900">Professor-wide student access</p>
+                <p className="mt-1 text-xs text-slate-600">Every professor can inspect and review every student's complete work. Department selection only filters the list.</p>
+              </div>
+              <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                <SelectTrigger aria-label="Department filter" className="w-full bg-white sm:w-60"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Departments</SelectItem>
+                  {DEPARTMENTS.map((department) => <SelectItem key={department} value={department}>{department}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </CardContent>
+          </Card>
           <Card className="border border-slate-200 shadow-xs bg-white">
             <CardHeader className="pb-3 border-b border-slate-100">
-              <CardTitle className="text-base font-bold text-slate-900">Assigned PG Residents Progress</CardTitle>
+              <CardTitle className="text-base font-bold text-slate-900">All PG Students Progress</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               <Table>
                 <TableHeader className="bg-slate-50">
                   <TableRow>
                     <TableHead className="text-xs font-semibold">Resident Name</TableHead>
+                    <TableHead className="text-xs font-semibold">Department</TableHead>
                     <TableHead className="text-xs font-semibold">Requirement Progress</TableHead>
                     <TableHead className="text-xs font-semibold">Shortfall Status</TableHead>
                     <TableHead className="text-xs font-semibold text-right">Action</TableHead>
@@ -370,6 +390,7 @@ export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
                         {m.name}
                         <p className="text-[11px] text-slate-500 font-normal">{m.registrationNumber}</p>
                       </TableCell>
+                      <TableCell className="text-xs">{m.department}</TableCell>
                       <TableCell className="text-xs w-48">
                         <div className="flex items-center justify-between text-[11px] mb-1">
                           <span className="font-semibold text-slate-700">{m.overallCompletion}%</span>
@@ -416,8 +437,9 @@ export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
                       <SelectValue placeholder="Select Resident" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="1">Dr. Adithya Nair (MD Pediatrics - PG II)</SelectItem>
-                      <SelectItem value="2">Dr. Anilkumar A (MD Pediatrics - PG II)</SelectItem>
+                      {allStudents.map((student: any) => (
+                        <SelectItem key={student.id} value={String(student.id)}>{student.name} ({student.department})</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -476,7 +498,7 @@ export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
 
               <Button
                 onClick={() => toast.success("MCI Quarterly Appraisal Signed & Submitted!", {
-                  description: "Report archived into Dr. Adithya Nair's permanent compliance record."
+                  description: "Report archived into Dr. Anilkumar A's permanent compliance record."
                 })}
                 className="bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs gap-2"
               >
@@ -623,14 +645,15 @@ function renderShortfallBadge(status: string) {
 
 function getFallbackProfData() {
   return {
-    faculty: { name: "Prof. Dr. Mohammad MTP", role: "Professor & Guide", department: "Department of Pediatrics" },
+    faculty: { name: "Dr. Mohammed", role: "Professor", department: "All Departments" },
     pendingReviews: [
-      { id: 1092, studentName: "Dr. Adithya Nair", type: "Case Log", title: "Acute Severe Asthma Exacerbation in a 7yo Child", date: "2026-07-26", detail: "Managed with nebulized salbutamol and ipratropium; detailed history, examination, investigations, outcome and learning points attached.", patientUhid: "UHID-2026-004281", patientInfo: "7 yr / Male" },
-      { id: 1088, studentName: "Dr. Adithya Nair", type: "Procedure", title: "Endotracheal Intubation", date: "2026-07-24", detail: "Emergency procedure completed under direct supervision.", patientUhid: "UHID-2026-003944", patientInfo: "7 yr / Male", declaredCompetency: "Performed under supervision" },
+      { id: 3, studentName: "Dr. Anilkumar A", type: "Case Log", title: "Acute Severe Asthma Exacerbation in a 7yo Child", date: "2026-07-26", detail: "Managed with nebulized salbutamol and ipratropium; detailed history, examination, investigations, outcome and learning points attached.", patientUhid: "UHID-2026-004281", patientInfo: "7 yr / Male" },
+      { id: 11, studentName: "Dr. Anilkumar A", type: "Procedure", title: "Endotracheal Intubation", date: "2026-07-24", detail: "Emergency procedure completed under direct supervision.", patientUhid: "UHID-2026-003944", patientInfo: "7 yr / Male", declaredCompetency: "Performed under supervision" },
     ],
     assignedMentees: [
-      { id: 1, name: "Dr. Adithya Nair", registrationNumber: "PG2024-PAED-014", overallCompletion: 73, shortfallStatus: "at_risk" },
-      { id: 2, name: "Dr. Anilkumar A", registrationNumber: "PG2024-PAED-018", overallCompletion: 88, shortfallStatus: "on_track" },
+      { id: 1, name: "Dr. Anilkumar A", department: "Pediatrics", registrationNumber: "PG2024-PAED-014", overallCompletion: 73, shortfallStatus: "at_risk" },
+      { id: 2, name: "Dr. Radhamani KV", department: "General Medicine", registrationNumber: "PG2024-MED-018", overallCompletion: 88, shortfallStatus: "on_track" },
+      { id: 3, name: "Dr. Mohammad MTP", department: "General Surgery", registrationNumber: "PG2025-SURG-003", overallCompletion: 64, shortfallStatus: "behind" },
     ],
   };
 }

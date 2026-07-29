@@ -23,8 +23,8 @@ type Thesis = {
 
 const initialThesis: Thesis = {
   topic: "Clinical profile and predictors of severe acute asthma in children admitted to a tertiary-care centre",
-  guide: "Prof. Dr. Mohammad MTP",
-  coGuide: "Dr. Radhamani KV",
+  guide: "Dr. Mohamad",
+  coGuide: "Dr. Mohammed",
   protocolSubmissionDate: "2025-08-12",
   iecClearanceDate: "2025-10-06",
   dataCollectionStartDate: "2025-11-01",

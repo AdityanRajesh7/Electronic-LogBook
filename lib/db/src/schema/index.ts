@@ -5,3 +5,8 @@ export * from "./logs.js";
 export * from "./attendance.js";
 export * from "./requirements.js";
 export * from "./progress.js";
+export * from "./audit.js";
+export * from "./leave.js";
+export * from "./certifications.js";
+export * from "./research.js";
+export * from "./appraisals.js";

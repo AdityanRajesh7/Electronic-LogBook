@@ -35,7 +35,7 @@ function calculateExpectedCompletion(dateOfJoining: string) {
 }
 
 export function Dashboard() {
-  const user = getCurrentUser();
+  const user = React.useMemo(() => getCurrentUser(), []);
   const [logs, setLogs] = React.useState<any>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);

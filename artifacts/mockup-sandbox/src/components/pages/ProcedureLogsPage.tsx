@@ -55,7 +55,7 @@ export function ProcedureLogsPage() {
 
   const setGroup = (group: ProcedureGroup) => setForm({ ...form, group, procedureName: "" });
 
-  const user = getCurrentUser();
+  const user = React.useMemo(() => getCurrentUser(), []);
   const [professors, setProfessors] = React.useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 

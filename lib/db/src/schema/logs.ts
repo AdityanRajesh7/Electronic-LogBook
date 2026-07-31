@@ -6,6 +6,7 @@ import { usersTable } from "./users.js";
 export const caseLogsTable = pgTable("case_logs", {
   id: serial("id").primaryKey(),
   studentId: integer("student_id").notNull().references(() => studentsTable.id),
+  supervisorId: integer("supervisor_id").references(() => usersTable.id),
   date: text("date").notNull(),
   attemptNumber: integer("attempt_number").notNull().default(1),
   patientUhid: text("patient_uhid").notNull(),
@@ -24,6 +25,8 @@ export const caseLogsTable = pgTable("case_logs", {
   status: text("status", { enum: ["pending", "verified", "rejected"] }).notNull().default("pending"),
   facultyRemarks: text("faculty_remarks"),
   facultyGrade: text("faculty_grade"),
+  reviewedBy: integer("reviewed_by").references(() => usersTable.id),
+  reviewedAt: timestamp("reviewed_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -34,6 +37,7 @@ export type CaseLog = typeof caseLogsTable.$inferSelect;
 export const procedureLogsTable = pgTable("procedure_logs", {
   id: serial("id").primaryKey(),
   studentId: integer("student_id").notNull().references(() => studentsTable.id),
+  supervisorId: integer("supervisor_id").references(() => usersTable.id),
   procedureGroup: text("procedure_group", { enum: ["emergency", "invasive"] }).notNull(),
   procedureName: text("procedure_name").notNull(),
   date: text("date").notNull(),
@@ -45,6 +49,8 @@ export const procedureLogsTable = pgTable("procedure_logs", {
   facultyVerifiedLevel: text("faculty_verified_level"),
   status: text("status", { enum: ["pending", "verified", "rejected"] }).notNull().default("pending"),
   facultyRemarks: text("faculty_remarks"),
+  reviewedBy: integer("reviewed_by").references(() => usersTable.id),
+  reviewedAt: timestamp("reviewed_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -65,6 +71,8 @@ export const academicLogsTable = pgTable("academic_logs", {
   supervisorId: integer("supervisor_id").references(() => usersTable.id),
   status: text("status", { enum: ["pending", "verified", "rejected"] }).notNull().default("pending"),
   facultyRemarks: text("faculty_remarks"),
+  reviewedBy: integer("reviewed_by").references(() => usersTable.id),
+  reviewedAt: timestamp("reviewed_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

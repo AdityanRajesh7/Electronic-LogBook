@@ -1,99 +1,202 @@
 import { Router, type IRouter } from "express";
+import { db, caseLogsTable, procedureLogsTable, academicLogsTable, studentsTable, usersTable, departmentsTable } from "@workspace/db";
+import { eq, and, inArray, count } from "drizzle-orm";
 
 const router: IRouter = Router();
 
-type Review = {
-  id: number;
-  studentId: number;
-  studentName: string;
-  department: string;
-  type: string;
-  title: string;
-  date: string;
-  detail: string;
-  status: string;
-  patientUhid?: string;
-  patientInfo?: string;
-  diagnosis?: string;
-  declaredCompetency?: string;
-};
+const REQUIRED_CASES = 50;
+const REQUIRED_PROCS = 101;
+const REQUIRED_ACAD  = 50;
 
-let pendingReviews: Review[] = [
-  {
-    id: 3,
-    studentId: 1,
-    studentName: "Dr. Anilkumar A",
-    department: "Pediatrics",
-    type: "Case Log",
-    title: "Acute Severe Asthma Exacerbation in a 7-year-old",
-    date: "2026-07-26",
-    patientUhid: "UHID-2026-004281",
-    patientInfo: "7 years / Male",
-    detail: "Complete case record includes complaints, history, examination, investigations, differentials, management, outcome and learning points.",
-    diagnosis: "Acute Severe Asthma Exacerbation",
-    status: "pending",
-  },
-  {
-    id: 11,
-    studentId: 2,
-    studentName: "Dr. Radhamani KV",
-    department: "General Medicine",
-    type: "Procedure",
-    title: "Endotracheal Intubation",
-    date: "2026-07-26",
-    patientUhid: "UHID-2026-004255",
-    patientInfo: "2 days",
-    detail: "Emergency procedure performed under direct supervision.",
-    declaredCompetency: "Performed under supervision",
-    status: "pending",
-  },
-  {
-    id: 8,
-    studentId: 3,
-    studentName: "Dr. Mohammad MTP",
-    department: "General Surgery",
-    type: "Academic",
-    title: "Case Discussion: Management of Septic Shock in Children",
-    date: "2026-07-25",
-    detail: "Literature review and departmental case discussion.",
-    status: "pending",
-  },
-];
+function computeCompletion(cases: number, procs: number, acad: number) {
+  const score =
+    (Math.min(cases / REQUIRED_CASES, 1) +
+     Math.min(procs / REQUIRED_PROCS, 1) +
+     Math.min(acad / REQUIRED_ACAD, 1)) / 3;
+  return Math.round(score * 100);
+}
 
-const allStudents = [
-  { id: 1, name: "Dr. Anilkumar A", department: "Pediatrics", registrationNumber: "PG2024-PAED-014", overallCompletion: 73, shortfallStatus: "at_risk", pendingLogs: 1, lastLogDate: "2026-07-26" },
-  { id: 2, name: "Dr. Radhamani KV", department: "General Medicine", registrationNumber: "PG2024-MED-018", overallCompletion: 88, shortfallStatus: "on_track", pendingLogs: 1, lastLogDate: "2026-07-26" },
-  { id: 3, name: "Dr. Mohammad MTP", department: "General Surgery", registrationNumber: "PG2025-SURG-003", overallCompletion: 64, shortfallStatus: "behind", pendingLogs: 1, lastLogDate: "2026-07-25" },
-];
+function shortfallStatus(pct: number): "on_track" | "at_risk" | "behind" {
+  if (pct >= 75) return "on_track";
+  if (pct >= 40) return "at_risk";
+  return "behind";
+}
 
-router.get("/dashboard", (_req, res) => {
-  res.json({
-    faculty: {
-      id: 10,
-      name: "Dr. Mohammed",
-      role: "Professor",
-      department: "All Departments",
-      studentAccessScope: "all_students",
-      studentCount: allStudents.length,
-      pendingReviewCount: pendingReviews.length,
-    },
-    pendingReviews,
-    assignedMentees: allStudents,
-  });
-});
+router.get("/:professorId/review-queue", async (req, res) => {
+  try {
+    const professorId = parseInt(req.params.professorId, 10);
+    if (isNaN(professorId)) {
+      res.status(400).json({ message: "Invalid professorId" });
+      return;
+    }
 
-router.post("/review", (req, res) => {
-  const { number, logId, status, remarks, grade, verifiedCompetency } = req.body;
-  const targetNumber = Number(number ?? logId);
-  pendingReviews = pendingReviews.filter((review) => review.id !== targetNumber);
-  res.json({
-    success: true,
-    message: `Number ${targetNumber} evaluated as ${status}`,
-    number: targetNumber,
-    remarks,
-    grade,
-    verifiedCompetency,
-  });
+    const profMatch = await db
+      .select()
+      .from(usersTable)
+      .where(and(eq(usersTable.id, professorId), inArray(usersTable.role, ["professor", "hod"])))
+      .limit(1);
+
+    if (profMatch.length === 0) {
+      res.status(404).json({ message: "Professor not found" });
+      return;
+    }
+
+    const cases = await db.select({
+      log: caseLogsTable,
+      student: studentsTable,
+      user: usersTable,
+      department: departmentsTable,
+    })
+    .from(caseLogsTable)
+    .where(and(eq(caseLogsTable.supervisorId, professorId), eq(caseLogsTable.status, "pending")))
+    .innerJoin(studentsTable, eq(caseLogsTable.studentId, studentsTable.id))
+    .innerJoin(usersTable, eq(studentsTable.userId, usersTable.id))
+    .leftJoin(departmentsTable, eq(usersTable.departmentId, departmentsTable.id));
+
+    const procedures = await db.select({
+      log: procedureLogsTable,
+      student: studentsTable,
+      user: usersTable,
+      department: departmentsTable,
+    })
+    .from(procedureLogsTable)
+    .where(and(eq(procedureLogsTable.supervisorId, professorId), eq(procedureLogsTable.status, "pending")))
+    .innerJoin(studentsTable, eq(procedureLogsTable.studentId, studentsTable.id))
+    .innerJoin(usersTable, eq(studentsTable.userId, usersTable.id))
+    .leftJoin(departmentsTable, eq(usersTable.departmentId, departmentsTable.id));
+
+    const academics = await db.select({
+      log: academicLogsTable,
+      student: studentsTable,
+      user: usersTable,
+      department: departmentsTable,
+    })
+    .from(academicLogsTable)
+    .where(and(eq(academicLogsTable.supervisorId, professorId), eq(academicLogsTable.status, "pending")))
+    .innerJoin(studentsTable, eq(academicLogsTable.studentId, studentsTable.id))
+    .innerJoin(usersTable, eq(studentsTable.userId, usersTable.id))
+    .leftJoin(departmentsTable, eq(usersTable.departmentId, departmentsTable.id));
+
+    const pendingReviews = [
+      ...cases.map(c => ({
+        id: `case-${c.log.id}`,
+        dbId: c.log.id,
+        logType: "case",
+        studentId: c.student.id,
+        studentName: c.user.fullName,
+        registrationNumber: c.student.registrationNumber,
+        department: c.department?.name || "Unknown",
+        type: "Case Log",
+        title: `${c.log.diagnosisProvisional} — ${c.log.patientAge}, ${c.log.patientGender}`,
+        date: c.log.date,
+        patientUhid: c.log.patientUhid,
+        patientInfo: `${c.log.patientAge} / ${c.log.patientGender}`,
+        detail: c.log.chiefComplaints,
+        diagnosis: c.log.diagnosisProvisional,
+        status: c.log.status
+      })),
+      ...procedures.map(p => ({
+        id: `procedure-${p.log.id}`,
+        dbId: p.log.id,
+        logType: "procedure",
+        studentId: p.student.id,
+        studentName: p.user.fullName,
+        registrationNumber: p.student.registrationNumber,
+        department: p.department?.name || "Unknown",
+        type: "Procedure",
+        title: p.log.procedureName,
+        date: p.log.date,
+        patientUhid: p.log.patientUhid,
+        patientInfo: p.log.patientAge,
+        detail: `${p.log.procedureGroup} procedure`,
+        declaredCompetency: p.log.competencyLevel,
+        status: p.log.status
+      })),
+      ...academics.map(a => ({
+        id: `academic-${a.log.id}`,
+        dbId: a.log.id,
+        logType: "academic",
+        studentId: a.student.id,
+        studentName: a.user.fullName,
+        registrationNumber: a.student.registrationNumber,
+        department: a.department?.name || "Unknown",
+        type: "Academic",
+        title: `${a.log.activityType}: ${a.log.topic}`,
+        date: a.log.date,
+        detail: a.log.presentationType || a.log.activityType,
+        status: a.log.status
+      }))
+    ];
+
+    // ── Mentees (all students in the professor's department) ──────────────────
+    const deptId = profMatch[0].departmentId;
+
+    let menteesData: any[] = [];
+    if (deptId != null) {
+      const studentsInDept = await db
+        .select({
+          studentId: studentsTable.id,
+          userId:    studentsTable.userId,
+          regNum:    studentsTable.registrationNumber,
+          fullName:  usersTable.fullName,
+          deptName:  departmentsTable.name,
+        })
+        .from(studentsTable)
+        .innerJoin(usersTable,      eq(studentsTable.userId,      usersTable.id))
+        .leftJoin(departmentsTable, eq(usersTable.departmentId,   departmentsTable.id))
+        .where(eq(usersTable.departmentId, deptId));
+
+      // Count only verified logs per student for Professor Portal evaluation
+      const caseCountRows = await db
+        .select({ studentId: caseLogsTable.studentId, cnt: count() })
+        .from(caseLogsTable)
+        .where(eq(caseLogsTable.status, "verified"))
+        .groupBy(caseLogsTable.studentId);
+
+      const procCountRows = await db
+        .select({ studentId: procedureLogsTable.studentId, cnt: count() })
+        .from(procedureLogsTable)
+        .where(eq(procedureLogsTable.status, "verified"))
+        .groupBy(procedureLogsTable.studentId);
+
+      const acadCountRows = await db
+        .select({ studentId: academicLogsTable.studentId, cnt: count() })
+        .from(academicLogsTable)
+        .where(eq(academicLogsTable.status, "verified"))
+        .groupBy(academicLogsTable.studentId);
+
+      const toMap = (rows: { studentId: number; cnt: number }[]) =>
+        Object.fromEntries(rows.map(r => [r.studentId, Number(r.cnt)]));
+
+      const caseMap = toMap(caseCountRows as any);
+      const procMap = toMap(procCountRows as any);
+      const acadMap = toMap(acadCountRows as any);
+
+      menteesData = studentsInDept.map(s => {
+        const cases = caseMap[s.studentId] ?? 0;
+        const procs = procMap[s.studentId] ?? 0;
+        const acad  = acadMap[s.studentId]  ?? 0;
+        const pct   = computeCompletion(cases, procs, acad);
+        return {
+          id:                 s.studentId,
+          name:               s.fullName,
+          registrationNumber: s.regNum,
+          department:         s.deptName || "Unknown",
+          overallCompletion:  pct,
+          shortfallStatus:    shortfallStatus(pct),
+          logCounts: { cases, procs, acad },
+        };
+      });
+    }
+
+    res.json({
+      pendingReviews,
+      assignedMentees: menteesData,
+    });
+  } catch (error) {
+    req.log.error(error, "Error fetching professor review queue");
+    res.status(500).json({ message: "Internal server error" });
+  }
 });
 
 export default router;

@@ -1,6 +1,8 @@
 import * as React from "react";
-import { AlertCircle, CheckCircle2, Clock, PlusCircle, Stethoscope } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, PlusCircle, Stethoscope, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { apiGet, apiPost } from "@/lib/apiClient";
+import { getCurrentUser } from "@/lib/session";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,19 +25,6 @@ type ProcedureLog = {
   status: "pending" | "verified" | "revision";
 };
 
-const seeded: ProcedureLog[] = [
-  { number: 11, date: "2026-07-24", group: "emergency", patientUhid: "UHID-2026-003944", procedureName: "Endotracheal Intubation", age: "7 years", experience: "Performed under supervision", verifiedCompetency: "Performed under supervision", status: "verified" },
-  { number: 10, date: "2026-07-20", group: "invasive", patientUhid: "UHID-2026-003771", procedureName: "Lumbar Puncture", age: "4 months", experience: "Assisted", verifiedCompetency: "Assisted", status: "revision" },
-  { number: 9, date: "2026-07-14", group: "emergency", patientUhid: "UHID-2026-003502", procedureName: "ICD Insertion", age: "8 years", experience: "Observed / procedure seen", verifiedCompetency: "Observed", status: "verified" },
-  { number: 8, date: "2026-07-08", group: "invasive", patientUhid: "UHID-2026-003321", procedureName: "Bone Marrow Aspiration", age: "5 years", experience: "Assisted", verifiedCompetency: "Assisted", status: "verified" },
-  { number: 7, date: "2026-07-02", group: "invasive", patientUhid: "UHID-2026-003140", procedureName: "Central Venous Line Insertion", age: "5 years", experience: "Performed under supervision", verifiedCompetency: "Performed under supervision", status: "verified" },
-  { number: 6, date: "2026-06-28", group: "invasive", patientUhid: "UHID-2026-003008", procedureName: "Peritoneal Dialysis", age: "3 days", experience: "Observed / procedure seen", verifiedCompetency: "Observed", status: "verified" },
-  { number: 5, date: "2026-06-20", group: "invasive", patientUhid: "UHID-2026-002844", procedureName: "Umbilical Venous Catheterisation", age: "1 hour", experience: "Performed under supervision", verifiedCompetency: "Performed under supervision", status: "verified" },
-  { number: 4, date: "2026-06-12", group: "emergency", patientUhid: "UHID-2026-002605", procedureName: "Arterial Blood Gas", age: "8 years", experience: "Assisted", verifiedCompetency: "Assisted", status: "verified" },
-  { number: 3, date: "2026-06-04", group: "emergency", patientUhid: "UHID-2026-002422", procedureName: "Mechanical Ventilation Setup", age: "1 year", experience: "Performed under supervision", verifiedCompetency: "Performed under supervision", status: "verified" },
-  { number: 2, date: "2026-05-27", group: "emergency", patientUhid: "UHID-2026-002231", procedureName: "CPAP / HFNC", age: "6 months", experience: "Observed / procedure seen", verifiedCompetency: "Observed", status: "verified" },
-  { number: 1, date: "2026-05-18", group: "emergency", patientUhid: "UHID-2026-001984", procedureName: "Endotracheal Intubation", age: "2 years", experience: "Performed under supervision", verifiedCompetency: "Performed under supervision", status: "verified" },
-];
 
 const groupNames: Record<ProcedureGroup, string> = {
   emergency: "Emergency procedures",
@@ -44,7 +33,9 @@ const groupNames: Record<ProcedureGroup, string> = {
 
 export function ProcedureLogsPage() {
   const [open, setOpen] = React.useState(false);
-  const [logs, setLogs] = React.useState(seeded);
+  const [logs, setLogs] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
   const [form, setForm] = React.useState({
     date: todayForInput(),
     group: "emergency" as ProcedureGroup,
@@ -52,6 +43,7 @@ export function ProcedureLogsPage() {
     patientUhid: "",
     age: "",
     experience: "Observed / procedure seen",
+    supervisorId: "",
   });
   const loggedCounts = React.useMemo(
     () => Object.fromEntries(PROCEDURE_REQUIREMENTS.map((requirement) => [
@@ -63,21 +55,85 @@ export function ProcedureLogsPage() {
 
   const setGroup = (group: ProcedureGroup) => setForm({ ...form, group, procedureName: "" });
 
-  const submit = (event: React.FormEvent) => {
+  const user = getCurrentUser();
+  const [professors, setProfessors] = React.useState<any[]>([]);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+  const fetchLogs = React.useCallback(async () => {
+    if (!user?.studentProfileId) {
+      setError("Not logged in");
+      setLoading(false);
+      return;
+    }
+    try {
+      setLoading(true);
+      const data = await apiGet(`/api/students/${user.studentProfileId}/logs`);
+      const sortedLogs = (data.procedureLogs || []).sort((a: any, b: any) => b.id - a.id);
+      setLogs(sortedLogs.map((log: any, index: number) => ({ ...log, number: sortedLogs.length - index })));
+    } catch (err: any) {
+      setError(err.message || "Failed to load procedure logs");
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.studentProfileId]);
+
+  React.useEffect(() => {
+    fetchLogs();
+    if (user?.departmentId) {
+      apiGet(`/api/departments/${user.departmentId}/professors`).then(setProfessors).catch(console.error);
+    }
+  }, [fetchLogs, user?.departmentId]);
+
+  const submit = async (event: React.FormEvent) => {
     event.preventDefault();
-    const next: ProcedureLog = {
-      number: Math.max(...logs.map((log) => log.number)) + 1,
-      ...form,
-      verifiedCompetency: "Pending professor verification",
-      status: "pending",
-    };
-    setLogs([next, ...logs]);
-    setOpen(false);
-    toast.success(`Procedure number ${next.number} sent to professor`);
+    if (!form.supervisorId) {
+      toast.error("Please select a reviewing professor");
+      return;
+    }
+    
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        procedureGroup: form.group,
+        procedureName: form.procedureName,
+        date: form.date,
+        patientUhid: form.patientUhid,
+        patientAge: form.age,
+        competencyLevel: form.experience === "Observed / procedure seen" ? "observed" :
+          form.experience === "Assisted" ? "assisted" :
+          form.experience === "Performed under supervision" ? "performed_under_supervision" : "performed_independently",
+        supervisorId: form.supervisorId,
+      };
+      
+      await apiPost(`/api/students/${user?.studentProfileId}/procedure-logs`, payload);
+
+      await fetchLogs();
+      setOpen(false);
+      setForm({
+        date: todayForInput(),
+        group: "emergency",
+        procedureName: "",
+        patientUhid: "",
+        age: "",
+        experience: "Observed / procedure seen",
+        supervisorId: "",
+      });
+      toast.success(`Procedure submitted successfully`);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to submit procedure log");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div className="space-y-6 pb-12">
+      {error && (
+        <div className="flex flex-col items-center justify-center p-8 text-center border rounded-2xl bg-rose-50 border-rose-100">
+          <p className="text-rose-700 mb-4">{error}</p>
+          <Button onClick={fetchLogs} variant="outline" className="border-rose-200 text-rose-700">Try Again</Button>
+        </div>
+      )}
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
           <p className="page-eyebrow">Procedures seen and performed</p>
@@ -125,7 +181,21 @@ export function ProcedureLogsPage() {
               <p className="rounded-xl border border-teal-100 bg-teal-50 p-3 text-[11px] leading-5 text-teal-800">
                 Verified competency is not self-selected. It is assigned by a professor during procedure review.
               </p>
-              <DialogFooter><Button type="button" variant="outline" onClick={() => setOpen(false)}>Save draft</Button><Button type="submit">Send to professor</Button></DialogFooter>
+              <Field label="Reviewing professor">
+                <Select value={form.supervisorId} onValueChange={(value) => setForm({ ...form, supervisorId: value })}>
+                  <SelectTrigger><SelectValue placeholder="Select a professor" /></SelectTrigger>
+                  <SelectContent>
+                    {professors.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.fullName}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </Field>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isSubmitting}>Save draft</Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Send to professor
+                </Button>
+              </DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
@@ -189,24 +259,35 @@ export function ProcedureLogsPage() {
       <Card>
         <CardHeader className="border-b border-teal-100"><CardTitle className="text-lg">Procedure entries sent</CardTitle></CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader><TableRow><TableHead>Number</TableHead><TableHead>Date</TableHead><TableHead>Group</TableHead><TableHead>Procedure</TableHead><TableHead>Patient UHID</TableHead><TableHead>Age</TableHead><TableHead>Experience</TableHead><TableHead>Verified competency</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
-            <TableBody>
-              {logs.map((log) => (
-                <TableRow key={log.number}>
-                  <TableCell className="font-bold">{log.number}</TableCell>
-                  <TableCell>{formatLogbookDate(log.date)}</TableCell>
-                  <TableCell><Badge variant="outline" className="border-teal-100 bg-teal-50 text-teal-800">{groupNames[log.group]}</Badge></TableCell>
-                  <TableCell className="font-semibold">{log.procedureName}</TableCell>
-                  <TableCell className="font-semibold text-teal-800">{log.patientUhid}</TableCell>
-                  <TableCell>{log.age}</TableCell>
-                  <TableCell className="text-xs">{log.experience}</TableCell>
-                  <TableCell className="text-xs">{log.verifiedCompetency}</TableCell>
-                  <TableCell>{statusBadge(log.status)}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          {loading ? (
+            <div className="flex h-48 flex-col items-center justify-center space-y-4">
+              <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
+              <p className="text-sm font-medium text-slate-500">Loading procedures...</p>
+            </div>
+          ) : logs.length === 0 ? (
+            <div className="flex h-48 flex-col items-center justify-center space-y-4 text-slate-500">
+              <p>No procedures found.</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader><TableRow><TableHead>Number</TableHead><TableHead>Date</TableHead><TableHead>Group</TableHead><TableHead>Procedure</TableHead><TableHead>Patient UHID</TableHead><TableHead>Age</TableHead><TableHead>Experience</TableHead><TableHead>Verified competency</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+              <TableBody>
+                {logs.map((log) => (
+                  <TableRow key={log.id}>
+                    <TableCell className="font-bold">{log.number}</TableCell>
+                    <TableCell>{formatLogbookDate(log.date)}</TableCell>
+                    <TableCell><Badge variant="outline" className="border-teal-100 bg-teal-50 text-teal-800">{groupNames[log.procedureGroup as ProcedureGroup]}</Badge></TableCell>
+                    <TableCell className="font-semibold">{log.procedureName}</TableCell>
+                    <TableCell className="font-semibold text-teal-800">{log.patientUhid}</TableCell>
+                    <TableCell>{log.patientAge || log.age}</TableCell>
+                    <TableCell className="text-xs">{log.competencyLevel}</TableCell>
+                    <TableCell className="text-xs">{log.verifiedCompetency || (log.status === 'verified' ? log.competencyLevel : 'Pending verification')}</TableCell>
+                    <TableCell>{statusBadge(log.status)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>

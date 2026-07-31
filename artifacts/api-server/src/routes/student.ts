@@ -1,4 +1,6 @@
 import { Router, type IRouter } from "express";
+import { db, studentsTable, caseLogsTable, procedureLogsTable, academicLogsTable, usersTable, departmentsTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 
 const router: IRouter = Router();
 
@@ -377,6 +379,231 @@ router.post("/leave-records", (req, res) => {
   };
   leaveRecords.unshift(entry);
   res.status(201).json({ success: true, leave: entry });
+});
+
+router.get("/:studentId/logs", async (req, res) => {
+  try {
+    const studentId = parseInt(req.params.studentId, 10);
+    if (isNaN(studentId)) {
+      res.status(400).json({ message: "Invalid studentId format" });
+      return;
+    }
+
+    // Verify student exists
+    const studentMatch = await db
+      .select()
+      .from(studentsTable)
+      .where(eq(studentsTable.id, studentId))
+      .limit(1);
+
+    if (studentMatch.length === 0) {
+      res.status(404).json({ message: "Student not found" });
+      return;
+    }
+
+    const studentRow = studentMatch[0];
+
+    // Fetch user and department for profile
+    const userMatch = await db
+      .select({
+        departmentName: departmentsTable.name,
+      })
+      .from(usersTable)
+      .leftJoin(departmentsTable, eq(usersTable.departmentId, departmentsTable.id))
+      .where(eq(usersTable.id, studentRow.userId))
+      .limit(1);
+
+    const departmentName = userMatch.length > 0 && userMatch[0].departmentName ? userMatch[0].departmentName : "Department Unassigned";
+
+    // Query logs with supervisor name join
+    const [caseLogsRaw, procedureLogsRaw, academicLogsRaw] = await Promise.all([
+      db.select({
+        log: caseLogsTable,
+        supervisorName: usersTable.fullName,
+      })
+      .from(caseLogsTable)
+      .leftJoin(usersTable, eq(caseLogsTable.supervisorId, usersTable.id))
+      .where(eq(caseLogsTable.studentId, studentId)),
+
+      db.select({
+        log: procedureLogsTable,
+        supervisorName: usersTable.fullName,
+      })
+      .from(procedureLogsTable)
+      .leftJoin(usersTable, eq(procedureLogsTable.supervisorId, usersTable.id))
+      .where(eq(procedureLogsTable.studentId, studentId)),
+
+      db.select({
+        log: academicLogsTable,
+        supervisorName: usersTable.fullName,
+      })
+      .from(academicLogsTable)
+      .leftJoin(usersTable, eq(academicLogsTable.supervisorId, usersTable.id))
+      .where(eq(academicLogsTable.studentId, studentId)),
+    ]);
+
+    res.json({
+      profile: {
+        department: departmentName,
+        registrationNumber: studentRow.registrationNumber,
+        dateOfJoining: studentRow.dateOfJoining,
+        joiningYear: studentRow.batch, // using batch as joining year proxy for now
+      },
+      caseLogs: caseLogsRaw.map(r => ({ ...r.log, supervisorName: r.supervisorName })),
+      procedureLogs: procedureLogsRaw.map(r => ({ ...r.log, supervisorName: r.supervisorName })),
+      academicLogs: academicLogsRaw.map(r => ({ ...r.log, supervisorName: r.supervisorName })),
+    });
+  } catch (error) {
+    req.log.error(error, "Error fetching student logs");
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// Helper for validating supervisor
+async function validateSupervisor(supervisorId: number) {
+  if (isNaN(supervisorId)) return false;
+  const supervisorMatch = await db
+    .select()
+    .from(usersTable)
+    .where(eq(usersTable.id, supervisorId))
+    .limit(1);
+  return supervisorMatch.length > 0 && ["professor", "hod"].includes(supervisorMatch[0].role);
+}
+
+// POST /:studentId/case-logs
+router.post("/:studentId/case-logs", async (req, res) => {
+  try {
+    const studentId = parseInt(req.params.studentId, 10);
+    if (isNaN(studentId)) {
+      res.status(400).json({ message: "Invalid studentId format" });
+      return;
+    }
+    const studentMatch = await db.select().from(studentsTable).where(eq(studentsTable.id, studentId)).limit(1);
+    if (studentMatch.length === 0) {
+      res.status(404).json({ message: "Student not found" });
+      return;
+    }
+    const { supervisorId, date, patientUhid, patientAge, patientGender, chiefComplaints, diagnosisProvisional, learningPoints } = req.body;
+    if (!supervisorId || !date || !patientUhid || !patientAge || !patientGender || !chiefComplaints || !diagnosisProvisional || !learningPoints) {
+      res.status(400).json({ message: "Missing required fields" });
+      return;
+    }
+    const supervisorIdNum = parseInt(supervisorId, 10);
+    if (!(await validateSupervisor(supervisorIdNum))) {
+      res.status(400).json({ message: "Invalid supervisorId or user is not a professor/hod" });
+      return;
+    }
+    
+    const [inserted] = await db.insert(caseLogsTable).values({
+      studentId,
+      supervisorId: supervisorIdNum,
+      date,
+      patientUhid,
+      patientAge,
+      patientGender,
+      chiefComplaints,
+      diagnosisProvisional,
+      diagnosisFinal: req.body.diagnosisFinal,
+      history: req.body.history,
+      examination: req.body.examination,
+      investigations: req.body.investigations,
+      differentialDiagnosis: req.body.differentialDiagnosis,
+      managementPlan: req.body.managementPlan,
+      outcome: req.body.outcome,
+      learningPoints,
+      status: "pending"
+    }).returning();
+    
+    res.status(201).json(inserted);
+  } catch (error) {
+    req.log.error(error, "Error creating case log");
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// POST /:studentId/procedure-logs
+router.post("/:studentId/procedure-logs", async (req, res) => {
+  try {
+    const studentId = parseInt(req.params.studentId, 10);
+    if (isNaN(studentId)) {
+      res.status(400).json({ message: "Invalid studentId format" });
+      return;
+    }
+    const studentMatch = await db.select().from(studentsTable).where(eq(studentsTable.id, studentId)).limit(1);
+    if (studentMatch.length === 0) {
+      res.status(404).json({ message: "Student not found" });
+      return;
+    }
+    const { supervisorId, procedureGroup, procedureName, date, patientUhid, patientAge, competencyLevel } = req.body;
+    if (!supervisorId || !procedureGroup || !procedureName || !date || !patientUhid || !patientAge || !competencyLevel) {
+      res.status(400).json({ message: "Missing required fields" });
+      return;
+    }
+    const supervisorIdNum = parseInt(supervisorId, 10);
+    if (!(await validateSupervisor(supervisorIdNum))) {
+      res.status(400).json({ message: "Invalid supervisorId or user is not a professor/hod" });
+      return;
+    }
+
+    const [inserted] = await db.insert(procedureLogsTable).values({
+      studentId,
+      supervisorId: supervisorIdNum,
+      procedureGroup,
+      procedureName,
+      date,
+      patientUhid,
+      patientAge,
+      competencyLevel,
+      status: "pending"
+    }).returning();
+    
+    res.status(201).json(inserted);
+  } catch (error) {
+    req.log.error(error, "Error creating procedure log");
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// POST /:studentId/academic-logs
+router.post("/:studentId/academic-logs", async (req, res) => {
+  try {
+    const studentId = parseInt(req.params.studentId, 10);
+    if (isNaN(studentId)) {
+      res.status(400).json({ message: "Invalid studentId format" });
+      return;
+    }
+    const studentMatch = await db.select().from(studentsTable).where(eq(studentsTable.id, studentId)).limit(1);
+    if (studentMatch.length === 0) {
+      res.status(404).json({ message: "Student not found" });
+      return;
+    }
+    const { supervisorId, activityType, topic, date } = req.body;
+    if (!supervisorId || !activityType || !topic || !date) {
+      res.status(400).json({ message: "Missing required fields" });
+      return;
+    }
+    const supervisorIdNum = parseInt(supervisorId, 10);
+    if (!(await validateSupervisor(supervisorIdNum))) {
+      res.status(400).json({ message: "Invalid supervisorId or user is not a professor/hod" });
+      return;
+    }
+
+    const [inserted] = await db.insert(academicLogsTable).values({
+      studentId,
+      supervisorId: supervisorIdNum,
+      activityType,
+      presentationType: req.body.presentationType,
+      topic,
+      date,
+      presenter: req.body.presenter,
+      status: "pending"
+    }).returning();
+    
+    res.status(201).json(inserted);
+  } catch (error) {
+    req.log.error(error, "Error creating academic log");
+    res.status(500).json({ message: "Internal server error" });
+  }
 });
 
 export default router;

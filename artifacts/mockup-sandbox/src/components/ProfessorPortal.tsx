@@ -54,18 +54,22 @@ import {
   FileText,
 } from "lucide-react";
 import { DEPARTMENTS, formatLogbookDate } from "@/lib/logbook-config";
+import { apiGet, apiPatch } from "@/lib/apiClient";
+import { getCurrentUser } from "@/lib/session";
 
 export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
   const [location, setLocation] = useLocation();
   const [data, setData] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [currentIndex, setCurrentIndex] = React.useState(0);
   const [remarks, setRemarks] = React.useState("");
   const [grade, setGrade] = React.useState("A");
   const [competencyOverride, setCompetencyOverride] = React.useState("performed_independently");
   const [evaluatedLogs, setEvaluatedLogs] = React.useState<Record<string, any>>({});
   const [departmentFilter, setDepartmentFilter] = React.useState("all");
-  
+
   // Selected mentee for Logbook Inspector Modal
   const [selectedMentee, setSelectedMentee] = React.useState<any | null>(null);
 
@@ -84,29 +88,47 @@ export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
     else setLocation("/");
   };
 
-  React.useEffect(() => {
-    async function fetchProfessorData() {
-      try {
-        const res = await fetch("/api/professor/dashboard");
-        if (res.ok) {
-          const json = await res.json();
-          setData(json);
-        } else {
-          setData(getFallbackProfData());
-        }
-      } catch (e) {
-        setData(getFallbackProfData());
-      } finally {
+  const fetchProfessorData = React.useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const user = getCurrentUser();
+      
+      if (!user?.id) {
+        setError("Not logged in");
         setLoading(false);
+        return;
       }
+      
+      const json = await apiGet(`/api/professors/${user.id}/review-queue`);
+      setData(json);
+    } catch (e: any) {
+      setError(e.message || "Failed to load review queue");
+    } finally {
+      setLoading(false);
     }
-    fetchProfessorData();
   }, []);
+
+  React.useEffect(() => {
+    fetchProfessorData();
+  }, [fetchProfessorData]);
 
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <p className="text-sm font-medium text-slate-500">Loading Faculty Review Queue...</p>
+        <div className="flex flex-col items-center space-y-4">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-300 border-t-teal-600"></div>
+          <p className="text-sm font-medium text-slate-500">Loading Faculty Review Queue...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-64 flex-col items-center justify-center space-y-4">
+        <p className="text-red-500">{error}</p>
+        <Button onClick={fetchProfessorData} variant="outline">Try Again</Button>
       </div>
     );
   }
@@ -116,43 +138,49 @@ export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
   const mentees = departmentFilter === "all"
     ? allStudents
     : allStudents.filter((student: any) => student.department === departmentFilter);
+    
+  // Auto-clamp currentIndex if the review queue shrinks after an action
+  React.useEffect(() => {
+    if (reviews.length > 0 && currentIndex >= reviews.length) {
+      setCurrentIndex(reviews.length - 1);
+    }
+  }, [reviews.length, currentIndex]);
+
   const currentItem = reviews[currentIndex];
 
-  const handleApprove = () => {
-    if (!currentItem) return;
-    setEvaluatedLogs({
-      ...evaluatedLogs,
-      [currentItem.id]: { status: "verified", remarks: remarks || "Approved without conditions.", grade },
-    });
+  const handleReviewAction = async (status: "verified" | "rejected", defaultRemarks: string) => {
+    if (!currentItem || isSubmitting) return;
+    
+    setIsSubmitting(true);
+    const user = getCurrentUser();
+    
+    try {
+      await apiPatch(`/api/logs/${currentItem.logType}/${currentItem.dbId}/review`, {
+        status,
+        comments: remarks || defaultRemarks,
+        reviewerId: user?.id
+      });
+      
+      // Optimistic update for evaluatedLogs mapping
+      setEvaluatedLogs(prev => ({
+        ...prev,
+        [currentItem.id]: { status, remarks: remarks || defaultRemarks, grade },
+      }));
 
-    toast.success(`Number ${currentItem.id} verified`, {
-      description: currentItem.type === "Procedure"
-        ? `Grade ${grade}; verified competency saved.`
-        : `Grade ${grade}; guide review saved.`,
-    });
-
-    setRemarks("");
-    if (currentIndex < reviews.length - 1) {
-      setCurrentIndex(currentIndex + 1);
+      toast.success(status === "verified" ? `Number ${currentItem.id} verified` : `Revision Requested for ${currentItem.id}`);
+      
+      setRemarks("");
+      // Refresh real data so the roster updates and the queue shrinks
+      await fetchProfessorData();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to submit review");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleReject = () => {
-    if (!currentItem) return;
-    setEvaluatedLogs({
-      ...evaluatedLogs,
-      [currentItem.id]: { status: "rejected", remarks: remarks || "Please expand on case findings." },
-    });
-
-    toast.error(`Revision Requested for ${currentItem.id}`, {
-      description: `Returned to ${currentItem.studentName} with feedback.`,
-    });
-
-    setRemarks("");
-    if (currentIndex < reviews.length - 1) {
-      setCurrentIndex(currentIndex + 1);
-    }
-  };
+  const handleApprove = () => handleReviewAction("verified", "Approved without conditions.");
+  const handleReject = () => handleReviewAction("rejected", "Please expand on case findings.");
 
   return (
     <div className="space-y-6 pb-12">
@@ -175,6 +203,8 @@ export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
           </div>
         </div>
       </div>
+      
+
 
       <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="bg-slate-200/70 p-1 rounded-xl">
@@ -308,9 +338,8 @@ export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
                             key={g}
                             type="button"
                             onClick={() => setGrade(g)}
-                            className={`flex-1 py-1.5 rounded text-xs font-bold transition-all border ${
-                              grade === g ? "bg-teal-600 text-white border-teal-600" : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"
-                            }`}
+                            className={`flex-1 py-1.5 rounded text-xs font-bold transition-all border ${grade === g ? "bg-teal-600 text-white border-teal-600" : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"
+                              }`}
                           >
                             {g}
                           </button>
@@ -332,6 +361,7 @@ export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
                     <div className="grid grid-cols-2 gap-3 pt-2">
                       <Button
                         onClick={handleReject}
+                        disabled={isSubmitting}
                         variant="outline"
                         className="border-rose-300 text-rose-700 hover:bg-rose-50 text-xs font-semibold gap-1"
                       >
@@ -339,6 +369,7 @@ export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
                       </Button>
                       <Button
                         onClick={handleApprove}
+                        disabled={isSubmitting}
                         className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold gap-1"
                       >
                         <CheckCircle2 className="h-4 w-4" /> Verify &amp; Next
@@ -643,17 +674,4 @@ function renderShortfallBadge(status: string) {
   }
 }
 
-function getFallbackProfData() {
-  return {
-    faculty: { name: "Dr. Mohammed", role: "Professor", department: "All Departments" },
-    pendingReviews: [
-      { id: 3, studentName: "Dr. Anilkumar A", type: "Case Log", title: "Acute Severe Asthma Exacerbation in a 7yo Child", date: "2026-07-26", detail: "Managed with nebulized salbutamol and ipratropium; detailed history, examination, investigations, outcome and learning points attached.", patientUhid: "UHID-2026-004281", patientInfo: "7 yr / Male" },
-      { id: 11, studentName: "Dr. Anilkumar A", type: "Procedure", title: "Endotracheal Intubation", date: "2026-07-24", detail: "Emergency procedure completed under direct supervision.", patientUhid: "UHID-2026-003944", patientInfo: "7 yr / Male", declaredCompetency: "Performed under supervision" },
-    ],
-    assignedMentees: [
-      { id: 1, name: "Dr. Anilkumar A", department: "Pediatrics", registrationNumber: "PG2024-PAED-014", overallCompletion: 73, shortfallStatus: "at_risk" },
-      { id: 2, name: "Dr. Radhamani KV", department: "General Medicine", registrationNumber: "PG2024-MED-018", overallCompletion: 88, shortfallStatus: "on_track" },
-      { id: 3, name: "Dr. Mohammad MTP", department: "General Surgery", registrationNumber: "PG2025-SURG-003", overallCompletion: 64, shortfallStatus: "behind" },
-    ],
-  };
-}
+

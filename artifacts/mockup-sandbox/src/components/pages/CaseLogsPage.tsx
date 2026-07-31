@@ -1,6 +1,8 @@
 import * as React from "react";
-import { AlertCircle, CheckCircle2, Clock, Eye, FileText, PlusCircle, Search } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, Eye, FileText, PlusCircle, Search, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { apiGet, apiPost } from "@/lib/apiClient";
+import { getCurrentUser } from "@/lib/session";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -39,62 +41,6 @@ type CaseLog = {
   remarks: string;
 };
 
-const caseSeed: CaseLog[] = [
-  {
-    number: 3,
-    date: "2026-07-26",
-    patientUhid: "UHID-2026-004281",
-    age: "7 years",
-    gender: "Male",
-    chiefComplaints: "Breathlessness and wheeze for 8 hours; nocturnal cough for 3 days.",
-    history: "Known asthma for 2 years with two prior admissions. Missed controller medication for one week. No fever, choking episode or drug allergy.",
-    examination: "Alert but anxious; RR 42/min, HR 132/min, SpO₂ 89% on room air. Intercostal retractions, reduced bilateral air entry and diffuse expiratory wheeze.",
-    investigations: "PEFR 35% of predicted; ABG: pH 7.34, pCO₂ 43 mmHg. Chest radiograph showed hyperinflation without focal infiltrate.",
-    diagnosis: "Acute Severe Asthma Exacerbation",
-    differentialDiagnosis: "Foreign-body aspiration; bronchopneumonia; anaphylaxis.",
-    management: "Oxygen, back-to-back salbutamol–ipratropium nebulisation, IV hydrocortisone, IV magnesium sulphate and continuous cardiorespiratory monitoring.",
-    outcome: "SpO₂ improved to 97% and respiratory distress settled over 6 hours. Shifted to ward on inhaled bronchodilator and controller therapy.",
-    learningPoints: "Applied severity classification, documented response after each bronchodilator cycle and counselled family on spacer technique and an asthma action plan.",
-    status: "pending",
-    remarks: "Awaiting Dr. Mohammed review.",
-  },
-  {
-    number: 2,
-    date: "2026-07-23",
-    patientUhid: "UHID-2026-004097",
-    age: "3 years",
-    gender: "Female",
-    chiefComplaints: "High fever for 5 days, abdominal pain and reduced urine output.",
-    history: "No bleeding manifestations. Oral intake reduced. No previous major illness.",
-    examination: "Cold extremities, delayed capillary refill, narrow pulse pressure and tender hepatomegaly.",
-    investigations: "Rising hematocrit, platelet count 42,000/mm³ and positive dengue NS1 antigen.",
-    diagnosis: "Severe Dengue with Plasma Leakage",
-    differentialDiagnosis: "Septic shock; enteric fever.",
-    management: "Judicious IV crystalloid resuscitation with serial hematocrit, urine-output and perfusion monitoring.",
-    outcome: "Hemodynamically stable after 24 hours; fluids tapered without overload.",
-    learningPoints: "Used dynamic clinical endpoints to guide fluids and recognised the critical phase early.",
-    status: "verified",
-    remarks: "Clear fluid-balance documentation and monitoring plan.",
-  },
-  {
-    number: 1,
-    date: "2026-07-19",
-    patientUhid: "UHID-2026-003812",
-    age: "10 months",
-    gender: "Male",
-    chiefComplaints: "Loose stools and vomiting for 2 days.",
-    history: "Eight watery stools, three episodes of vomiting, no blood in stool.",
-    examination: "Irritable, thirsty, sunken eyes and reduced skin turgor.",
-    investigations: "Serum electrolytes within normal limits.",
-    diagnosis: "Acute Gastroenteritis with Some Dehydration",
-    differentialDiagnosis: "Urinary tract infection; surgical abdomen.",
-    management: "ORS Plan B, zinc supplementation and continued breastfeeding.",
-    outcome: "Hydration restored and discharged with danger-sign counselling.",
-    learningPoints: "Classified dehydration clinically and demonstrated ORS preparation to caregiver.",
-    status: "verified",
-    remarks: "Appropriate dehydration assessment.",
-  },
-];
 
 const emptyForm = {
   date: todayForInput(),
@@ -110,27 +56,86 @@ const emptyForm = {
   management: "",
   outcome: "",
   learningPoints: "",
+  supervisorId: "",
 };
 
 export function CaseLogsPage() {
   const [searchTerm, setSearchTerm] = React.useState("");
   const [isModalOpen, setIsModalOpen] = React.useState(false);
-  const [selectedLog, setSelectedLog] = React.useState<CaseLog | null>(null);
-  const [caseLogs, setCaseLogs] = React.useState(caseSeed);
+  const [selectedLog, setSelectedLog] = React.useState<any | null>(null);
+  const [caseLogs, setCaseLogs] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
   const [form, setForm] = React.useState(emptyForm);
 
-  const handleAddCase = (event: React.FormEvent) => {
+  const user = getCurrentUser();
+  const [professors, setProfessors] = React.useState<any[]>([]);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+  const fetchLogs = React.useCallback(async () => {
+    if (!user?.studentProfileId) {
+      setError("Not logged in");
+      setLoading(false);
+      return;
+    }
+    try {
+      setLoading(true);
+      const data = await apiGet(`/api/students/${user.studentProfileId}/logs`);
+      // Sort so newest are first
+      const sortedLogs = (data.caseLogs || []).sort((a: any, b: any) => b.id - a.id);
+      setCaseLogs(sortedLogs.map((log: any, index: number) => ({ ...log, number: sortedLogs.length - index })));
+    } catch (err: any) {
+      setError(err.message || "Failed to load case logs");
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.studentProfileId]);
+
+  React.useEffect(() => {
+    fetchLogs();
+    if (user?.departmentId) {
+      apiGet(`/api/departments/${user.departmentId}/professors`).then(setProfessors).catch(console.error);
+    }
+  }, [fetchLogs, user?.departmentId]);
+
+  const handleAddCase = async (event: React.FormEvent) => {
     event.preventDefault();
-    const next: CaseLog = {
-      number: Math.max(...caseLogs.map((item) => item.number)) + 1,
-      ...form,
-      status: "pending",
-      remarks: "Submitted for professor review.",
-    };
-    setCaseLogs([next, ...caseLogs]);
-    setForm({ ...emptyForm, date: todayForInput() });
-    setIsModalOpen(false);
-    toast.success(`Case number ${next.number} submitted`);
+    if (!form.supervisorId) {
+      toast.error("Please select a reviewing professor");
+      return;
+    }
+    
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        date: form.date,
+        patientUhid: form.patientUhid,
+        patientAge: form.age,
+        patientGender: form.gender.toLowerCase(),
+        chiefComplaints: form.chiefComplaints,
+        history: form.history,
+        examination: form.examination,
+        investigations: form.investigations,
+        diagnosisProvisional: form.diagnosis,
+        diagnosisFinal: form.differentialDiagnosis, // reuse field for now or keep blank
+        differentialDiagnosis: form.differentialDiagnosis,
+        managementPlan: form.management,
+        outcome: form.outcome,
+        learningPoints: form.learningPoints,
+        supervisorId: form.supervisorId,
+      };
+      
+      await apiPost(`/api/students/${user?.studentProfileId}/case-logs`, payload);
+      
+      await fetchLogs();
+      setForm({ ...emptyForm, date: todayForInput() });
+      setIsModalOpen(false);
+      toast.success(`Case submitted successfully`);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to submit case log");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const search = searchTerm.toLowerCase();
@@ -143,6 +148,12 @@ export function CaseLogsPage() {
 
   return (
     <div className="space-y-6 pb-12">
+      {error && (
+        <div className="flex flex-col items-center justify-center p-8 text-center border rounded-2xl bg-rose-50 border-rose-100">
+          <p className="text-rose-700 mb-4">{error}</p>
+          <Button onClick={fetchLogs} variant="outline" className="border-rose-200 text-rose-700">Try Again</Button>
+        </div>
+      )}
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
           <p className="page-eyebrow">Clinical case exposure</p>
@@ -183,9 +194,20 @@ export function CaseLogsPage() {
               <Field label="Management and interventions"><Textarea rows={3} value={form.management} onChange={(e) => setField("management", e.target.value)} required /></Field>
               <Field label="Outcome / follow-up"><Textarea rows={2} value={form.outcome} onChange={(e) => setField("outcome", e.target.value)} /></Field>
               <Field label="Learning points"><Textarea rows={2} value={form.learningPoints} onChange={(e) => setField("learningPoints", e.target.value)} required /></Field>
+              <Field label="Reviewing professor">
+                <Select value={form.supervisorId} onValueChange={(value) => setField("supervisorId", value)}>
+                  <SelectTrigger><SelectValue placeholder="Select a professor" /></SelectTrigger>
+                  <SelectContent>
+                    {professors.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.fullName}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </Field>
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Save draft</Button>
-                <Button type="submit">Send to professor</Button>
+                <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)} disabled={isSubmitting}>Save draft</Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Send to professor
+                </Button>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -201,34 +223,45 @@ export function CaseLogsPage() {
           <Badge variant="outline" className="w-fit border-teal-100 bg-teal-50 px-3 py-1 text-teal-800">{caseLogs.length} of 50 cases logged</Badge>
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Number</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Patient UHID</TableHead>
-                <TableHead>Age</TableHead>
-                <TableHead>Diagnosis</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Record</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredLogs.map((log) => (
-                <TableRow key={log.number}>
-                  <TableCell className="font-bold">{log.number}</TableCell>
-                  <TableCell>{formatLogbookDate(log.date)}</TableCell>
-                  <TableCell className="font-semibold text-teal-800">{log.patientUhid}</TableCell>
-                  <TableCell>{log.age}</TableCell>
-                  <TableCell><p className="max-w-sm font-semibold text-slate-900">{log.diagnosis}</p></TableCell>
-                  <TableCell>{statusBadge(log.status)}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" onClick={() => setSelectedLog(log)}><Eye className="h-4 w-4" /> Details</Button>
-                  </TableCell>
+          {loading ? (
+            <div className="flex h-48 flex-col items-center justify-center space-y-4">
+              <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
+              <p className="text-sm font-medium text-slate-500">Loading cases...</p>
+            </div>
+          ) : filteredLogs.length === 0 ? (
+            <div className="flex h-48 flex-col items-center justify-center space-y-4 text-slate-500">
+              <p>No cases found.</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Number</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Patient UHID</TableHead>
+                  <TableHead>Age</TableHead>
+                  <TableHead>Diagnosis</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Record</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredLogs.map((log) => (
+                  <TableRow key={log.id}>
+                    <TableCell className="font-bold">{log.number}</TableCell>
+                    <TableCell>{formatLogbookDate(log.date)}</TableCell>
+                    <TableCell className="font-semibold text-teal-800">{log.patientUhid}</TableCell>
+                    <TableCell>{log.patientAge || log.age}</TableCell>
+                    <TableCell><p className="max-w-sm font-semibold text-slate-900">{log.diagnosisProvisional || log.diagnosis}</p></TableCell>
+                    <TableCell>{statusBadge(log.status)}</TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="sm" onClick={() => setSelectedLog(log)}><Eye className="h-4 w-4" /> Details</Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
@@ -238,8 +271,8 @@ export function CaseLogsPage() {
             <>
               <DialogHeader>
                 <p className="page-eyebrow">Case number {selectedLog.number} • {formatLogbookDate(selectedLog.date)}</p>
-                <DialogTitle className="text-2xl">{selectedLog.diagnosis}</DialogTitle>
-                <DialogDescription>{selectedLog.patientUhid} • {selectedLog.age} • {selectedLog.gender}</DialogDescription>
+                <DialogTitle className="text-2xl">{selectedLog.diagnosisProvisional || selectedLog.diagnosis}</DialogTitle>
+                <DialogDescription>{selectedLog.patientUhid} • {selectedLog.patientAge || selectedLog.age} • {selectedLog.patientGender || selectedLog.gender}</DialogDescription>
               </DialogHeader>
               <div className="grid gap-4">
                 <Detail label="Chief complaints" value={selectedLog.chiefComplaints} />
@@ -247,16 +280,18 @@ export function CaseLogsPage() {
                 <Detail label="Clinical examination" value={selectedLog.examination} />
                 <Detail label="Investigations" value={selectedLog.investigations} />
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <Detail label="Final diagnosis" value={selectedLog.diagnosis} />
+                  <Detail label="Final diagnosis" value={selectedLog.diagnosisProvisional || selectedLog.diagnosis} />
                   <Detail label="Differential diagnosis" value={selectedLog.differentialDiagnosis} />
                 </div>
-                <Detail label="Management and interventions" value={selectedLog.management} />
+                <Detail label="Management and interventions" value={selectedLog.managementPlan || selectedLog.management} />
                 <Detail label="Outcome / follow-up" value={selectedLog.outcome} />
                 <Detail label="Learning points" value={selectedLog.learningPoints} />
-                <div className="rounded-2xl border border-teal-100 bg-teal-50/70 p-4">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-teal-700">Professor remarks</p>
-                  <p className="mt-1 text-sm text-teal-950">{selectedLog.remarks}</p>
-                </div>
+                {(selectedLog.comments || selectedLog.remarks) && (
+                  <div className="rounded-2xl border border-teal-100 bg-teal-50/70 p-4">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-teal-700">Professor remarks</p>
+                    <p className="mt-1 text-sm text-teal-950">{selectedLog.comments || selectedLog.remarks}</p>
+                  </div>
+                )}
               </div>
             </>
           )}

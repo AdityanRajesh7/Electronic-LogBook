@@ -1,16 +1,36 @@
 import * as React from "react";
-import { BookOpenCheck, CheckCircle2, KeyRound, ShieldCheck, UserPlus } from "lucide-react";
+import { BookOpenCheck, CheckCircle2, KeyRound, ShieldCheck, UserPlus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { apiPost } from "@/lib/apiClient";
 
 export function LoginPage({ onSignIn, onRegister }: { onSignIn: () => void; onRegister: () => void }) {
   const [registrationNumber, setRegistrationNumber] = React.useState("PG2024-PAED-014");
   const [password, setPassword] = React.useState("Demo@2026");
+  const [error, setError] = React.useState<string | null>(null);
+  const [isLoading, setIsLoading] = React.useState(false);
 
-  const signIn = (event: React.FormEvent) => {
+  const signIn = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (registrationNumber && password) onSignIn();
+    if (!registrationNumber || !password) return;
+    
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const user = await apiPost('/api/auth/login', { 
+        username: registrationNumber, 
+        password 
+      });
+      
+      window.sessionStorage.setItem('elogbook-user', JSON.stringify(user));
+      onSignIn();
+    } catch (err: any) {
+      setError(err.message || "Failed to sign in. Please check your credentials.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -52,6 +72,12 @@ export function LoginPage({ onSignIn, onRegister }: { onSignIn: () => void; onRe
             <h2 className="mt-2 text-4xl font-bold text-slate-900">Welcome back</h2>
             <p className="mt-2 text-sm text-slate-500">Sign in with your university registration number and password.</p>
 
+            {error && (
+              <div className="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-700 border border-red-200">
+                {error}
+              </div>
+            )}
+
             <form onSubmit={signIn} className="mt-9 space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="registration">Registration number</Label>
@@ -62,6 +88,7 @@ export function LoginPage({ onSignIn, onRegister }: { onSignIn: () => void; onRe
                     value={registrationNumber}
                     onChange={(event) => setRegistrationNumber(event.target.value)}
                     className="pl-10"
+                    disabled={isLoading}
                     required
                   />
                 </div>
@@ -76,12 +103,18 @@ export function LoginPage({ onSignIn, onRegister }: { onSignIn: () => void; onRe
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
                     className="pl-10"
+                    disabled={isLoading}
                     required
                   />
                 </div>
               </div>
-              <Button type="submit" className="h-11 w-full">
-                <ShieldCheck className="h-4 w-4" /> Sign in to E-Logbook
+              <Button type="submit" className="h-11 w-full" disabled={isLoading}>
+                {isLoading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <ShieldCheck className="mr-2 h-4 w-4" />
+                )}
+                {isLoading ? "Signing in..." : "Sign in to E-Logbook"}
               </Button>
             </form>
 

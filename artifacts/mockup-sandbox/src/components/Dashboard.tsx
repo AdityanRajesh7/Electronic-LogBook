@@ -6,11 +6,12 @@ import {
   Award,
   CalendarDays,
   CheckCircle2,
-  ClipboardCheck,
   FileText,
   GraduationCap,
   Printer,
   Stethoscope,
+  Loader2,
+  RefreshCcw,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,35 +19,95 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatLogbookDate } from "@/lib/logbook-config";
+import { apiGet } from "@/lib/apiClient";
+import { getCurrentUser } from "@/lib/session";
 
-const student = {
-  name: "Dr. Anilkumar A",
-  department: "Department of Pediatrics",
-  registrationNumber: "PG2024-PAED-014",
-  dateOfJoining: "2024-06-03",
-  joiningYear: "2024",
-  expectedCompletion: "2027-06-03",
-  registrationStatus: "Paid & active",
-};
-
-const categories = [
-  { label: "Clinical cases", logged: 42, required: 50, icon: FileText, href: "/cases", tone: "from-teal-500 to-cyan-500" },
-  { label: "Procedures", logged: 11, required: 101, icon: Stethoscope, href: "/procedures", tone: "from-cyan-500 to-sky-500" },
-  { label: "Case discussions", logged: 18, required: 50, icon: GraduationCap, href: "/academics", tone: "from-emerald-500 to-teal-500" },
-  { label: "Assessments", logged: 3, required: 4, icon: ClipboardCheck, href: "/assessments", tone: "from-amber-400 to-orange-400" },
-];
-
-const recent = [
-  { number: 3, date: "2026-07-26", type: "Case", title: "Acute Severe Asthma Exacerbation", patientUhid: "UHID-2026-004281", status: "Pending" },
-  { number: 1088, date: "2026-07-24", type: "Procedure", title: "Endotracheal Intubation", patientUhid: "UHID-2026-003944", status: "Verified" },
-  { number: 1081, date: "2026-07-22", type: "Academic", title: "High-Flow Nasal Cannula versus CPAP", patientUhid: "—", status: "Verified" },
-  { number: 1075, date: "2026-07-20", type: "Procedure", title: "Lumbar Puncture", patientUhid: "UHID-2026-003771", status: "Revision" },
-];
+// Calculate expected completion by adding 3 years to dateOfJoining
+function calculateExpectedCompletion(dateOfJoining: string) {
+  if (!dateOfJoining) return "Unknown";
+  try {
+    const d = new Date(dateOfJoining);
+    d.setFullYear(d.getFullYear() + 3);
+    return d.toISOString().slice(0, 10);
+  } catch {
+    return "Unknown";
+  }
+}
 
 export function Dashboard() {
+  const user = getCurrentUser();
+  const [logs, setLogs] = React.useState<any>(null);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const fetchLogs = React.useCallback(async () => {
+    if (!user?.studentProfileId) {
+      setError("No student profile ID found. Please log in as a student.");
+      setIsLoading(false);
+      return;
+    }
+    try {
+      setIsLoading(true);
+      setError(null);
+      const data = await apiGet(`/api/students/${user.studentProfileId}/logs`);
+      setLogs(data);
+    } catch (err: any) {
+      setError(err.message || "Failed to load dashboard data");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user]);
+
+  React.useEffect(() => {
+    fetchLogs();
+  }, [fetchLogs]);
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[50vh] flex-col items-center justify-center space-y-4">
+        <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
+        <p className="text-sm text-slate-500">Loading your logbook data...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex min-h-[50vh] flex-col items-center justify-center space-y-4">
+        <AlertTriangle className="h-10 w-10 text-amber-500" />
+        <p className="text-sm font-medium text-slate-900">{error}</p>
+        <Button onClick={fetchLogs} variant="outline" className="text-teal-700">
+          <RefreshCcw className="mr-2 h-4 w-4" /> Try again
+        </Button>
+      </div>
+    );
+  }
+
+  if (!logs) return null;
+
+  const categories = [
+    { label: "Clinical cases", logged: logs.caseLogs?.length || 0, required: 50, icon: FileText, href: "/cases", tone: "from-teal-500 to-cyan-500" },
+    { label: "Procedures", logged: logs.procedureLogs?.length || 0, required: 101, icon: Stethoscope, href: "/procedures", tone: "from-cyan-500 to-sky-500" },
+    { label: "Case discussions", logged: logs.academicLogs?.length || 0, required: 50, icon: GraduationCap, href: "/academics", tone: "from-emerald-500 to-teal-500" },
+  ];
+
   const completion = Math.round(
-    categories.reduce((sum, item) => sum + item.logged / item.required, 0) / categories.length * 100,
+    categories.reduce((sum, item) => sum + Math.min(item.logged / item.required, 1), 0) / categories.length * 100,
   );
+
+  const mappedCaseLogs = (logs.caseLogs || []).map((l: any) => ({
+    number: l.id, date: l.date, type: "Case", title: l.diagnosisProvisional || "Case Log", patientUhid: l.patientUhid, status: l.status, timestamp: new Date(l.createdAt).getTime()
+  }));
+  const mappedProcLogs = (logs.procedureLogs || []).map((l: any) => ({
+    number: l.id, date: l.date, type: "Procedure", title: l.procedureName, patientUhid: l.patientUhid, status: l.status, timestamp: new Date(l.createdAt).getTime()
+  }));
+  const mappedAcadLogs = (logs.academicLogs || []).map((l: any) => ({
+    number: l.id, date: l.date, type: "Academic", title: l.topic, patientUhid: "—", status: l.status, timestamp: new Date(l.createdAt).getTime()
+  }));
+
+  const recent = [...mappedCaseLogs, ...mappedProcLogs, ...mappedAcadLogs]
+    .sort((a, b) => b.timestamp - a.timestamp)
+    .slice(0, 5);
 
   return (
     <div className="space-y-6 pb-12">
@@ -56,19 +117,18 @@ export function Dashboard() {
           <div className="flex flex-col gap-7 xl:flex-row xl:items-start xl:justify-between">
             <div className="max-w-2xl">
               <Badge className="border-0 bg-teal-50 text-[10px] font-bold uppercase tracking-[.16em] text-teal-800">MCI logbook guidelines</Badge>
-              <p className="mt-4 page-eyebrow">{student.department}</p>
+              <p className="mt-4 page-eyebrow">{logs.profile?.department || "Department Unassigned"}</p>
               <h1 className="mt-1 text-4xl font-bold leading-tight text-slate-900 md:text-5xl">Postgraduate Electronic Logbook</h1>
               <p className="mt-4 text-sm leading-6 text-slate-600">
                 Maintain complete, dated clinical and academic records using patient UHID only. Submit entries regularly for professor verification.
               </p>
             </div>
             <div className="grid w-full gap-3 sm:grid-cols-2 xl:max-w-xl">
-              <ProfileField label="Resident" value={student.name} />
-              <ProfileField label="Registration number" value={student.registrationNumber} />
-              <ProfileField label="Date of joining" value={formatLogbookDate(student.dateOfJoining)} />
-              <ProfileField label="Joining year" value={student.joiningYear} />
-              <ProfileField label="Expected completion" value={formatLogbookDate(student.expectedCompletion)} />
-              <ProfileField label="Registration status" value={student.registrationStatus} />
+              <ProfileField label="Resident" value={user?.name || "Student"} />
+              <ProfileField label="Registration number" value={logs.profile?.registrationNumber || "—"} />
+              <ProfileField label="Date of joining" value={formatLogbookDate(logs.profile?.dateOfJoining || "—")} />
+              <ProfileField label="Joining year" value={logs.profile?.joiningYear || "—"} />
+              <ProfileField label="Expected completion" value={formatLogbookDate(calculateExpectedCompletion(logs.profile?.dateOfJoining))} />
             </div>
           </div>
         </CardContent>
@@ -96,9 +156,9 @@ export function Dashboard() {
                 </div>
               </div>
               <div className="min-w-52 rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-teal-100">Registration</p>
-                <p className="mt-1 text-lg font-bold">{student.registrationStatus}</p>
-                <p className="mt-1 text-[11px] text-teal-50">Programme ends {formatLogbookDate(student.expectedCompletion)}</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-teal-100 flex items-center gap-1.5">Registration <Badge variant="secondary" className="h-4 px-1 text-[8px] bg-white/20 text-white border-0 hover:bg-white/20 rounded-sm">Not tracked</Badge></p>
+                <p className="mt-1 text-lg font-bold text-teal-50/50 italic">Status unknown</p>
+                <p className="mt-1 text-[11px] text-teal-50">Programme ends {formatLogbookDate(calculateExpectedCompletion(logs.profile?.dateOfJoining))}</p>
               </div>
             </div>
             <Progress value={completion} className="relative mt-6 h-2.5 bg-white/20" />
@@ -109,7 +169,7 @@ export function Dashboard() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {categories.map((item) => {
           const Icon = item.icon;
-          const percent = Math.round(item.logged / item.required * 100);
+          const percent = Math.min(Math.round(item.logged / item.required * 100), 100);
           return (
             <Link key={item.label} href={item.href}>
               <Card className="h-full cursor-pointer border-teal-100 transition hover:-translate-y-0.5 hover:shadow-lg">
@@ -138,21 +198,31 @@ export function Dashboard() {
             <Button variant="ghost" size="sm" asChild><Link href="/cases">View logs <ArrowRight className="h-4 w-4" /></Link></Button>
           </CardHeader>
           <CardContent className="p-0">
-            <Table>
-              <TableHeader><TableRow><TableHead>Number</TableHead><TableHead>Date</TableHead><TableHead>Type</TableHead><TableHead>Entry</TableHead><TableHead>Patient UHID</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
-              <TableBody>
-                {recent.map((item) => (
-                  <TableRow key={item.number}>
-                    <TableCell className="font-bold">{item.number}</TableCell>
-                    <TableCell>{formatLogbookDate(item.date)}</TableCell>
-                    <TableCell><Badge variant="outline" className="border-teal-100 bg-teal-50 text-teal-800">{item.type}</Badge></TableCell>
-                    <TableCell className="max-w-xs font-semibold">{item.title}</TableCell>
-                    <TableCell className="text-xs font-semibold text-teal-800">{item.patientUhid}</TableCell>
-                    <TableCell><Status value={item.status} /></TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            {recent.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-50">
+                  <FileText className="h-5 w-5 text-slate-400" />
+                </div>
+                <h3 className="mt-4 text-sm font-semibold text-slate-900">No entries yet</h3>
+                <p className="mt-1 max-w-sm text-sm text-slate-500">Your logbook is empty. Start by logging your first clinical case or procedure.</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader><TableRow><TableHead>Number</TableHead><TableHead>Date</TableHead><TableHead>Type</TableHead><TableHead>Entry</TableHead><TableHead>Patient UHID</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+                <TableBody>
+                  {recent.map((item) => (
+                    <TableRow key={`${item.type}-${item.number}`}>
+                      <TableCell className="font-bold">{item.number}</TableCell>
+                      <TableCell>{formatLogbookDate(item.date)}</TableCell>
+                      <TableCell><Badge variant="outline" className="border-teal-100 bg-teal-50 text-teal-800">{item.type}</Badge></TableCell>
+                      <TableCell className="max-w-xs font-semibold">{item.title}</TableCell>
+                      <TableCell className="text-xs font-semibold text-teal-800">{item.patientUhid}</TableCell>
+                      <TableCell><Status value={item.status} /></TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
 
@@ -188,9 +258,11 @@ export function Dashboard() {
         <CardContent className="flex flex-col justify-between gap-4 p-5 sm:flex-row sm:items-center">
           <div className="flex items-center gap-3">
             <CalendarDays className="h-5 w-5 text-teal-600" />
-            <div><p className="text-sm font-bold">Next quarterly assessment</p><p className="text-xs text-slate-500">30/09/26 with Dr. Mohamad</p></div>
+            <div><p className="text-sm font-bold">Next quarterly assessment</p><p className="text-xs text-slate-500 italic">Assessment tracking coming soon</p></div>
           </div>
-          <Button asChild variant="outline" size="sm"><Link href="/assessments"><Award className="h-4 w-4" /> View assessments</Link></Button>
+          <Button asChild variant="outline" size="sm" disabled className="opacity-50 cursor-not-allowed">
+            <span><Award className="h-4 w-4 mr-2 inline" /> View assessments</span>
+          </Button>
         </CardContent>
       </Card>
     </div>
@@ -202,7 +274,7 @@ function ProfileField({ label, value }: { label: string; value: string }) {
 }
 
 function Status({ value }: { value: string }) {
-  if (value === "Verified") return <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700"><CheckCircle2 className="mr-1 h-3 w-3" /> Verified</Badge>;
-  if (value === "Revision") return <Badge className="border-rose-200 bg-rose-50 text-rose-700">Revision</Badge>;
+  if (value === "verified") return <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700"><CheckCircle2 className="mr-1 h-3 w-3" /> Verified</Badge>;
+  if (value === "rejected") return <Badge className="border-rose-200 bg-rose-50 text-rose-700">Revision</Badge>;
   return <Badge className="border-amber-200 bg-amber-50 text-amber-700">Pending</Badge>;
 }

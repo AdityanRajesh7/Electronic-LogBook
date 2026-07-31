@@ -13,6 +13,8 @@ import { PostingsPage } from "@/components/pages/PostingsPage";
 import { AttendancePage } from "@/components/pages/AttendancePage";
 import { MilestonesPage } from "@/components/pages/MilestonesPage";
 import { AssessmentsPage } from "@/components/pages/AssessmentsPage";
+import { getCurrentUser } from "@/lib/session";
+import { Toaster } from "@/components/ui/sonner";
 
 import { modules as discoveredModules } from "./.generated/mockup-components";
 
@@ -118,9 +120,16 @@ function getPreviewPath(): string | null {
 
 function App() {
   const previewPath = getPreviewPath();
-  const [activeRole, setActiveRole] = useState<RoleType>("Student");
+  const currentUser = getCurrentUser();
+  
+  const activeRole: RoleType = (() => {
+    if (currentUser?.role === "hod") return "HOD";
+    if (currentUser?.role === "professor") return "Professor";
+    return "Student";
+  })();
+  
   const [isAuthenticated, setIsAuthenticated] = useState(
-    () => window.sessionStorage.getItem("elogbook-authenticated") === "true",
+    () => window.sessionStorage.getItem("elogbook-authenticated") === "true"
   );
   const [authScreen, setAuthScreen] = useState<"login" | "register">("login");
 
@@ -136,29 +145,34 @@ function App() {
   if (!isAuthenticated) {
     if (authScreen === "register") {
       return (
-        <RegistrationPage
-          onBack={() => setAuthScreen("login")}
-          onRegistered={() => {
-            setAuthScreen("login");
-          }}
-        />
+        <>
+          <RegistrationPage
+            onBack={() => setAuthScreen("login")}
+            onRegistered={() => {
+              setAuthScreen("login");
+            }}
+          />
+          <Toaster position="top-right" richColors />
+        </>
       );
     }
     return (
-      <LoginPage
-        onRegister={() => setAuthScreen("register")}
-        onSignIn={() => {
-          window.sessionStorage.setItem("elogbook-authenticated", "true");
-          setIsAuthenticated(true);
-        }}
-      />
+      <>
+        <LoginPage
+          onRegister={() => setAuthScreen("register")}
+          onSignIn={() => {
+            window.sessionStorage.setItem("elogbook-authenticated", "true");
+            setIsAuthenticated(true);
+          }}
+        />
+        <Toaster position="top-right" richColors />
+      </>
     );
   }
 
   return (
     <AppLayout
       activeRole={activeRole}
-      setActiveRole={setActiveRole}
       onSignOut={() => {
         window.sessionStorage.removeItem("elogbook-authenticated");
         setIsAuthenticated(false);
@@ -174,6 +188,7 @@ function App() {
       {activeRole === "HOD" && (
         <Switch>
           <Route path="/student-access" component={() => <HODPortal activeTab="student-access" />} />
+          <Route path="/professors" component={() => <HODPortal activeTab="professors" />} />
           <Route path="/leave-approvals" component={() => <HODPortal activeTab="leave-approvals" />} />
           <Route component={() => <HODPortal activeTab="gap-dashboard" />} />
         </Switch>

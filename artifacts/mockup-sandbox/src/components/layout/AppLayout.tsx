@@ -55,7 +55,6 @@ export type RoleType = "Student" | "Professor" | "HOD";
 interface AppLayoutProps {
   children: React.ReactNode;
   activeRole: RoleType;
-  setActiveRole: (role: RoleType) => void;
   onSignOut?: () => void;
 }
 
@@ -99,16 +98,10 @@ function navigationForRole(role: RoleType): NavigationItem[] {
 export function AppLayout({
   children,
   activeRole,
-  setActiveRole,
   onSignOut,
 }: AppLayoutProps) {
-  const [location, setLocation] = useLocation();
+  const [location] = useLocation();
   const navigationItems = navigationForRole(activeRole);
-
-  const handleRoleChange = (newRole: RoleType) => {
-    setActiveRole(newRole);
-    setLocation("/");
-  };
 
   const printCurrentView = () => {
     const label = activeRole === "Student" ? "DRAFT" : "OFFICIAL COPY";
@@ -205,24 +198,10 @@ export function AppLayout({
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-64 rounded-2xl border-teal-100 bg-white/95 p-1 shadow-xl">
-                  <DropdownMenuLabel className="text-xs text-slate-500">Switch prototype portal</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => handleRoleChange("Student")} className="cursor-pointer rounded-xl text-xs">
-                    <UserCheck className="mr-2 h-4 w-4 text-teal-600" /> Student — Dr. Anilkumar A
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleRoleChange("Professor")} className="cursor-pointer rounded-xl text-xs">
-                    <Stethoscope className="mr-2 h-4 w-4 text-teal-600" /> Professor — Dr. Mohammed
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleRoleChange("HOD")} className="cursor-pointer rounded-xl text-xs">
-                    <Building className="mr-2 h-4 w-4 text-teal-600" /> HOD — Dr. Mohamad
-                  </DropdownMenuItem>
                   {onSignOut && (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={onSignOut} className="cursor-pointer rounded-xl text-xs text-rose-700">
-                        <LogOut className="mr-2 h-4 w-4" /> Sign out
-                      </DropdownMenuItem>
-                    </>
+                    <DropdownMenuItem onClick={onSignOut} className="cursor-pointer rounded-xl text-xs text-rose-700">
+                      <LogOut className="mr-2 h-4 w-4" /> Sign out
+                    </DropdownMenuItem>
                   )}
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -245,21 +224,6 @@ export function AppLayout({
               </div>
 
               <div className="flex items-center gap-2">
-                <div className="hidden items-center gap-1 rounded-xl border border-white/80 bg-white/60 p-1 lg:flex">
-                  {(["Student", "Professor", "HOD"] as RoleType[]).map((role) => (
-                    <button
-                      key={role}
-                      onClick={() => handleRoleChange(role)}
-                      className={`rounded-lg px-2.5 py-1.5 text-[11px] font-bold transition ${
-                        activeRole === role
-                          ? "bg-white text-teal-800 shadow-sm"
-                          : "text-slate-500 hover:text-teal-800"
-                      }`}
-                    >
-                      {role}
-                    </button>
-                  ))}
-                </div>
                 <Button
                   variant="outline"
                   size="sm"

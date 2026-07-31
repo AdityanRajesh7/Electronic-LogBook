@@ -4,6 +4,7 @@ import studentRouter from "./student";
 import professorRouter from "./professor";
 import hodRouter from "./hod";
 import authRouter from "./auth";
+import adminRouter from "./admin";
 import departmentRouter from "./department";
 import logsRouter from "./logs";
 
@@ -11,6 +12,7 @@ const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use("/auth", authRouter);
+router.use("/admin", adminRouter);
 router.use("/student", studentRouter);
 router.use("/students", studentRouter);
 router.use("/professors", professorRouter);

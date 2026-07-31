@@ -113,6 +113,19 @@ export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
     fetchProfessorData();
   }, [fetchProfessorData]);
 
+  const reviews = data?.pendingReviews || [];
+  const allStudents = data?.assignedMentees || [];
+  const mentees = departmentFilter === "all"
+    ? allStudents
+    : allStudents.filter((student: any) => student.department === departmentFilter);
+    
+  // Auto-clamp currentIndex if the review queue shrinks after an action
+  React.useEffect(() => {
+    if (reviews.length > 0 && currentIndex >= reviews.length) {
+      setCurrentIndex(reviews.length - 1);
+    }
+  }, [reviews.length, currentIndex]);
+
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -132,19 +145,6 @@ export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
       </div>
     );
   }
-
-  const reviews = data?.pendingReviews || [];
-  const allStudents = data?.assignedMentees || [];
-  const mentees = departmentFilter === "all"
-    ? allStudents
-    : allStudents.filter((student: any) => student.department === departmentFilter);
-    
-  // Auto-clamp currentIndex if the review queue shrinks after an action
-  React.useEffect(() => {
-    if (reviews.length > 0 && currentIndex >= reviews.length) {
-      setCurrentIndex(reviews.length - 1);
-    }
-  }, [reviews.length, currentIndex]);
 
   const currentItem = reviews[currentIndex];
 

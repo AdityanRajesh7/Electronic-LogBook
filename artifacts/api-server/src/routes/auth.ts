@@ -1,8 +1,70 @@
 import { Router, type IRouter } from "express";
 import { db, usersTable, studentsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 
 const router: IRouter = Router();
+const JWT_SECRET = process.env.JWT_SECRET || "fallback-secret-for-dev-only";
+
+router.post("/register", async (req, res) => {
+  try {
+    const { 
+      fullName, 
+      email, 
+      password, 
+      registrationNumber, 
+      batch, 
+      dateOfJoining, 
+      kuhsId, 
+      specialty 
+    } = req.body;
+
+    if (!fullName || !email || !password || !registrationNumber || !batch || !dateOfJoining || !kuhsId || !specialty) {
+      res.status(400).json({ message: "All fields are required" });
+      return;
+    }
+
+    // Check if email or reg number exists
+    const existingUser = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
+    if (existingUser.length > 0) {
+      res.status(400).json({ message: "Email already registered" });
+      return;
+    }
+
+    const existingStudent = await db.select().from(studentsTable).where(eq(studentsTable.registrationNumber, registrationNumber)).limit(1);
+    if (existingStudent.length > 0) {
+      res.status(400).json({ message: "Registration number already registered" });
+      return;
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    // Insert user (defaults to role: student, status: pending)
+    const [newUser] = await db.insert(usersTable).values({
+      fullName,
+      email,
+      passwordHash,
+      role: "student",
+      status: "pending"
+    }).returning();
+
+    // Insert student profile
+    await db.insert(studentsTable).values({
+      userId: newUser.id,
+      registrationNumber,
+      batch,
+      dateOfJoining,
+      kuhsId,
+      specialty
+    });
+
+    res.status(201).json({ message: "Registration successful. Pending HOD approval." });
+  } catch (error) {
+    req.log.error(error, "Registration error");
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
 
 router.post("/login", async (req, res) => {
   try {
@@ -13,22 +75,19 @@ router.post("/login", async (req, res) => {
       return;
     }
 
-    // TODO: Temporary unsecured auth step! Do not use in production.
-    // Replace with real password hashing and JWT signing.
-
     let userRow = null;
 
-    // 1. Check if username matches an email in usersTable (for profs/hods)
-    const profMatch = await db
+    // Check usersTable (email)
+    const match = await db
       .select()
       .from(usersTable)
       .where(eq(usersTable.email, username))
       .limit(1);
     
-    if (profMatch.length > 0) {
-      userRow = profMatch[0];
+    if (match.length > 0) {
+      userRow = match[0];
     } else {
-      // 2. Check if it's a student registration number
+      // Fallback: Check registration number for students
       const studentMatch = await db
         .select()
         .from(studentsTable)
@@ -48,10 +107,38 @@ router.post("/login", async (req, res) => {
       }
     }
 
-    if (!userRow) {
+    if (!userRow || !userRow.passwordHash) {
       res.status(401).json({ message: "Invalid credentials" });
       return;
     }
+
+    const isMatch = await bcrypt.compare(password, userRow.passwordHash);
+    if (!isMatch) {
+      res.status(401).json({ message: "Invalid credentials" });
+      return;
+    }
+
+    if (userRow.status === "pending") {
+      res.status(403).json({ message: "Account pending HOD approval" });
+      return;
+    }
+
+    if (userRow.status === "rejected") {
+      res.status(403).json({ message: "Account rejected by HOD" });
+      return;
+    }
+
+    const token = jwt.sign(
+      { id: userRow.id, role: userRow.role, departmentId: userRow.departmentId },
+      JWT_SECRET,
+      { expiresIn: "1d" }
+    );
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 24 * 60 * 60 * 1000 // 1 day
+    });
 
     let studentProfileId = null;
     if (userRow.role === "student") {
@@ -76,6 +163,42 @@ router.post("/login", async (req, res) => {
   } catch (error) {
     req.log.error(error, "Login error");
     res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+router.post("/logout", (req, res) => {
+  res.clearCookie("token");
+  res.json({ message: "Logged out successfully" });
+});
+
+router.get("/me", async (req, res) => {
+  let token = req.cookies?.token;
+  if (!token && req.headers.authorization?.startsWith("Bearer ")) {
+    token = req.headers.authorization.split(" ")[1];
+  }
+
+  if (!token) {
+    res.status(401).json({ message: "Not authenticated" });
+    return;
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    const [userRow] = await db.select().from(usersTable).where(eq(usersTable.id, decoded.id)).limit(1);
+    
+    if (!userRow) {
+      res.status(401).json({ message: "User not found" });
+      return;
+    }
+
+    res.json({
+      id: userRow.id,
+      name: userRow.fullName,
+      role: userRow.role,
+      departmentId: userRow.departmentId,
+    });
+  } catch (error) {
+    res.status(401).json({ message: "Invalid token" });
   }
 });
 

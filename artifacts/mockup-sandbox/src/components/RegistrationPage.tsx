@@ -5,13 +5,10 @@ import {
   BadgeCheck,
   BookOpenCheck,
   CalendarDays,
-  CreditCard,
-  IndianRupee,
   ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -24,7 +21,6 @@ export function RegistrationPage({
   onBack: () => void;
   onRegistered: () => void;
 }) {
-  const [step, setStep] = React.useState<1 | 2>(1);
   const [submitting, setSubmitting] = React.useState(false);
   const [form, setForm] = React.useState({
     fullName: "",
@@ -34,31 +30,36 @@ export function RegistrationPage({
     joiningDate: todayForInput(),
     password: "",
     confirmPassword: "",
-    paymentMethod: "UPI",
   });
 
   const completionDate = expectedCompletionDate(form.joiningDate);
   const joiningYear = form.joiningDate ? new Date(`${form.joiningDate}T00:00:00`).getFullYear() : "";
   const passwordsMatch = Boolean(form.password) && form.password === form.confirmPassword;
 
-  const continueToPayment = (event: React.FormEvent) => {
-    event.preventDefault();
-    if (passwordsMatch) setStep(2);
-  };
-
   const completeRegistration = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (!passwordsMatch) return;
+    
     setSubmitting(true);
     try {
-      const response = await fetch("/api/student/register", {
+      const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          fullName: form.fullName,
+          email: form.email,
+          password: form.password,
+          registrationNumber: form.registrationNumber,
+          batch: joiningYear.toString(),
+          dateOfJoining: form.joiningDate,
+          kuhsId: `KUHS-${form.registrationNumber}`, // Mock KUHS ID for now
+          specialty: form.department,
+        }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || "Registration could not be completed.");
-      toast.success("Payment completed and registration submitted", {
-        description: `Reference ${result.student.paymentReference}. HOD verification is pending.`,
+      toast.success("Registration submitted", {
+        description: `HOD verification is pending. You will be able to log in after approval.`,
       });
       onRegistered();
     } catch (error) {
@@ -89,8 +90,7 @@ export function RegistrationPage({
               Register using the official university registration number, exact joining date and department.
             </p>
             <div className="mt-8 space-y-3">
-              <Step number="1" title="Student & course details" active={step === 1} complete={step === 2} />
-              <Step number="2" title="Registration payment" active={step === 2} complete={false} />
+              <Step number="1" title="Student & course details" active={true} complete={false} />
             </div>
             <div className="mt-8 rounded-2xl border border-white/15 bg-white/10 p-4">
               <p className="flex items-center gap-2 text-xs font-bold"><CalendarDays className="h-4 w-4" /> Course duration check</p>
@@ -101,10 +101,8 @@ export function RegistrationPage({
           </aside>
 
           <main className="bg-white/82 p-6 md:p-9">
-            {step === 1 ? (
-              <form onSubmit={continueToPayment} className="space-y-5">
+              <form onSubmit={completeRegistration} className="space-y-5">
                 <div>
-                  <p className="page-eyebrow">Step 1 of 2</p>
                   <h2 className="mt-1 text-3xl font-bold">Student details</h2>
                   <p className="mt-2 text-sm text-slate-500">All fields must match the official admission record.</p>
                 </div>
@@ -132,51 +130,10 @@ export function RegistrationPage({
                     {form.confirmPassword && !passwordsMatch && <p className="text-[10px] text-rose-600">Passwords do not match.</p>}
                   </Field>
                 </div>
-                <Button type="submit" disabled={!passwordsMatch} className="w-full sm:w-auto">Continue to payment <ArrowRight className="h-4 w-4" /></Button>
+                <Button type="submit" disabled={!passwordsMatch || submitting} className="w-full sm:w-auto">
+                   {submitting ? "Submitting Registration..." : "Complete Registration"} <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
               </form>
-            ) : (
-              <form onSubmit={completeRegistration} className="space-y-6">
-                <div>
-                  <p className="page-eyebrow">Step 2 of 2</p>
-                  <h2 className="mt-1 text-3xl font-bold">Registration payment</h2>
-                  <p className="mt-2 text-sm text-slate-500">Complete payment to activate the student account.</p>
-                </div>
-                <Card className="border-teal-100 bg-teal-50/60">
-                  <CardContent className="grid gap-4 p-5 sm:grid-cols-3">
-                    <Summary label="Registration number" value={form.registrationNumber} />
-                    <Summary label="Department" value={form.department} />
-                    <Summary label="Course ends" value={formatLogbookDate(completionDate)} />
-                  </CardContent>
-                </Card>
-                <div className="rounded-2xl border border-teal-100 bg-white p-5">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-bold text-slate-900">E-Logbook registration fee</p>
-                      <p className="mt-1 text-xs text-slate-500">One-time account activation payment</p>
-                    </div>
-                    <p className="flex items-center text-2xl font-bold text-teal-700"><IndianRupee className="h-5 w-5" />1,500</p>
-                  </div>
-                  <div className="mt-5 space-y-2">
-                    <Label htmlFor="registration-payment-method">Payment method</Label>
-                    <Select value={form.paymentMethod} onValueChange={(paymentMethod) => setForm({ ...form, paymentMethod })}>
-                      <SelectTrigger id="registration-payment-method"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="UPI">UPI</SelectItem>
-                        <SelectItem value="Card">Debit / Credit Card</SelectItem>
-                        <SelectItem value="Net Banking">Net Banking</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <p className="mt-4 flex items-center gap-2 rounded-xl bg-slate-50 p-3 text-[11px] text-slate-600">
-                    <ShieldCheck className="h-4 w-4 text-teal-600" /> Payment status and transaction reference will be saved with the registration.
-                  </p>
-                </div>
-                <div className="flex flex-col gap-3 sm:flex-row">
-                  <Button type="button" variant="outline" onClick={() => setStep(1)}><ArrowLeft className="h-4 w-4" /> Edit details</Button>
-                  <Button type="submit" disabled={submitting}><CreditCard className="h-4 w-4" /> {submitting ? "Processing payment…" : "Pay ₹1,500 & register"}</Button>
-                </div>
-              </form>
-            )}
           </main>
         </div>
       </div>

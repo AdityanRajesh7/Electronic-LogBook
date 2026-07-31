@@ -1,29 +1,53 @@
 import * as React from "react";
-import { BookOpenCheck, CheckCircle2, KeyRound, ShieldCheck, UserPlus, Loader2 } from "lucide-react";
+import { BookOpenCheck, CheckCircle2, KeyRound, ShieldCheck, UserPlus, Loader2, Building, Stethoscope, UserCheck, AtSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiPost } from "@/lib/apiClient";
 
 export function LoginPage({ onSignIn, onRegister }: { onSignIn: () => void; onRegister: () => void }) {
-  const [registrationNumber, setRegistrationNumber] = React.useState("PG2024-PAED-014");
-  const [password, setPassword] = React.useState("Demo@2026");
+  const [role, setRole] = React.useState<"student" | "professor" | "hod">("student");
+  
+  // Credentials state
+  const [username, setUsername] = React.useState("PG2024-PAED-014");
+  const [password, setPassword] = React.useState("password123");
+  
   const [error, setError] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
 
+  // Update pre-filled credentials when role changes
+  React.useEffect(() => {
+    if (role === "student") {
+      setUsername("PG2024-PAED-014");
+    } else if (role === "professor") {
+      setUsername("prof@elogbook.com");
+    } else if (role === "hod") {
+      setUsername("hod@elogbook.com");
+    }
+    setPassword("password123");
+    setError(null);
+  }, [role]);
+
   const signIn = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!registrationNumber || !password) return;
+    if (!username || !password) return;
     
     try {
       setIsLoading(true);
       setError(null);
       
       const user = await apiPost('/api/auth/login', { 
-        username: registrationNumber, 
+        username, 
         password 
       });
       
+      // We could optionally verify the returned user.role matches the selected tab
+      if (user.role !== role) {
+         // Optionally warn or just let it proceed since the AppLayout routes based on actual role
+         console.warn(`Logged in as ${user.role} but ${role} tab was selected.`);
+      }
+
       window.sessionStorage.setItem('elogbook-user', JSON.stringify(user));
       onSignIn();
     } catch (err: any) {
@@ -33,44 +57,90 @@ export function LoginPage({ onSignIn, onRegister }: { onSignIn: () => void; onRe
     }
   };
 
+  const getLeftPanelContent = () => {
+    if (role === "student") {
+      return (
+        <div className="mt-12 grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+          {[
+            ["1", "Student completes self-registration"],
+            ["2", "Registration payment is completed"],
+            ["3", "Account activates for sign in"],
+          ].map(([number, text]) => (
+            <div key={number} className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-xs font-bold text-teal-700">{number}</span>
+              <p className="mt-3 text-xs font-semibold leading-5 text-white">{text}</p>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    if (role === "professor") {
+      return (
+        <div className="mt-12 space-y-4">
+           <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur">
+              <p className="flex items-center gap-2 text-sm font-bold text-white"><CheckCircle2 className="h-5 w-5" /> Evaluate efficiently</p>
+              <p className="mt-2 text-xs leading-5 text-teal-50">Review and verify student logbook entries directly from your personalized dashboard.</p>
+           </div>
+        </div>
+      );
+    }
+    return (
+        <div className="mt-12 space-y-4">
+           <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur">
+              <p className="flex items-center gap-2 text-sm font-bold text-white"><ShieldCheck className="h-5 w-5" /> Administer Department</p>
+              <p className="mt-2 text-xs leading-5 text-teal-50">Manage leave approvals, add professor accounts, and monitor department-wide compliance.</p>
+           </div>
+        </div>
+    );
+  };
+
   return (
     <div className="medical-grid flex min-h-screen items-center justify-center p-4 md:p-8">
       <div className="glass-panel grid w-full max-w-6xl overflow-hidden rounded-[30px] lg:grid-cols-[1.08fr_.92fr]">
-        <section className="relative overflow-hidden bg-gradient-to-br from-teal-700 via-teal-600 to-cyan-500 p-8 text-white md:p-12">
+        <section className="relative overflow-hidden bg-gradient-to-br from-teal-700 via-teal-600 to-cyan-500 p-8 text-white md:p-12 transition-colors">
           <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full border-[42px] border-white/10" />
           <div className="absolute -bottom-24 -left-20 h-64 w-64 rounded-full bg-cyan-300/15 blur-2xl" />
-          <div className="relative">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/16 shadow-lg ring-1 ring-white/25">
-              <BookOpenCheck className="h-7 w-7" />
-            </div>
-            <p className="mt-12 text-xs font-bold uppercase tracking-[0.2em] text-teal-50">Department of Pediatrics</p>
-            <h1 className="mt-3 max-w-xl text-4xl font-bold leading-[1.05] md:text-5xl">
-              A complete postgraduate training record, in one place.
-            </h1>
-            <p className="mt-5 max-w-xl text-sm leading-6 text-teal-50/85">
-              Record clinical exposure, procedures, academic work, assessments, thesis progress and leave in an MCI-aligned electronic logbook.
-            </p>
-
-            <div className="mt-12 grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
-              {[
-                ["1", "Student completes self-registration"],
-                ["2", "Registration payment is completed"],
-                ["3", "Account activates for sign in"],
-              ].map(([number, text]) => (
-                <div key={number} className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-xs font-bold text-teal-700">{number}</span>
-                  <p className="mt-3 text-xs font-semibold leading-5 text-white">{text}</p>
-                </div>
-              ))}
+          <div className="relative flex flex-col h-full justify-between">
+            <div>
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/16 shadow-lg ring-1 ring-white/25">
+                <BookOpenCheck className="h-7 w-7" />
+              </div>
+              <p className="mt-12 text-xs font-bold uppercase tracking-[0.2em] text-teal-50">Department of Pediatrics</p>
+              <h1 className="mt-3 max-w-xl text-4xl font-bold leading-[1.05] md:text-5xl">
+                A complete postgraduate training record, in one place.
+              </h1>
+              <p className="mt-5 max-w-xl text-sm leading-6 text-teal-50/85">
+                Record clinical exposure, procedures, academic work, assessments, thesis progress and leave in an MCI-aligned electronic logbook.
+              </p>
+              {getLeftPanelContent()}
             </div>
           </div>
         </section>
 
         <section className="bg-white/80 p-8 md:p-12">
           <div className="mx-auto max-w-sm">
-            <p className="page-eyebrow">Secure student access</p>
+            
+            <Tabs value={role} onValueChange={(v) => setRole(v as any)} className="w-full mb-8">
+              <TabsList className="grid w-full grid-cols-3 bg-teal-50/50 p-1">
+                <TabsTrigger value="student" className="rounded-xl text-xs data-[state=active]:bg-white data-[state=active]:text-teal-800 data-[state=active]:shadow-sm">
+                  <UserCheck className="w-3.5 h-3.5 mr-1.5" /> Student
+                </TabsTrigger>
+                <TabsTrigger value="professor" className="rounded-xl text-xs data-[state=active]:bg-white data-[state=active]:text-teal-800 data-[state=active]:shadow-sm">
+                  <Stethoscope className="w-3.5 h-3.5 mr-1.5" /> Prof
+                </TabsTrigger>
+                <TabsTrigger value="hod" className="rounded-xl text-xs data-[state=active]:bg-white data-[state=active]:text-teal-800 data-[state=active]:shadow-sm">
+                  <Building className="w-3.5 h-3.5 mr-1.5" /> HOD
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            <p className="page-eyebrow">
+               {role === "student" ? "Secure student access" : role === "professor" ? "Professor portal" : "HOD Administration"}
+            </p>
             <h2 className="mt-2 text-4xl font-bold text-slate-900">Welcome back</h2>
-            <p className="mt-2 text-sm text-slate-500">Sign in with your university registration number and password.</p>
+            <p className="mt-2 text-sm text-slate-500">
+              {role === "student" ? "Sign in with your university registration number and password." : "Sign in with your email address and password."}
+            </p>
 
             {error && (
               <div className="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-700 border border-red-200">
@@ -80,13 +150,19 @@ export function LoginPage({ onSignIn, onRegister }: { onSignIn: () => void; onRe
 
             <form onSubmit={signIn} className="mt-9 space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="registration">Registration number</Label>
+                <Label htmlFor="username">
+                  {role === "student" ? "Registration number" : "Email address"}
+                </Label>
                 <div className="relative">
-                  <UserPlus className="absolute left-3 top-3 h-4 w-4 text-teal-600" />
+                  {role === "student" ? (
+                    <UserPlus className="absolute left-3 top-3 h-4 w-4 text-teal-600" />
+                  ) : (
+                    <AtSign className="absolute left-3 top-3 h-4 w-4 text-teal-600" />
+                  )}
                   <Input
-                    id="registration"
-                    value={registrationNumber}
-                    onChange={(event) => setRegistrationNumber(event.target.value)}
+                    id="username"
+                    value={username}
+                    onChange={(event) => setUsername(event.target.value)}
                     className="pl-10"
                     disabled={isLoading}
                     required
@@ -118,21 +194,25 @@ export function LoginPage({ onSignIn, onRegister }: { onSignIn: () => void; onRe
               </Button>
             </form>
 
-            <div className="my-6 flex items-center gap-3">
-              <div className="h-px flex-1 bg-teal-100" />
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">New student</span>
-              <div className="h-px flex-1 bg-teal-100" />
-            </div>
-            <Button type="button" variant="outline" onClick={onRegister} className="h-11 w-full border-teal-200 text-teal-800">
-              <UserPlus className="h-4 w-4" /> Register and pay
-            </Button>
+            {role === "student" && (
+              <>
+                <div className="my-6 flex items-center gap-3">
+                  <div className="h-px flex-1 bg-teal-100" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">New student</span>
+                  <div className="h-px flex-1 bg-teal-100" />
+                </div>
+                <Button type="button" variant="outline" onClick={onRegister} className="h-11 w-full border-teal-200 text-teal-800">
+                  <UserPlus className="h-4 w-4" /> Register and pay
+                </Button>
+              </>
+            )}
 
             <div className="mt-6 rounded-2xl border border-teal-100 bg-teal-50/75 p-4">
               <p className="flex items-center gap-2 text-xs font-bold text-teal-900">
                 <CheckCircle2 className="h-4 w-4 text-teal-600" /> Demo account ready
               </p>
               <p className="mt-1 text-[11px] leading-5 text-teal-800/75">
-                The sample registration number and password are pre-filled so the prototype can be explored immediately.
+                The sample credentials for the {role} account are pre-filled so the portal can be explored immediately.
               </p>
             </div>
           </div>

@@ -29,6 +29,7 @@ type Assessment = {
   remarks: string;
 };
 
+export function AssessmentsPage() {
   const [open, setOpen] = React.useState(false);
 
   return (

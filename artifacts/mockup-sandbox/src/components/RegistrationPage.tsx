@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DEPARTMENTS, expectedCompletionDate, formatLogbookDate, todayForInput } from "@/lib/logbook-config";
+import { apiPost } from "@/lib/apiClient";
 
 export function RegistrationPage({
   onBack,
@@ -42,22 +43,16 @@ export function RegistrationPage({
     
     setSubmitting(true);
     try {
-      const response = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fullName: form.fullName,
-          email: form.email,
-          password: form.password,
-          registrationNumber: form.registrationNumber,
-          batch: joiningYear.toString(),
-          dateOfJoining: form.joiningDate,
-          kuhsId: `KUHS-${form.registrationNumber}`, // Mock KUHS ID for now
-          specialty: form.department,
-        }),
+      await apiPost("/api/auth/register", {
+        fullName: form.fullName,
+        email: form.email,
+        password: form.password,
+        registrationNumber: form.registrationNumber,
+        batch: joiningYear.toString(),
+        dateOfJoining: form.joiningDate,
+        kuhsId: `KUHS-${form.registrationNumber}`, // Mock KUHS ID for now
+        specialty: form.department,
       });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.message || "Registration could not be completed.");
       toast.success("Registration submitted", {
         description: `HOD verification is pending. You will be able to log in after approval.`,
       });

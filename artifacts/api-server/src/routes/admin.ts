@@ -13,6 +13,15 @@ router.use(requireAuth, requireRole(["hod"]));
 // List all students pending approval
 router.get("/students/pending", async (req, res) => {
   try {
+    const departmentId = req.user?.departmentId;
+    const conditions = [
+      eq(usersTable.role, "student"), 
+      eq(usersTable.status, "pending")
+    ];
+    if (departmentId) {
+      conditions.push(eq(usersTable.departmentId, departmentId));
+    }
+
     const pendingUsers = await db
       .select({
         id: usersTable.id,
@@ -24,7 +33,7 @@ router.get("/students/pending", async (req, res) => {
       })
       .from(usersTable)
       .innerJoin(studentsTable, eq(usersTable.id, studentsTable.userId))
-      .where(and(eq(usersTable.role, "student"), eq(usersTable.status, "pending")));
+      .where(and(...conditions));
 
     res.json(pendingUsers);
   } catch (error) {
@@ -137,7 +146,8 @@ router.post("/leaves/:id/action", async (req, res) => {
     const { leaveTable } = await import("@workspace/db");
 
     if (!["approve", "reject"].includes(action)) {
-       res.status(400).json({ message: "Invalid action" }); return;
+      res.status(400).json({ message: "Invalid action" });
+      return;
     }
 
     const status = action === "approve" ? "approved" : "rejected";
@@ -150,7 +160,10 @@ router.post("/leaves/:id/action", async (req, res) => {
       .where(eq(leaveTable.id, leaveId))
       .returning();
 
-    if (!updated) res.status(404).json({ message: "Leave not found" }); return;
+    if (!updated) {
+      res.status(404).json({ message: "Leave not found" });
+      return;
+    }
 
     res.json({ message: `Leave ${status} successfully` });
   } catch (error) {

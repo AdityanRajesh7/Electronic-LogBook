@@ -45,7 +45,10 @@ async function validateSupervisor(supervisorId: number) {
 router.get("/:studentId/dashboard", async (req, res) => {
   try {
     const studentId = parseInt(req.params.studentId, 10);
-    if (isNaN(studentId)) res.status(400).json({ message: "Invalid studentId" }); return;
+    if (isNaN(studentId)) {
+      res.status(400).json({ message: "Invalid studentId" });
+      return;
+    }
 
     const studentMatch = await db.select({
       id: studentsTable.id,
@@ -61,7 +64,10 @@ router.get("/:studentId/dashboard", async (req, res) => {
     .where(eq(studentsTable.id, studentId))
     .limit(1);
 
-    if (studentMatch.length === 0) res.status(404).json({ message: "Student not found" }); return;
+    if (studentMatch.length === 0) {
+      res.status(404).json({ message: "Student not found" });
+      return;
+    }
     const student = studentMatch[0];
 
     // Counts
@@ -108,7 +114,10 @@ router.get("/:studentId/dashboard", async (req, res) => {
 router.get("/:studentId/logs", async (req, res) => {
   try {
     const studentId = parseInt(req.params.studentId, 10);
-    if (isNaN(studentId)) res.status(400).json({ message: "Invalid studentId format" }); return;
+    if (isNaN(studentId)) {
+      res.status(400).json({ message: "Invalid studentId format" });
+      return;
+    }
 
     // Fetch profile
     const studentMatch = await db.select({
@@ -124,7 +133,10 @@ router.get("/:studentId/logs", async (req, res) => {
     .where(eq(studentsTable.id, studentId))
     .limit(1);
 
-    if (studentMatch.length === 0) res.status(404).json({ message: "Student not found" }); return;
+    if (studentMatch.length === 0) {
+      res.status(404).json({ message: "Student not found" });
+      return;
+    }
 
     const [caseLogsRaw, procedureLogsRaw, academicLogsRaw] = await Promise.all([
       db.select({ log: caseLogsTable, supervisorName: usersTable.fullName })
@@ -262,7 +274,10 @@ router.post("/:studentId/case-logs", async (req, res) => {
     const studentId = parseInt(req.params.studentId, 10);
     const { supervisorId, date, patientUhid, patientAge, patientGender, chiefComplaints, diagnosisProvisional, learningPoints } = req.body;
     const supervisorIdNum = parseInt(supervisorId, 10);
-    if (!(await validateSupervisor(supervisorIdNum))) res.status(400).json({ message: "Invalid supervisorId" }); return;
+    if (!(await validateSupervisor(supervisorIdNum))) {
+      res.status(400).json({ message: "Invalid supervisorId" });
+      return;
+    }
     
     const [inserted] = await db.insert(caseLogsTable).values({
       studentId, supervisorId: supervisorIdNum, date, patientUhid, patientAge, patientGender, chiefComplaints, 
@@ -282,7 +297,10 @@ router.post("/:studentId/procedure-logs", async (req, res) => {
     const studentId = parseInt(req.params.studentId, 10);
     const { supervisorId, procedureGroup, procedureName, date, patientUhid, patientAge, competencyLevel } = req.body;
     const supervisorIdNum = parseInt(supervisorId, 10);
-    if (!(await validateSupervisor(supervisorIdNum))) res.status(400).json({ message: "Invalid supervisorId" }); return;
+    if (!(await validateSupervisor(supervisorIdNum))) {
+      res.status(400).json({ message: "Invalid supervisorId" });
+      return;
+    }
 
     const [inserted] = await db.insert(procedureLogsTable).values({
       studentId, supervisorId: supervisorIdNum, procedureGroup, procedureName, date, 
@@ -299,7 +317,10 @@ router.post("/:studentId/academic-logs", async (req, res) => {
     const studentId = parseInt(req.params.studentId, 10);
     const { supervisorId, activityType, topic, date } = req.body;
     const supervisorIdNum = parseInt(supervisorId, 10);
-    if (!(await validateSupervisor(supervisorIdNum))) res.status(400).json({ message: "Invalid supervisorId" }); return;
+    if (!(await validateSupervisor(supervisorIdNum))) {
+      res.status(400).json({ message: "Invalid supervisorId" });
+      return;
+    }
 
     const [inserted] = await db.insert(academicLogsTable).values({
       studentId, supervisorId: supervisorIdNum, activityType, presentationType: req.body.presentationType, 

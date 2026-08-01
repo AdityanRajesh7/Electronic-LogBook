@@ -10,7 +10,18 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const connectionString = process.env.DATABASE_URL;
+const isNeonOrCloud = connectionString.includes("sslmode=") || 
+  connectionString.includes("neon.tech") || 
+  process.env.NODE_ENV === "production";
+
+export const pool = new Pool({ 
+  connectionString,
+  ssl: isNeonOrCloud ? { rejectUnauthorized: false } : undefined,
+  connectionTimeoutMillis: 10000,
+  idleTimeoutMillis: 30000,
+  max: 10,
+});
 export const db = drizzle(pool, { schema });
 
 export * from "./schema";

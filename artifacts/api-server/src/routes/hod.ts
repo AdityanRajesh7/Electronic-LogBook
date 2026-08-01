@@ -1,4 +1,6 @@
 import { Router, type IRouter } from "express";
+import { db, usersTable, studentsTable, departmentsTable } from "@workspace/db";
+import { eq, and } from "drizzle-orm";
 
 const router: IRouter = Router();
 
@@ -24,6 +26,40 @@ let pendingLeaves = [
   { number: 1, residentId: 1, residentName: "Dr. Anilkumar A", fromDate: "2026-08-12", toDate: "2026-08-14", totalDays: 3, type: "Academic Leave", reason: "National Pediatric Pulmonary Conference", status: "pending" },
   { number: 2, residentId: 2, residentName: "Dr. Radhamani KV", fromDate: "2026-08-22", toDate: "2026-08-22", totalDays: 1, type: "Casual Leave", reason: "Personal appointment", status: "pending" },
 ];
+
+// GET /api/hod/registrations/pending - Fetch database pending registrations for HOD's department
+router.get("/registrations/pending", async (req, res) => {
+  try {
+    const departmentId = req.user?.departmentId;
+    const conditions = [
+      eq(usersTable.role, "student"),
+      eq(usersTable.status, "pending")
+    ];
+    if (departmentId) {
+      conditions.push(eq(usersTable.departmentId, departmentId));
+    }
+
+    const pending = await db
+      .select({
+        id: usersTable.id,
+        fullName: usersTable.fullName,
+        email: usersTable.email,
+        registrationNumber: studentsTable.registrationNumber,
+        batch: studentsTable.batch,
+        dateOfJoining: studentsTable.dateOfJoining,
+        specialty: studentsTable.specialty,
+        createdAt: usersTable.createdAt
+      })
+      .from(usersTable)
+      .innerJoin(studentsTable, eq(usersTable.id, studentsTable.userId))
+      .where(and(...conditions));
+
+    res.json(pending);
+  } catch (error) {
+    req.log?.error?.(error, "Error fetching pending registrations for HOD");
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
 
 router.get("/dashboard", (_req, res) => {
   res.json({

@@ -16,19 +16,25 @@ router.patch("/:logType/:logId/review", async (req, res) => {
     const { status, comments, reviewerId } = req.body;
 
     const id = parseInt(logId, 10);
-    if (isNaN(id)) res.status(400).json({ message: "Invalid logId" }); return;
+    if (isNaN(id)) {
+      res.status(400).json({ message: "Invalid logId" });
+      return;
+    }
 
     if (!["verified", "rejected"].includes(status)) {
-      res.status(400).json({ message: "Invalid status" }); return;
+      res.status(400).json({ message: "Invalid status" });
+      return;
     }
 
     if (!reviewerId) {
-      res.status(400).json({ message: "Missing reviewerId" }); return;
+      res.status(400).json({ message: "Missing reviewerId" });
+      return;
     }
 
     const reviewerIdNum = parseInt(reviewerId, 10);
     if (!(await validateReviewer(reviewerIdNum))) {
-      res.status(400).json({ message: "Invalid reviewerId or user is not a professor/hod" }); return;
+      res.status(400).json({ message: "Invalid reviewerId or user is not a professor/hod" });
+      return;
     }
 
     let updatedRows;
@@ -46,11 +52,13 @@ router.patch("/:logType/:logId/review", async (req, res) => {
     } else if (logType === "academic") {
       updatedRows = await db.update(academicLogsTable).set(updateData).where(eq(academicLogsTable.id, id)).returning();
     } else {
-      res.status(400).json({ message: "Invalid logType" }); return;
+      res.status(400).json({ message: "Invalid logType" });
+      return;
     }
 
     if (updatedRows.length === 0) {
-      res.status(404).json({ message: "Log not found" }); return;
+      res.status(404).json({ message: "Log not found" });
+      return;
     }
 
     res.json(updatedRows[0]);

@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { db, usersTable, studentsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { db, usersTable, studentsTable, departmentsTable } from "@workspace/db";
+import { eq, ilike } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
@@ -38,6 +38,19 @@ router.post("/register", async (req, res) => {
       return;
     }
 
+    // Lookup departmentId from specialty
+    let departmentId: number | null = null;
+    if (specialty) {
+      const deptMatch = await db
+        .select()
+        .from(departmentsTable)
+        .where(ilike(departmentsTable.name, specialty))
+        .limit(1);
+      if (deptMatch.length > 0) {
+        departmentId = deptMatch[0].id;
+      }
+    }
+
     const passwordHash = await bcrypt.hash(password, 10);
 
     // Insert user (defaults to role: student, status: pending)
@@ -46,7 +59,8 @@ router.post("/register", async (req, res) => {
       email,
       passwordHash,
       role: "student",
-      status: "pending"
+      status: "pending",
+      departmentId,
     }).returning();
 
     // Insert student profile

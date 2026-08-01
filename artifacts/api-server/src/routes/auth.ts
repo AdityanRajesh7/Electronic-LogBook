@@ -39,17 +39,23 @@ router.post("/register", async (req, res) => {
     }
 
     // Lookup departmentId from specialty
-    let departmentId: number | null = null;
-    if (specialty) {
-      const deptMatch = await db
-        .select()
-        .from(departmentsTable)
-        .where(ilike(departmentsTable.name, specialty))
-        .limit(1);
-      if (deptMatch.length > 0) {
-        departmentId = deptMatch[0].id;
-      }
+    if (!specialty) {
+      res.status(400).json({ message: "Specialty (Department) is required" });
+      return;
     }
+
+    const deptMatch = await db
+      .select()
+      .from(departmentsTable)
+      .where(ilike(departmentsTable.name, specialty))
+      .limit(1);
+      
+    if (deptMatch.length === 0) {
+      res.status(400).json({ message: `Invalid department: ${specialty}` });
+      return;
+    }
+    
+    const departmentId = deptMatch[0].id;
 
     const passwordHash = await bcrypt.hash(password, 10);
 

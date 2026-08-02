@@ -2,9 +2,9 @@ import { Router, type IRouter } from "express";
 import { 
   db, studentsTable, caseLogsTable, procedureLogsTable, 
   academicLogsTable, usersTable, departmentsTable,
-  postingsTable, leaveTable, appraisalsTable, researchTable
+  postingsTable, leaveRecordsTable, appraisalsTable, researchTable, assessmentsTable
 } from "@workspace/db";
-import { eq, desc, count } from "drizzle-orm";
+import { eq, desc, count, sql } from "drizzle-orm";
 
 const router: IRouter = Router();
 
@@ -171,9 +171,23 @@ router.get("/:studentId/logs", async (req, res) => {
 router.get("/:studentId/postings", async (req, res) => {
   try {
     const studentId = parseInt(req.params.studentId, 10);
-    const data = await db.select().from(postingsTable).where(eq(postingsTable.studentId, studentId)).orderBy(desc(postingsTable.createdAt));
+    const data = await db
+      .select({
+        id: postingsTable.id,
+        ward: postingsTable.ward,
+        startDate: postingsTable.startDate,
+        endDate: postingsTable.endDate,
+        supervisorId: postingsTable.supervisorId,
+        supervisorName: usersTable.fullName
+      })
+      .from(postingsTable)
+      .leftJoin(usersTable, eq(postingsTable.supervisorId, usersTable.id))
+      .where(eq(postingsTable.studentId, studentId))
+      .orderBy(desc(postingsTable.createdAt));
+      
     res.json({ options: ["Ward Posting U1", "Ward Posting U2", "PICU", "NICU", "DRP"], data });
   } catch (error) {
+    req.log.error(error, "Error fetching postings");
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -181,22 +195,18 @@ router.get("/:studentId/postings", async (req, res) => {
 router.post("/:studentId/postings", async (req, res) => {
   try {
     const studentId = parseInt(req.params.studentId, 10);
-    const { postingName, startDate, endDate } = req.body;
-    const start = new Date(`${startDate}T00:00:00Z`).getTime();
-    const end = new Date(`${endDate}T00:00:00Z`).getTime();
-    const durationDays = Math.floor((end - start) / 86_400_000);
+    const { ward, postingName, startDate, endDate, supervisorId } = req.body;
     
     const [inserted] = await db.insert(postingsTable).values({
       studentId,
-      postingName,
+      ward: ward || postingName || "General",
       startDate,
       endDate,
-      durationDays,
-      hodOrGuide: "Assigned Guide",
-      status: "active"
+      supervisorId: parseInt(supervisorId, 10) || null,
     }).returning();
     res.status(201).json({ success: true, posting: inserted });
   } catch (error) {
+    req.log.error(error, "Error creating posting");
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -205,7 +215,7 @@ router.post("/:studentId/postings", async (req, res) => {
 router.get("/:studentId/leave-records", async (req, res) => {
   try {
     const studentId = parseInt(req.params.studentId, 10);
-    const data = await db.select().from(leaveTable).where(eq(leaveTable.studentId, studentId)).orderBy(desc(leaveTable.createdAt));
+    const data = await db.select().from(leaveRecordsTable).where(eq(leaveRecordsTable.studentId, studentId)).orderBy(desc(leaveRecordsTable.createdAt));
     res.json({ data: data.map(d => ({ ...d, number: d.id })) }); // Map id to number for frontend compat
   } catch (error) {
     res.status(500).json({ message: "Internal server error" });
@@ -215,23 +225,14 @@ router.get("/:studentId/leave-records", async (req, res) => {
 router.post("/:studentId/leave-records", async (req, res) => {
   try {
     const studentId = parseInt(req.params.studentId, 10);
-    const { fromDate, toDate, leaveType, reason } = req.body;
-    const start = new Date(`${fromDate}T00:00:00Z`).getTime();
-    const end = new Date(`${toDate}T00:00:00Z`).getTime();
-    const totalDays = Math.floor((end - start) / 86_400_000) + 1;
+    const { fromDate, toDate, leaveType, reason, startDate, endDate } = req.body;
     
-    // Convert to native JS Date for timestamp mapping
-    const fromDateObj = new Date(`${fromDate}T00:00:00Z`);
-    const toDateObj = new Date(`${toDate}T00:00:00Z`);
+    const type = ["casual", "academic"].includes(leaveType?.toLowerCase()) ? leaveType.toLowerCase() : "casual";
 
-    // Only map known leaveTypes to avoid enum error
-    const type = ["casual", "academic", "medical"].includes(leaveType.toLowerCase()) ? leaveType.toLowerCase() : "other";
-
-    const [inserted] = await db.insert(leaveTable).values({
+    const [inserted] = await db.insert(leaveRecordsTable).values({
       studentId,
-      fromDate: fromDateObj,
-      toDate: toDateObj,
-      totalDays,
+      startDate: startDate || fromDate,
+      endDate: endDate || toDate,
       leaveType: type,
       reason,
       status: "pending"
@@ -247,9 +248,44 @@ router.post("/:studentId/leave-records", async (req, res) => {
 router.get("/:studentId/assessments", async (req, res) => {
   try {
     const studentId = parseInt(req.params.studentId, 10);
-    const data = await db.select().from(appraisalsTable).where(eq(appraisalsTable.studentId, studentId)).orderBy(desc(appraisalsTable.createdAt));
-    res.json({ data });
+    const data = await db
+      .select({
+        id: assessmentsTable.id,
+        number: assessmentsTable.id,
+        examName: assessmentsTable.examName,
+        type: assessmentsTable.type,
+        date: assessmentsTable.date,
+        marks: assessmentsTable.marks,
+        maximum: sql`100`.as("maximum"),
+        assessorId: assessmentsTable.assessorId,
+        assessorName: usersTable.fullName
+      })
+      .from(assessmentsTable)
+      .leftJoin(usersTable, eq(assessmentsTable.assessorId, usersTable.id))
+      .where(eq(assessmentsTable.studentId, studentId))
+      .orderBy(desc(assessmentsTable.createdAt));
+    res.json(data);
   } catch (error) {
+    req.log.error(error, "Error fetching assessments");
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+router.post("/:studentId/assessments", async (req, res) => {
+  try {
+    const studentId = parseInt(req.params.studentId, 10);
+    const { examName, type, date, marks, assessorId } = req.body;
+    const [inserted] = await db.insert(assessmentsTable).values({
+      examName,
+      type,
+      date,
+      marks: parseInt(marks, 10) || 0,
+      assessorId: parseInt(assessorId, 10) || null,
+      studentId
+    }).returning();
+    res.status(201).json(inserted);
+  } catch (error) {
+    req.log.error(error, "Error creating assessment");
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -272,7 +308,7 @@ router.get("/:studentId/thesis", async (req, res) => {
 router.post("/:studentId/case-logs", async (req, res) => {
   try {
     const studentId = parseInt(req.params.studentId, 10);
-    const { supervisorId, date, patientUhid, patientAge, patientGender, chiefComplaints, diagnosisProvisional, learningPoints } = req.body;
+    const { supervisorId, date, patientAge, patientGender, diagnosisFinal } = req.body;
     const supervisorIdNum = parseInt(supervisorId, 10);
     if (!(await validateSupervisor(supervisorIdNum))) {
       res.status(400).json({ message: "Invalid supervisorId" });
@@ -280,11 +316,15 @@ router.post("/:studentId/case-logs", async (req, res) => {
     }
     
     const [inserted] = await db.insert(caseLogsTable).values({
-      studentId, supervisorId: supervisorIdNum, date, patientUhid, patientAge, patientGender, chiefComplaints, 
-      diagnosisProvisional, diagnosisFinal: req.body.diagnosisFinal, history: req.body.history, 
+      studentId, supervisorId: supervisorIdNum, date, patientAge, patientGender, 
+      diagnosisFinal,
+      patientUhid: req.body.patientUhid,
+      chiefComplaints: req.body.chiefComplaints,
+      diagnosisProvisional: req.body.diagnosisProvisional,
+      history: req.body.history, 
       examination: req.body.examination, investigations: req.body.investigations, 
       differentialDiagnosis: req.body.differentialDiagnosis, managementPlan: req.body.managementPlan, 
-      outcome: req.body.outcome, learningPoints, status: "pending"
+      outcome: req.body.outcome, learningPoints: req.body.learningPoints, status: "pending"
     }).returning();
     res.status(201).json(inserted);
   } catch (error) {

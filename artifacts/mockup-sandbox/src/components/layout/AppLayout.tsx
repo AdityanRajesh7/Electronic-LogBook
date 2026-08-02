@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Link, useLocation } from "wouter";
 import { Toaster } from "@/components/ui/sonner";
+import { toast } from "sonner";
 import {
   SidebarProvider,
   Sidebar,
@@ -224,18 +225,20 @@ export function AppLayout({
               </div>
 
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={printCurrentView}
-                  title="Print the current record. Incomplete student records are marked Draft."
-                  className="hidden border-white bg-white/70 text-teal-800 sm:inline-flex"
-                >
-                  <Printer className="h-4 w-4" /> Print PDF
-                </Button>
-                <button className="relative rounded-xl border border-white/80 bg-white/65 p-2 text-teal-800 shadow-sm transition hover:bg-white">
+                {activeRole === "Student" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open('/print', '_blank')}
+                    title="Print the complete consolidated record."
+                    className="hidden border-white bg-white/70 text-teal-800 sm:inline-flex"
+                  >
+                    <Printer className="h-4 w-4 mr-2" /> Print PDF
+                  </Button>
+                )}
+                <button onClick={() => toast.info("No new notifications")} className="relative rounded-xl border border-white/80 bg-white/65 p-2 text-teal-800 shadow-sm transition hover:bg-white">
                   <Bell className="h-4 w-4" />
-                  <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-rose-500 ring-2 ring-white" />
+                  <span className="hidden absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-rose-500 ring-2 ring-white" />
                 </button>
               </div>
             </header>
@@ -256,13 +259,13 @@ export function AppLayout({
 }
 
 function getNameForRole(role: RoleType) {
-  if (role === "Professor") return "Dr. Mohammed";
-  if (role === "HOD") return "Dr. Mohamad";
-  return "Dr. Anilkumar A";
+  if (role === "Professor") return "Dr. Radhamani K V";
+  if (role === "HOD") return "Dr. Mohammed M T P";
+  return "Aravind P";
 }
 
 function getInitialsForRole(role: RoleType) {
-  if (role === "Professor") return "MM";
-  if (role === "HOD") return "DM";
-  return "AN";
+  if (role === "Professor") return "RK";
+  if (role === "HOD") return "MM";
+  return "AP";
 }

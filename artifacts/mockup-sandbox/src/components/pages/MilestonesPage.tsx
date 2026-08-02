@@ -23,7 +23,7 @@ type Thesis = {
 
 const initialThesis: Thesis = {
   topic: "Clinical profile and predictors of severe acute asthma in children admitted to a tertiary-care centre",
-  guide: "Dr. Mohamad",
+  guide: "Dr. Mohammed M T P",
   coGuide: "Dr. Mohammed",
   protocolSubmissionDate: "2025-08-12",
   iecClearanceDate: "2025-10-06",
@@ -38,11 +38,11 @@ export function MilestonesPage() {
   const [thesisOpen, setThesisOpen] = React.useState(false);
   const [certificateOpen, setCertificateOpen] = React.useState(false);
   const [certificates, setCertificates] = React.useState([
-    { number: 3, name: "PALS — Pediatric Advanced Life Support", provider: "Indian Academy of Pediatrics", expiry: "2027-10-15" },
-    { number: 2, name: "NRP — Neonatal Resuscitation Program", provider: "IAP", expiry: "2027-04-20" },
-    { number: 1, name: "BLS — Basic Life Support", provider: "AHA", expiry: "2026-12-01" },
+    { number: 3, name: "PALS — Pediatric Advanced Life Support", provider: "Indian Academy of Pediatrics", dateIssued: "2027-10-15" },
+    { number: 2, name: "NRP — Neonatal Resuscitation Program", provider: "IAP", dateIssued: "2027-04-20" },
+    { number: 1, name: "BLS — Basic Life Support", provider: "AHA", dateIssued: "2026-12-01" },
   ]);
-  const [certificate, setCertificate] = React.useState({ name: "", provider: "", expiry: "2028-01-01" });
+  const [certificate, setCertificate] = React.useState({ name: "", provider: "", dateIssued: "2028-01-01" });
 
   const saveThesis = (event: React.FormEvent) => {
     event.preventDefault();
@@ -123,7 +123,7 @@ export function MilestonesPage() {
               <form onSubmit={saveCertificate} className="space-y-4">
                 <Field label="Certificate"><Input value={certificate.name} onChange={(e) => setCertificate({ ...certificate, name: e.target.value })} required /></Field>
                 <Field label="Issuing body"><Input value={certificate.provider} onChange={(e) => setCertificate({ ...certificate, provider: e.target.value })} required /></Field>
-                <Field label="Expiry date"><Input type="date" value={certificate.expiry} onChange={(e) => setCertificate({ ...certificate, expiry: e.target.value })} /></Field>
+                <Field label="Date issued"><Input type="date" value={certificate.dateIssued} onChange={(e) => setCertificate({ ...certificate, dateIssued: e.target.value })} /></Field>
                 <DialogFooter><Button type="button" variant="outline" onClick={() => setCertificateOpen(false)}>Cancel</Button><Button type="submit">Save certificate</Button></DialogFooter>
               </form>
             </DialogContent>
@@ -131,9 +131,9 @@ export function MilestonesPage() {
         </CardHeader>
         <CardContent className="p-0">
           <Table>
-            <TableHeader><TableRow><TableHead>Number</TableHead><TableHead>Certificate</TableHead><TableHead>Issuing body</TableHead><TableHead>Expiry date</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+            <TableHeader><TableRow><TableHead>Number</TableHead><TableHead>Certificate</TableHead><TableHead>Issuing body</TableHead><TableHead>Date issued</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
             <TableBody>
-              {certificates.map((item) => <TableRow key={item.number}><TableCell className="font-bold">{item.number}</TableCell><TableCell className="font-semibold"><span className="flex items-center gap-2"><FileText className="h-4 w-4 text-teal-600" /> {item.name}</span></TableCell><TableCell>{item.provider}</TableCell><TableCell>{formatLogbookDate(item.expiry)}</TableCell><TableCell><Badge className="border-emerald-200 bg-emerald-50 text-emerald-700"><CheckCircle2 className="mr-1 h-3 w-3" /> Active</Badge></TableCell></TableRow>)}
+              {certificates.map((item) => <TableRow key={item.number}><TableCell className="font-bold">{item.number}</TableCell><TableCell className="font-semibold"><span className="flex items-center gap-2"><FileText className="h-4 w-4 text-teal-600" /> {item.name}</span></TableCell><TableCell>{item.provider}</TableCell><TableCell>{formatLogbookDate(item.dateIssued)}</TableCell><TableCell><Badge className="border-emerald-200 bg-emerald-50 text-emerald-700"><CheckCircle2 className="mr-1 h-3 w-3" /> Active</Badge></TableCell></TableRow>)}
             </TableBody>
           </Table>
         </CardContent>

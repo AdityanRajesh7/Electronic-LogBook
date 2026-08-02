@@ -117,7 +117,7 @@ export function CaseLogsPage() {
         examination: form.examination,
         investigations: form.investigations,
         diagnosisProvisional: form.diagnosis,
-        diagnosisFinal: form.differentialDiagnosis, // reuse field for now or keep blank
+        diagnosisFinal: form.diagnosis, 
         differentialDiagnosis: form.differentialDiagnosis,
         managementPlan: form.management,
         outcome: form.outcome,
@@ -183,17 +183,17 @@ export function CaseLogsPage() {
                   </Select>
                 </Field>
               </div>
-              <Field label="Chief complaints"><Textarea rows={2} value={form.chiefComplaints} onChange={(e) => setField("chiefComplaints", e.target.value)} required /></Field>
-              <Field label="Relevant history"><Textarea rows={3} value={form.history} onChange={(e) => setField("history", e.target.value)} required /></Field>
-              <Field label="Clinical examination"><Textarea rows={3} value={form.examination} onChange={(e) => setField("examination", e.target.value)} required /></Field>
-              <Field label="Investigations"><Textarea rows={2} value={form.investigations} onChange={(e) => setField("investigations", e.target.value)} required /></Field>
+              <Field label="Chief complaints"><Textarea rows={2} value={form.chiefComplaints} onChange={(e) => setField("chiefComplaints", e.target.value)} /></Field>
+              <Field label="Relevant history"><Textarea rows={3} value={form.history} onChange={(e) => setField("history", e.target.value)} /></Field>
+              <Field label="Clinical examination"><Textarea rows={3} value={form.examination} onChange={(e) => setField("examination", e.target.value)} /></Field>
+              <Field label="Investigations"><Textarea rows={2} value={form.investigations} onChange={(e) => setField("investigations", e.target.value)} /></Field>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Final diagnosis"><Input value={form.diagnosis} onChange={(e) => setField("diagnosis", e.target.value)} required /></Field>
                 <Field label="Differential diagnosis"><Input value={form.differentialDiagnosis} onChange={(e) => setField("differentialDiagnosis", e.target.value)} /></Field>
               </div>
-              <Field label="Management and interventions"><Textarea rows={3} value={form.management} onChange={(e) => setField("management", e.target.value)} required /></Field>
+              <Field label="Management and interventions"><Textarea rows={3} value={form.management} onChange={(e) => setField("management", e.target.value)} /></Field>
               <Field label="Outcome / follow-up"><Textarea rows={2} value={form.outcome} onChange={(e) => setField("outcome", e.target.value)} /></Field>
-              <Field label="Learning points"><Textarea rows={2} value={form.learningPoints} onChange={(e) => setField("learningPoints", e.target.value)} required /></Field>
+              <Field label="Learning points"><Textarea rows={2} value={form.learningPoints} onChange={(e) => setField("learningPoints", e.target.value)} /></Field>
               <Field label="Reviewing professor">
                 <Select value={form.supervisorId} onValueChange={(value) => setField("supervisorId", value)}>
                   <SelectTrigger><SelectValue placeholder="Select a professor" /></SelectTrigger>

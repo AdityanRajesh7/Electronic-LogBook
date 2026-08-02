@@ -21,40 +21,183 @@ import { formatLogbookDate, todayForInput } from "@/lib/logbook-config";
 
 type Assessment = {
   number: number;
-  type: "Quarterly" | "Annual";
+  examName: string;
+  type: string;
   date: string;
   marks: number;
   maximum: number;
-  assessor: string;
-  remarks: string;
+  assessorId: number;
+  assessorName: string;
 };
+
+import { apiGet, apiPost } from "@/lib/apiClient";
+import { getCurrentUser } from "@/lib/session";
 
 export function AssessmentsPage() {
   const [open, setOpen] = React.useState(false);
+  const [assessments, setAssessments] = React.useState<Assessment[]>([]);
+  const user = React.useMemo(() => getCurrentUser(), []);
+  const [loading, setLoading] = React.useState(false);
+  const [professors, setProfessors] = React.useState<any[]>([]);
+
+  // Form State
+  const [examName, setExamName] = React.useState("");
+  const [type, setType] = React.useState<"quarterly" | "annual">("quarterly");
+  const [date, setDate] = React.useState(todayForInput());
+  const [marks, setMarks] = React.useState("");
+  const [assessorId, setAssessorId] = React.useState("");
+  
+  const fetchAssessments = React.useCallback(async () => {
+    if (!user?.studentProfileId) return;
+    setLoading(true);
+    try {
+      const data = await apiGet(`/api/students/${user.studentProfileId}/assessments`);
+      setAssessments(data || []);
+    } catch (e) {
+      toast.error("Failed to fetch assessments");
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.studentProfileId]);
+
+  React.useEffect(() => {
+    fetchAssessments();
+    if (user?.departmentId) {
+      apiGet(`/api/departments/${user.departmentId}/professors`).then(setProfessors).catch(console.error);
+    }
+  }, [fetchAssessments, user?.departmentId]);
+
+  const handleAddAssessment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user?.studentProfileId) return;
+
+    if (!examName || !marks || !assessorId) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    try {
+      await apiPost(`/api/students/${user.studentProfileId}/assessments`, {
+        examName,
+        type,
+        date,
+        marks,
+        assessorId
+      });
+      toast.success("Assessment added successfully");
+      setOpen(false);
+      fetchAssessments();
+      // reset form
+      setExamName("");
+      setMarks("");
+    } catch (e: any) {
+      toast.error(e.message || "Failed to add assessment");
+    }
+  };
 
   return (
     <div className="space-y-6 pb-12">
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
-          <p className="page-eyebrow flex items-center gap-2">
-            Training progress
-            <Badge variant="secondary" className="h-4 px-1.5 text-[9px] bg-amber-100 text-amber-800 border-0 hover:bg-amber-100 rounded-sm">Demo data — not yet persisted</Badge>
-          </p>
-          <h2 className="page-title mt-1 text-slate-400">Assessments</h2>
-          <p className="mt-2 text-sm text-slate-400 italic">Assessment tracking is coming soon.</p>
+          <p className="page-eyebrow flex items-center gap-2">Training progress</p>
+          <h2 className="page-title mt-1">Assessments</h2>
+          <p className="mt-2 text-sm text-slate-500">Track your quarterly and annual assessment scores.</p>
         </div>
-        <Button disabled className="opacity-50 cursor-not-allowed" title="Assessment tracking coming soon">
-          <PlusCircle className="h-4 w-4 mr-2" /> Add assessment
-        </Button>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <PlusCircle className="h-4 w-4 mr-2" /> Add assessment
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Add Assessment</DialogTitle>
+              <DialogDescription>
+                Record your quarterly or annual assessment results.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleAddAssessment} className="space-y-4">
+              <div className="space-y-2">
+                <Label>Exam Name</Label>
+                <Input value={examName} onChange={e => setExamName(e.target.value)} placeholder="e.g. Q1 Exam 2026" required />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Type</Label>
+                  <Select value={type} onValueChange={(val: any) => setType(val)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="quarterly">Quarterly</SelectItem>
+                      <SelectItem value="annual">Annual</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Date</Label>
+                  <Input type="date" value={date} onChange={e => setDate(e.target.value)} required />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Marks (out of 100)</Label>
+                <Input type="number" min="0" max="100" value={marks} onChange={e => setMarks(e.target.value)} required />
+              </div>
+              <div className="space-y-2">
+                <Label>Assessor</Label>
+                <Select value={assessorId} onValueChange={setAssessorId}>
+                  <SelectTrigger><SelectValue placeholder="Select professor" /></SelectTrigger>
+                  <SelectContent>
+                    {professors.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.fullName}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+                <Button type="submit">Save Assessment</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      <div className="flex flex-col items-center justify-center p-12 text-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/50">
-        <ClipboardCheck className="h-12 w-12 text-slate-300 mb-4" />
-        <h3 className="text-lg font-bold text-slate-700">Assessment Module Not Available</h3>
-        <p className="mt-2 max-w-md text-sm text-slate-500">
-          The ability to log and track quarterly/annual assessments is not yet implemented. This page will be available in a future update once the backend schema is finalized.
-        </p>
-      </div>
+      <Card>
+        <CardHeader className="border-b">
+          <CardTitle className="text-lg">Assessment Records</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {loading ? (
+             <div className="p-8 text-center text-slate-500">Loading...</div>
+          ) : assessments.length === 0 ? (
+            <div className="flex flex-col items-center justify-center p-12 text-center">
+              <ClipboardCheck className="h-12 w-12 text-slate-300 mb-4" />
+              <h3 className="text-lg font-bold text-slate-700">No assessments logged</h3>
+              <p className="mt-2 text-sm text-slate-500">You haven't added any assessments yet.</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader className="bg-slate-50">
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Exam Name</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Marks</TableHead>
+                  <TableHead>Assessor</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {assessments.map((item) => (
+                  <TableRow key={item.number}>
+                    <TableCell className="font-medium text-slate-900">{formatLogbookDate(item.date)}</TableCell>
+                    <TableCell>{item.examName}</TableCell>
+                    <TableCell className="capitalize">{item.type}</TableCell>
+                    <TableCell className="font-bold text-slate-900">{item.marks} / {item.maximum}</TableCell>
+                    <TableCell>{item.assessorName}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

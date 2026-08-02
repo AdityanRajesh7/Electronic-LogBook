@@ -11,7 +11,9 @@ import {
   FileCheck,
   Clock,
   AlertTriangle,
-  UserPlus
+  UserPlus,
+  Settings,
+  Syringe
 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -62,6 +64,8 @@ const paths: Record<string, string> = {
   "student-access": "/student-access",
   "leave-approvals": "/leave-approvals",
   "professors": "/professors",
+  "settings": "/settings",
+  "procedures": "/procedures",
 };
 
 export function HODPortal({ activeTab = "gap-dashboard" }: { activeTab?: string }) {
@@ -70,6 +74,15 @@ export function HODPortal({ activeTab = "gap-dashboard" }: { activeTab?: string 
   const [pendingStudents, setPendingStudents] = React.useState<Registration[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+
+  // Settings State
+  const [deptConfig, setDeptConfig] = React.useState({ requiredCases: 50, requiredProcedures: 101, requiredAcademic: 15 });
+  const [savingConfig, setSavingConfig] = React.useState(false);
+
+  // Procedures State
+  const [procedures, setProcedures] = React.useState<any[]>([]);
+  const [procForm, setProcForm] = React.useState({ name: "", group: "emergency" });
+  const [addingProc, setAddingProc] = React.useState(false);
 
   // Professor Form State
   const [profForm, setProfForm] = React.useState({ fullName: "", email: "", password: "" });
@@ -88,15 +101,13 @@ export function HODPortal({ activeTab = "gap-dashboard" }: { activeTab?: string 
         return;
       }
       
-      // Fetch Pending Students from our new Admin API
       try {
         const students = await apiGet<Registration[]>("/api/admin/students/pending");
         setPendingStudents(students);
       } catch (err) {
-        console.warn("Could not fetch pending students, using fallback", err);
+        console.warn("Could not fetch pending students", err);
       }
 
-      // Fetch pending leaves
       try {
         const pendingLeaves = await apiGet<LeaveRequest[]>("/api/admin/leaves/pending");
         setLeaves(pendingLeaves);
@@ -104,7 +115,20 @@ export function HODPortal({ activeTab = "gap-dashboard" }: { activeTab?: string 
         console.warn("Could not fetch pending leaves", err);
       }
 
-      // Keep analytics mocked or silent fail if endpoint missing
+      try {
+        const config = await apiGet<any>("/api/admin/department/config");
+        if (config) setDeptConfig(config);
+      } catch (err) {
+        console.warn("Could not fetch config", err);
+      }
+
+      try {
+        const procs = await apiGet<any[]>("/api/admin/department/procedures");
+        if (procs) setProcedures(procs);
+      } catch (err) {
+        console.warn("Could not fetch procedures", err);
+      }
+
       try {
         const data = await apiGet<AnalyticsData>(`/api/departments/${user.departmentId}/analytics`);
         setAnalyticsData(data);
@@ -164,6 +188,34 @@ export function HODPortal({ activeTab = "gap-dashboard" }: { activeTab?: string 
     }
   };
 
+  const handleSaveConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingConfig(true);
+    try {
+      await apiPost("/api/admin/department/config", deptConfig);
+      toast.success("Settings saved successfully");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save settings");
+    } finally {
+      setSavingConfig(false);
+    }
+  };
+
+  const handleAddProcedure = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAddingProc(true);
+    try {
+      const newProc = await apiPost("/api/admin/department/procedures", procForm);
+      toast.success("Procedure added successfully");
+      setProcedures([...procedures, newProc]);
+      setProcForm({ name: "", group: "emergency" });
+    } catch (err: any) {
+      toast.error(err.message || "Failed to add procedure");
+    } finally {
+      setAddingProc(false);
+    }
+  };
+
   if (loading && !analyticsData) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -196,13 +248,15 @@ export function HODPortal({ activeTab = "gap-dashboard" }: { activeTab?: string 
           <TabsTrigger value="student-access"><Users className="h-4 w-4 mr-2" /> Pending Students</TabsTrigger>
           <TabsTrigger value="professors"><UserPlus className="h-4 w-4 mr-2" /> Add Professor</TabsTrigger>
           <TabsTrigger value="leave-approvals"><Clock3 className="h-4 w-4 mr-2" /> Leave approvals</TabsTrigger>
+          <TabsTrigger value="procedures"><Syringe className="h-4 w-4 mr-2" /> Procedures</TabsTrigger>
+          <TabsTrigger value="settings"><Settings className="h-4 w-4 mr-2" /> Settings</TabsTrigger>
         </TabsList>
 
         <TabsContent value="gap-dashboard" className="space-y-4 pt-4">
           <div className="grid gap-4 md:grid-cols-3">
-            <Overview label="Procedure target" value={String(REQUIRED_PROCEDURE_COUNT)} note="Emergency & invasive" icon={UserCheck} />
-            <Overview label="Case discussions" value="50" note="Mandatory total per resident" icon={CheckCircle2} />
-            <Overview label="Avg. dept. completion" value={`${analyticsData?.avgCompletion ?? 0}%`} note="Verified logs only" icon={TrendingUp} />
+            <Overview label="Procedure target" value={String(deptConfig.requiredProcedures)} note="Total procedures required" icon={UserCheck} />
+            <Overview label="Case discussions" value={String(deptConfig.requiredCases)} note="Total cases required" icon={CheckCircle2} />
+            <Overview label="Academic target" value={String(deptConfig.requiredAcademic)} note="Seminars, journals, etc." icon={TrendingUp} />
           </div>
         </TabsContent>
 
@@ -302,6 +356,85 @@ export function HODPortal({ activeTab = "gap-dashboard" }: { activeTab?: string 
                   </TableBody>
                 </Table>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="procedures" className="space-y-4 pt-4">
+          <div className="grid gap-6 md:grid-cols-2">
+            <Card>
+              <CardHeader className="border-b border-teal-100">
+                <CardTitle className="text-xl">Add New Procedure</CardTitle>
+              </CardHeader>
+              <CardContent className="p-5">
+                <form onSubmit={handleAddProcedure} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Procedure Name</Label>
+                    <Input value={procForm.name} onChange={(e) => setProcForm({...procForm, name: e.target.value})} required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Procedure Group</Label>
+                    <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" value={procForm.group} onChange={(e) => setProcForm({...procForm, group: e.target.value})} required>
+                      <option value="emergency">Emergency / Core</option>
+                      <option value="invasive">Invasive / Specialized</option>
+                      <option value="general">General / Routine</option>
+                    </select>
+                  </div>
+                  <Button type="submit" disabled={addingProc} className="w-full">
+                    <Syringe className="h-4 w-4 mr-2" /> {addingProc ? "Adding..." : "Add Procedure"}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="border-b border-teal-100">
+                <CardTitle className="text-xl">Existing Procedures</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                {procedures.length === 0 ? (
+                  <p className="p-6 text-center text-sm text-slate-500">No custom procedures defined.</p>
+                ) : (
+                  <Table>
+                    <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Group</TableHead></TableRow></TableHeader>
+                    <TableBody>
+                      {procedures.map((p) => (
+                        <TableRow key={p.id}>
+                          <TableCell className="font-medium">{p.name}</TableCell>
+                          <TableCell className="capitalize">{p.group}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="settings" className="space-y-4 pt-4">
+          <Card className="max-w-xl">
+            <CardHeader className="border-b border-teal-100">
+              <CardTitle className="text-xl">Department Target Settings</CardTitle>
+            </CardHeader>
+            <CardContent className="p-5">
+              <form onSubmit={handleSaveConfig} className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Required Number of Case Discussions (per resident)</Label>
+                  <Input type="number" min="0" value={deptConfig.requiredCases} onChange={(e) => setDeptConfig({...deptConfig, requiredCases: parseInt(e.target.value, 10) || 0})} required />
+                </div>
+                <div className="space-y-2">
+                  <Label>Required Number of Procedures (per resident)</Label>
+                  <Input type="number" min="0" value={deptConfig.requiredProcedures} onChange={(e) => setDeptConfig({...deptConfig, requiredProcedures: parseInt(e.target.value, 10) || 0})} required />
+                </div>
+                <div className="space-y-2">
+                  <Label>Required Academic Presentations (per resident)</Label>
+                  <Input type="number" min="0" value={deptConfig.requiredAcademic} onChange={(e) => setDeptConfig({...deptConfig, requiredAcademic: parseInt(e.target.value, 10) || 0})} required />
+                </div>
+                <Button type="submit" disabled={savingConfig} className="w-full">
+                  <Settings className="h-4 w-4 mr-2" /> {savingConfig ? "Saving..." : "Save Settings"}
+                </Button>
+              </form>
             </CardContent>
           </Card>
         </TabsContent>

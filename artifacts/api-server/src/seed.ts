@@ -1,9 +1,8 @@
-
 import bcrypt from "bcryptjs";
 import { 
   db,
   departmentsTable, usersTable, studentsTable, 
-  caseLogsTable, procedureLogsTable, leaveTable
+  caseLogsTable, procedureLogsTable
 } from "@workspace/db";
 
 import { eq } from "drizzle-orm";
@@ -120,21 +119,12 @@ async function main() {
       patientGender: "male",
       chiefComplaints: "Fever and cough since 3 days",
       diagnosisProvisional: "Acute Bronchiolitis",
+      diagnosisFinal: "Acute Bronchiolitis",
       status: "pending"
     });
     console.log("Created Mock Case Log");
 
-    // 7. Create Leave Request for HOD to Review
-    await db.insert(leaveTable).values({
-      studentId: studentProfile.id,
-      fromDate: new Date(),
-      toDate: new Date(Date.now() + 86400000 * 2),
-      totalDays: 2,
-      leaveType: "casual",
-      reason: "Family emergency",
-      status: "pending"
-    });
-    console.log("Created Mock Leave Request");
+
 
     console.log("Seeding complete! You can now log in with the following credentials:");
     console.log("- HOD: hod@elogbook.com / password123");

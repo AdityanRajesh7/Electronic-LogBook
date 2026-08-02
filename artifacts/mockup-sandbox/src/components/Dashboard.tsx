@@ -39,8 +39,9 @@ export function Dashboard() {
   const [logs, setLogs] = React.useState<any>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [deptConfig, setDeptConfig] = React.useState({ requiredCases: 50, requiredProcedures: 101, requiredAcademic: 50 });
 
-  const fetchLogs = React.useCallback(async () => {
+  const fetchDashboardData = React.useCallback(async () => {
     if (!user?.studentProfileId) {
       setError("No student profile ID found. Please log in as a student.");
       setIsLoading(false);
@@ -49,8 +50,12 @@ export function Dashboard() {
     try {
       setIsLoading(true);
       setError(null);
-      const data = await apiGet(`/api/students/${user.studentProfileId}/logs`);
-      setLogs(data);
+      const [logsData, configData] = await Promise.all([
+        apiGet(`/api/students/${user.studentProfileId}/logs`),
+        apiGet(`/api/departments/${user.departmentId}/config`).catch(() => null)
+      ]);
+      setLogs(logsData);
+      if (configData) setDeptConfig(configData);
     } catch (err: any) {
       setError(err.message || "Failed to load dashboard data");
     } finally {
@@ -59,8 +64,8 @@ export function Dashboard() {
   }, [user]);
 
   React.useEffect(() => {
-    fetchLogs();
-  }, [fetchLogs]);
+    fetchDashboardData();
+  }, [fetchDashboardData]);
 
   if (isLoading) {
     return (
@@ -76,7 +81,7 @@ export function Dashboard() {
       <div className="flex min-h-[50vh] flex-col items-center justify-center space-y-4">
         <AlertTriangle className="h-10 w-10 text-amber-500" />
         <p className="text-sm font-medium text-slate-900">{error}</p>
-        <Button onClick={fetchLogs} variant="outline" className="text-teal-700">
+        <Button onClick={fetchDashboardData} variant="outline" className="text-teal-700">
           <RefreshCcw className="mr-2 h-4 w-4" /> Try again
         </Button>
       </div>
@@ -86,9 +91,9 @@ export function Dashboard() {
   if (!logs) return null;
 
   const categories = [
-    { label: "Clinical cases", logged: logs.caseLogs?.length || 0, required: 50, icon: FileText, href: "/cases", tone: "from-teal-500 to-cyan-500" },
-    { label: "Procedures", logged: logs.procedureLogs?.length || 0, required: 101, icon: Stethoscope, href: "/procedures", tone: "from-cyan-500 to-sky-500" },
-    { label: "Case discussions", logged: logs.academicLogs?.length || 0, required: 50, icon: GraduationCap, href: "/academics", tone: "from-emerald-500 to-teal-500" },
+    { label: "Clinical cases", logged: logs.caseLogs?.length || 0, required: deptConfig.requiredCases, icon: FileText, href: "/cases", tone: "from-teal-500 to-cyan-500" },
+    { label: "Procedures", logged: logs.procedureLogs?.length || 0, required: deptConfig.requiredProcedures, icon: Stethoscope, href: "/procedures", tone: "from-cyan-500 to-sky-500" },
+    { label: "Case discussions", logged: logs.academicLogs?.length || 0, required: deptConfig.requiredAcademic, icon: GraduationCap, href: "/academics", tone: "from-emerald-500 to-teal-500" },
   ];
 
   const completion = Math.round(
@@ -156,8 +161,8 @@ export function Dashboard() {
                 </div>
               </div>
               <div className="min-w-52 rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-teal-100 flex items-center gap-1.5">Registration <Badge variant="secondary" className="h-4 px-1 text-[8px] bg-white/20 text-white border-0 hover:bg-white/20 rounded-sm">Not tracked</Badge></p>
-                <p className="mt-1 text-lg font-bold text-teal-50/50 italic">Status unknown</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-teal-100 flex items-center gap-1.5">Registration <Badge variant="secondary" className="h-4 px-1 text-[8px] bg-white/20 text-white border-0 hover:bg-white/20 rounded-sm">Active</Badge></p>
+                <p className="mt-1 text-lg font-bold text-white">{logs.profile?.registrationNumber || "Unknown"}</p>
                 <p className="mt-1 text-[11px] text-teal-50">Programme ends {formatLogbookDate(calculateExpectedCompletion(logs.profile?.dateOfJoining))}</p>
               </div>
             </div>

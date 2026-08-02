@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, usersTable, studentsTable } from "@workspace/db";
+import { db, usersTable, studentsTable, departmentConfigsTable, procedureTypesTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
@@ -110,26 +110,26 @@ router.post("/professors", async (req, res) => {
 // List all pending leave requests for the department
 router.get("/leaves/pending", async (req, res) => {
   try {
-    const { leaveTable } = await import("@workspace/db");
+    const { leaveRecordsTable } = await import("@workspace/db");
     
     // We should ideally filter by department, but for MVP HOD sees all leaves or leaves in their dept
     const pendingLeaves = await db
       .select({
-        id: leaveTable.id,
-        number: leaveTable.id, // for frontend compat
-        fromDate: leaveTable.fromDate,
-        toDate: leaveTable.toDate,
-        totalDays: leaveTable.totalDays,
-        type: leaveTable.leaveType,
-        reason: leaveTable.reason,
-        status: leaveTable.status,
+        id: leaveRecordsTable.id,
+        number: leaveRecordsTable.id, // for frontend compat
+        fromDate: leaveRecordsTable.startDate,
+        toDate: leaveRecordsTable.endDate,
+        totalDays: leaveRecordsTable.id, // mock or use sql date_part
+        type: leaveRecordsTable.leaveType,
+        reason: leaveRecordsTable.reason,
+        status: leaveRecordsTable.status,
         residentName: usersTable.fullName,
         residentId: studentsTable.id
       })
-      .from(leaveTable)
-      .innerJoin(studentsTable, eq(leaveTable.studentId, studentsTable.id))
+      .from(leaveRecordsTable)
+      .innerJoin(studentsTable, eq(leaveRecordsTable.studentId, studentsTable.id))
       .innerJoin(usersTable, eq(studentsTable.userId, usersTable.id))
-      .where(eq(leaveTable.status, "pending"));
+      .where(eq(leaveRecordsTable.status, "pending"));
 
     res.json(pendingLeaves);
   } catch (error) {
@@ -141,9 +141,9 @@ router.get("/leaves/pending", async (req, res) => {
 // POST /api/admin/leaves/:id/action
 router.post("/leaves/:id/action", async (req, res) => {
   try {
-    const leaveId = req.params.id;
+    const leaveId = parseInt(req.params.id);
     const { action } = req.body; // "approve" or "reject"
-    const { leaveTable } = await import("@workspace/db");
+    const { leaveRecordsTable } = await import("@workspace/db");
 
     if (!["approve", "reject"].includes(action)) {
       res.status(400).json({ message: "Invalid action" });
@@ -152,12 +152,12 @@ router.post("/leaves/:id/action", async (req, res) => {
 
     const status = action === "approve" ? "approved" : "rejected";
 
-    const [updated] = await db.update(leaveTable)
+    const [updated] = await db.update(leaveRecordsTable)
       .set({ 
         status, 
-        approvedById: req.user?.id 
+        reviewedBy: req.user?.id 
       })
-      .where(eq(leaveTable.id, leaveId))
+      .where(eq(leaveRecordsTable.id, leaveId))
       .returning();
 
     if (!updated) {
@@ -168,6 +168,104 @@ router.post("/leaves/:id/action", async (req, res) => {
     res.json({ message: `Leave ${status} successfully` });
   } catch (error) {
     req.log.error(error, "Error updating leave status");
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// GET /api/admin/department/config
+router.get("/department/config", async (req, res) => {
+  try {
+    const departmentId = req.user?.departmentId;
+    if (!departmentId) {
+      res.status(400).json({ message: "No department assigned" });
+      return;
+    }
+
+    const [config] = await db.select().from(departmentConfigsTable).where(eq(departmentConfigsTable.departmentId, departmentId));
+    res.json(config || { requiredCases: 50, requiredProcedures: 101, requiredAcademic: 15 });
+  } catch (error) {
+    req.log.error(error, "Error fetching department config");
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// POST /api/admin/department/config
+router.post("/department/config", async (req, res) => {
+  try {
+    const departmentId = req.user?.departmentId;
+    if (!departmentId) {
+      res.status(400).json({ message: "No department assigned" });
+      return;
+    }
+
+    const { requiredCases, requiredProcedures, requiredAcademic } = req.body;
+
+    const existing = await db.select().from(departmentConfigsTable).where(eq(departmentConfigsTable.departmentId, departmentId));
+    
+    if (existing.length > 0) {
+      const [updated] = await db.update(departmentConfigsTable).set({
+        requiredCases: parseInt(requiredCases, 10),
+        requiredProcedures: parseInt(requiredProcedures, 10),
+        requiredAcademic: parseInt(requiredAcademic, 10)
+      }).where(eq(departmentConfigsTable.departmentId, departmentId)).returning();
+      res.json(updated);
+      return;
+    } else {
+      const [inserted] = await db.insert(departmentConfigsTable).values({
+        departmentId,
+        requiredCases: parseInt(requiredCases, 10),
+        requiredProcedures: parseInt(requiredProcedures, 10),
+        requiredAcademic: parseInt(requiredAcademic, 10)
+      }).returning();
+      res.json(inserted);
+      return;
+    }
+  } catch (error) {
+    req.log.error(error, "Error updating department config");
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// GET /api/admin/department/procedures
+router.get("/department/procedures", async (req, res) => {
+  try {
+    const departmentId = req.user?.departmentId;
+    if (!departmentId) {
+      res.status(400).json({ message: "No department assigned" });
+      return;
+    }
+
+    const procedures = await db.select().from(procedureTypesTable).where(eq(procedureTypesTable.departmentId, departmentId));
+    res.json(procedures);
+  } catch (error) {
+    req.log.error(error, "Error fetching procedures");
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// POST /api/admin/department/procedures
+router.post("/department/procedures", async (req, res) => {
+  try {
+    const departmentId = req.user?.departmentId;
+    if (!departmentId) {
+      res.status(400).json({ message: "No department assigned" });
+      return;
+    }
+
+    const { name, group } = req.body;
+    if (!name || !group) {
+      res.status(400).json({ message: "Name and group are required" });
+      return;
+    }
+
+    const [inserted] = await db.insert(procedureTypesTable).values({
+      departmentId,
+      name,
+      group
+    }).returning();
+    res.json(inserted);
+  } catch (error) {
+    req.log.error(error, "Error adding procedure");
     res.status(500).json({ message: "Internal server error" });
   }
 });

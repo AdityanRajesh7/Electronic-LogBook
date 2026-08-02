@@ -13,6 +13,7 @@ import { PostingsPage } from "@/components/pages/PostingsPage";
 import { AttendancePage } from "@/components/pages/AttendancePage";
 import { MilestonesPage } from "@/components/pages/MilestonesPage";
 import { AssessmentsPage } from "@/components/pages/AssessmentsPage";
+import { PrintableLogbook } from "@/components/pages/PrintableLogbook";
 import { getCurrentUser } from "@/lib/session";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -140,6 +141,10 @@ function App() {
         modules={discoveredModules}
       />
     );
+  }
+
+  if (window.location.pathname === "/print") {
+    return <PrintableLogbook />;
   }
 
   if (!isAuthenticated) {

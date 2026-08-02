@@ -15,6 +15,8 @@ import {
 import { CalendarDays, CheckCircle2, Clock, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { formatLogbookDate, todayForInput } from "@/lib/logbook-config";
+import { apiGet, apiPost } from "@/lib/apiClient";
+import { getCurrentUser } from "@/lib/session";
 
 type LeaveStatus = "pending" | "approved" | "rejected";
 
@@ -36,43 +38,34 @@ export function AttendancePage() {
   const [toDate, setToDate] = React.useState("2026-08-14");
   const [reason, setReason] = React.useState("");
 
-  const [leaves, setLeaves] = React.useState<LeaveRecord[]>([
-    {
-      number: 402,
-      appliedOn: "2026-07-27",
-      fromDate: "2026-08-12",
-      toDate: "2026-08-14",
-      totalDays: 3,
-      leaveType: "Academic Leave",
-      reason: "Attending National Paediatric Pulmonary Conference (IAP)",
-      status: "pending",
-      approvedBy: "Awaiting HOD",
-    },
-    {
-      number: 388,
-      appliedOn: "2026-06-04",
-      fromDate: "2026-06-10",
-      toDate: "2026-06-11",
-      totalDays: 2,
-      leaveType: "Casual Leave",
-      reason: "Personal leave",
-      status: "approved",
-      approvedBy: "Dr. Mohamad",
-    },
-    {
-      number: 371,
-      appliedOn: "2026-05-10",
-      fromDate: "2026-05-18",
-      toDate: "2026-05-18",
-      totalDays: 1,
-      leaveType: "Casual Leave",
-      reason: "Personal appointment",
-      status: "rejected",
-      approvedBy: "Dr. Mohamad",
-    },
-  ]);
+  const [leaves, setLeaves] = React.useState<LeaveRecord[]>([]);
+  const user = React.useMemo(() => getCurrentUser(), []);
 
-  const handleApplyLeave = (e: React.FormEvent) => {
+  const fetchLeaves = React.useCallback(async () => {
+    if (!user?.studentProfileId) return;
+    try {
+      const data = await apiGet(`/api/students/${user.studentProfileId}/leave-records`);
+      setLeaves(data.map((l: any) => ({
+        number: l.id,
+        appliedOn: l.createdAt ? l.createdAt.split("T")[0] : "",
+        fromDate: l.startDate,
+        toDate: l.endDate,
+        totalDays: getInclusiveDays(l.startDate, l.endDate),
+        leaveType: l.leaveType === "casual" ? "Casual Leave" : l.leaveType === "academic" ? "Academic Leave" : l.leaveType,
+        reason: l.reason,
+        status: l.status,
+        approvedBy: l.reviewedBy ? "HOD" : "Awaiting HOD",
+      })));
+    } catch (err) {
+      toast.error("Failed to load leave records");
+    }
+  }, [user?.studentProfileId]);
+
+  React.useEffect(() => {
+    fetchLeaves();
+  }, [fetchLeaves]);
+
+  const handleApplyLeave = async (e: React.FormEvent) => {
     e.preventDefault();
     const totalDays = getInclusiveDays(fromDate, toDate);
 
@@ -80,31 +73,36 @@ export function AttendancePage() {
       toast.error("Enter a valid leave period and reason.");
       return;
     }
+    
+    if (!user?.studentProfileId) return;
 
-    const newLeave: LeaveRecord = {
-      number: Math.max(...leaves.map((leave) => leave.number)) + 1,
-      appliedOn: todayForInput(),
-      fromDate,
-      toDate,
-      totalDays,
-      leaveType,
-      reason,
-      status: "pending",
-      approvedBy: "Awaiting HOD",
-    };
-
-    setLeaves([newLeave, ...leaves]);
-    toast.success(`Leave application number ${newLeave.number} submitted`, {
-      description: `Sent to the HOD for approval (${formatLogbookDate(fromDate)} to ${formatLogbookDate(toDate)}).`,
-    });
-    setReason("");
+    try {
+      const payload = {
+        startDate: fromDate,
+        endDate: toDate,
+        leaveType: leaveType === "Casual Leave" ? "casual" : leaveType === "Academic Leave" ? "academic" : "casual",
+        reason
+      };
+      await apiPost(`/api/students/${user.studentProfileId}/leave-records`, payload);
+      toast.success(`Leave application submitted`, {
+        description: `Sent to the HOD for approval (${formatLogbookDate(fromDate)} to ${formatLogbookDate(toDate)}).`,
+      });
+      setReason("");
+      fetchLeaves();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to submit leave application");
+    }
   };
 
-  const approvedCount = leaves.filter((leave) => leave.status === "approved").length;
-  const pendingCount = leaves.filter((leave) => leave.status === "pending").length;
-  const approvedDays = leaves
-    .filter((leave) => leave.status === "approved")
+  const casualUsed = leaves
+    .filter((leave) => leave.leaveType === "Casual Leave" && leave.status === "approved")
     .reduce((total, leave) => total + leave.totalDays, 0);
+
+  const academicUsed = leaves
+    .filter((leave) => leave.leaveType === "Academic Leave" && leave.status === "approved")
+    .reduce((total, leave) => total + leave.totalDays, 0);
+
+  const pendingCount = leaves.filter((leave) => leave.status === "pending").length;
 
   return (
     <div className="space-y-6 pb-12">
@@ -115,9 +113,9 @@ export function AttendancePage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <SummaryCard label="Approved Applications" value={approvedCount} tone="teal" />
+        <SummaryCard label="Casual Leave (20/yr)" value={casualUsed} total={20} tone="teal" />
+        <SummaryCard label="Academic Leave (15/yr)" value={academicUsed} total={15} tone="teal" />
         <SummaryCard label="Pending Approval" value={pendingCount} tone="amber" />
-        <SummaryCard label="Approved Leave Days" value={approvedDays} tone="slate" />
       </div>
 
       <Card className="border border-slate-200 bg-white">
@@ -213,7 +211,7 @@ function getInclusiveDays(fromDate: string, toDate: string) {
   return Math.floor((end - start) / 86_400_000) + 1;
 }
 
-function SummaryCard({ label, value, tone }: { label: string; value: number; tone: "teal" | "amber" | "slate" }) {
+function SummaryCard({ label, value, tone, total }: { label: string; value: number; tone: "teal" | "amber" | "slate", total?: number }) {
   const toneClass = {
     teal: "border-teal-200 bg-teal-50 text-teal-900",
     amber: "border-amber-200 bg-amber-50 text-amber-900",
@@ -222,7 +220,9 @@ function SummaryCard({ label, value, tone }: { label: string; value: number; ton
 
   return (
     <div className={`rounded-xl border p-4 ${toneClass}`}>
-      <p className="text-2xl font-black">{value}</p>
+      <p className="text-2xl font-black">
+        {value} <span className="text-sm font-semibold opacity-60">{total ? `/ ${total} used` : ""}</span>
+      </p>
       <p className="text-[11px] font-semibold uppercase tracking-wide opacity-70">{label}</p>
     </div>
   );

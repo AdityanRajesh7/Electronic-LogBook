@@ -10,3 +10,6 @@ export * from "./leave.js";
 export * from "./certifications.js";
 export * from "./research.js";
 export * from "./appraisals.js";
+export * from "./assessments.js";
+export * from "./department_configs.js";
+export * from "./procedure_types.js";

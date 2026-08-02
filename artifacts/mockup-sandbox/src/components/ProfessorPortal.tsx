@@ -388,15 +388,8 @@ export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
             <CardContent className="flex flex-col justify-between gap-4 p-5 sm:flex-row sm:items-center">
               <div>
                 <p className="font-bold text-slate-900">Professor-wide student access</p>
-                <p className="mt-1 text-xs text-slate-600">Every professor can inspect and review every student's complete work. Department selection only filters the list.</p>
+                <p className="mt-1 text-xs text-slate-600">You can inspect and review every student's complete work in your department.</p>
               </div>
-              <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-                <SelectTrigger aria-label="Department filter" className="w-full bg-white sm:w-60"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Departments</SelectItem>
-                  {DEPARTMENTS.map((department) => <SelectItem key={department} value={department}>{department}</SelectItem>)}
-                </SelectContent>
-              </Select>
             </CardContent>
           </Card>
           <Card className="border border-slate-200 shadow-xs bg-white">

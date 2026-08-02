@@ -27,40 +27,174 @@ import {
 type PostingName = (typeof POSTING_OPTIONS)[number];
 
 type Posting = {
-  number: number;
-  name: PostingName;
+  id: number;
+  ward: PostingName;
   startDate: string;
   endDate: string;
-  chief: string;
-  status: "completed" | "submitted";
+  supervisorId: number;
+  supervisorName: string;
 };
 
+import { apiGet, apiPost } from "@/lib/apiClient";
+import { getCurrentUser } from "@/lib/session";
+
 export function PostingsPage() {
+  const [open, setOpen] = React.useState(false);
+  const [postings, setPostings] = React.useState<Posting[]>([]);
+  const user = React.useMemo(() => getCurrentUser(), []);
+  const [loading, setLoading] = React.useState(false);
+  const [professors, setProfessors] = React.useState<any[]>([]);
+
+  // Form State
+  const [ward, setWard] = React.useState<PostingName>(POSTING_OPTIONS[0]);
+  const [startDate, setStartDate] = React.useState(todayForInput());
+  const [endDate, setEndDate] = React.useState(todayForInput());
+  const [supervisorId, setSupervisorId] = React.useState("");
+
+  const fetchPostings = React.useCallback(async () => {
+    if (!user?.studentProfileId) return;
+    setLoading(true);
+    try {
+      const resp = await apiGet(`/api/students/${user.studentProfileId}/postings`);
+      setPostings(resp.data || []);
+    } catch (e) {
+      toast.error("Failed to fetch postings");
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.studentProfileId]);
+
+  React.useEffect(() => {
+    fetchPostings();
+    if (user?.departmentId) {
+      apiGet(`/api/departments/${user.departmentId}/professors`).then(setProfessors).catch(console.error);
+    }
+  }, [fetchPostings, user?.departmentId]);
+
+  const handleAddPosting = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user?.studentProfileId) return;
+
+    if (!ward || !startDate || !endDate || !supervisorId) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    try {
+      await apiPost(`/api/students/${user.studentProfileId}/postings`, {
+        ward,
+        startDate,
+        endDate,
+        supervisorId
+      });
+      toast.success("Posting added successfully");
+      setOpen(false);
+      fetchPostings();
+      setStartDate(todayForInput());
+      setEndDate(todayForInput());
+    } catch (e: any) {
+      toast.error(e.message || "Failed to add posting");
+    }
+  };
+
   return (
     <div className="space-y-6 pb-12">
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
-          <p className="page-eyebrow flex items-center gap-2">
-            Student-managed clinical training
-            <Badge variant="secondary" className="h-4 px-1.5 text-[9px] bg-amber-100 text-amber-800 border-0 hover:bg-amber-100 rounded-sm">Demo data — not yet persisted</Badge>
-          </p>
-          <h2 className="page-title mt-1 text-slate-400">Postings &amp; rotations</h2>
-          <p className="mt-2 text-sm text-slate-400 italic">
-            Posting tracking is coming soon.
-          </p>
+          <p className="page-eyebrow flex items-center gap-2">Student-managed clinical training</p>
+          <h2 className="page-title mt-1">Postings &amp; rotations</h2>
+          <p className="mt-2 text-sm text-slate-500">Track your individual ward postings and rotations.</p>
         </div>
-        <Button disabled className="opacity-50 cursor-not-allowed" title="Posting tracking coming soon">
-          <PlusCircle className="h-4 w-4 mr-2" /> Add posting / rotation
-        </Button>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <PlusCircle className="h-4 w-4 mr-2" /> Add posting
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Add Posting</DialogTitle>
+              <DialogDescription>
+                Log a new ward posting or rotation.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleAddPosting} className="space-y-4">
+              <div className="space-y-2">
+                <Label>Ward / Posting Unit</Label>
+                <Select value={ward} onValueChange={(val: any) => setWard(val)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {POSTING_OPTIONS.map((opt) => (
+                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Start Date</Label>
+                  <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} required />
+                </div>
+                <div className="space-y-2">
+                  <Label>End Date</Label>
+                  <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} required />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Supervisor (Unit Chief)</Label>
+                <Select value={supervisorId} onValueChange={setSupervisorId}>
+                  <SelectTrigger><SelectValue placeholder="Select professor" /></SelectTrigger>
+                  <SelectContent>
+                    {professors.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.fullName}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+                <Button type="submit">Save Posting</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      <div className="flex flex-col items-center justify-center p-12 text-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/50">
-        <CalendarDays className="h-12 w-12 text-slate-300 mb-4" />
-        <h3 className="text-lg font-bold text-slate-700">Postings Module Not Available</h3>
-        <p className="mt-2 max-w-md text-sm text-slate-500">
-          The ability to track individual ward postings and rotations is not yet implemented. This feature will be available in a future update once the backend schema is finalized.
-        </p>
-      </div>
+      <Card>
+        <CardHeader className="border-b">
+          <CardTitle className="text-lg">Posting Records</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {loading ? (
+             <div className="p-8 text-center text-slate-500">Loading...</div>
+          ) : postings.length === 0 ? (
+            <div className="flex flex-col items-center justify-center p-12 text-center">
+              <CalendarDays className="h-12 w-12 text-slate-300 mb-4" />
+              <h3 className="text-lg font-bold text-slate-700">No postings logged</h3>
+              <p className="mt-2 text-sm text-slate-500">You haven't added any postings yet.</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader className="bg-slate-50">
+                <TableRow>
+                  <TableHead>Ward / Unit</TableHead>
+                  <TableHead>Start Date</TableHead>
+                  <TableHead>End Date</TableHead>
+                  <TableHead>Supervisor</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {postings.map((item, index) => (
+                  <TableRow key={item.id || index}>
+                    <TableCell className="font-medium text-slate-900">{item.ward}</TableCell>
+                    <TableCell>{formatLogbookDate(item.startDate)}</TableCell>
+                    <TableCell>{formatLogbookDate(item.endDate)}</TableCell>
+                    <TableCell>{item.supervisorName}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

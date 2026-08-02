@@ -181,7 +181,7 @@ export function AppLayout({
               </SidebarGroup>
             </SidebarContent>
 
-            <SidebarFooter className="border-t border-teal-100/80 p-3">
+            <SidebarFooter className="sticky bottom-0 z-20 mt-auto border-t border-teal-100/80 bg-white/95 p-3 backdrop-blur-md">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button className="flex w-full items-center gap-3 rounded-2xl border border-white/80 bg-white/72 p-2.5 text-left shadow-sm transition hover:bg-white">

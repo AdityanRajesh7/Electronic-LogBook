@@ -19,7 +19,7 @@ export function LoginPage({ onSignIn, onRegister }: { onSignIn: () => void; onRe
   // Update pre-filled credentials when role changes
   React.useEffect(() => {
     if (role === "student") {
-      setUsername("PG2024-PAED-014");
+      setUsername("aravind@elogbook.com");
     } else if (role === "professor") {
       setUsername("prof@elogbook.com");
     } else if (role === "hod") {

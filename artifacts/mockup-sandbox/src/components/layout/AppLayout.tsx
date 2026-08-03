@@ -54,6 +54,7 @@ import {
   Stethoscope,
   UserCheck,
   UserPlus,
+  Users,
 } from "lucide-react";
 import { formatLogbookDate } from "@/lib/logbook-config";
 
@@ -125,9 +126,9 @@ export function AppLayout({
 
   // Fix: Get actual user from session for the sidebar profile
   const currentUser = getCurrentUser();
-  const displayName = dashboardData?.student?.name || currentUser?.name || getNameForRole(activeRole);
-  const initials = displayName
-    ? displayName.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()
+  const displayName = currentUser?.name || getNameForRole(activeRole);
+  const initials = currentUser?.name 
+    ? currentUser.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()
     : getInitialsForRole(activeRole);
 
   React.useEffect(() => {
@@ -179,15 +180,15 @@ export function AppLayout({
     <SidebarProvider defaultOpen>
       <div className="medical-grid h-screen w-full overflow-hidden p-0 text-slate-900 md:p-3 lg:p-4">
         <div className="glass-panel mx-auto flex h-[100dvh] w-full max-w-[1600px] overflow-hidden rounded-none border-white/70 md:h-[calc(100vh-24px)] md:rounded-[30px] lg:h-[calc(100vh-32px)]">
-          <Sidebar collapsible="icon" className="print-hidden border-r border-white/75 bg-white/72 shadow-[0_24px_80px_rgba(124,58,237,0.08)] backdrop-blur-xl">
-            <SidebarHeader className="border-b border-purple-100/80 p-4">
+          <Sidebar className="print-hidden border-r border-white/70 bg-white/60 shadow-[0_24px_80px_rgba(15,23,42,0.06)] backdrop-blur-xl">
+            <SidebarHeader className="border-b border-white/70 p-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-[#e1b3ff] via-[#dbb0f6] to-[#e8c7fd] text-purple-950 shadow-[0_16px_34px_rgba(124,58,237,0.18)]">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-500 via-teal-500 to-cyan-500 text-white shadow-[0_16px_34px_rgba(13,148,136,0.22)]">
                   <BookOpenCheck className="h-6 w-6" />
                 </div>
                 <div>
                   <p className="font-display text-lg font-bold leading-tight text-slate-900">Pediatrics E-Logbook</p>
-                  <p className="mt-0.5 flex items-center gap-1 text-[11px] font-semibold text-purple-700">
+                  <p className="mt-0.5 flex items-center gap-1 text-[11px] font-semibold text-teal-700">
                     <ShieldCheck className="h-3 w-3" /> MCI-aligned training record
                   </p>
                 </div>
@@ -196,7 +197,7 @@ export function AppLayout({
 
             <SidebarContent className="p-2">
               <SidebarGroup>
-                <SidebarGroupLabel className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-purple-900/45">
+                <SidebarGroupLabel className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-teal-900/45">
                   {activeRole} workspace
                 </SidebarGroupLabel>
                 <SidebarGroupContent>
@@ -213,12 +214,12 @@ export function AppLayout({
                             isActive={isActive}
                             className={`h-11 w-full rounded-xl px-3 transition-all duration-200 ${
                               isActive
-                                ? "border border-white/65 bg-gradient-to-r from-[#e1b3ff] to-[#dbb0f6] font-semibold text-purple-950 shadow-[0_16px_36px_rgba(124,58,237,0.18)] hover:text-purple-950"
-                                : "text-slate-600 hover:border hover:border-purple-100 hover:bg-purple-50/80 hover:text-purple-900"
+                                ? "border border-white/60 bg-gradient-to-r from-teal-600 to-cyan-500 font-semibold text-white shadow-[0_16px_36px_rgba(13,148,136,0.22)] hover:text-white"
+                                : "text-slate-600 hover:border hover:border-white/70 hover:bg-white/80 hover:text-teal-900"
                             }`}
                           >
                             <Link href={item.href} className="flex w-full items-center gap-3">
-                              <Icon className={`h-4 w-4 ${isActive ? "text-purple-950" : "text-purple-600"}`} />
+                              <Icon className={`h-4 w-4 ${isActive ? "text-white" : "text-teal-600"}`} />
                               <span className="flex-1 truncate text-[13px]">{item.title}</span>
                               
                               {item.badgeLoading ? (
@@ -228,8 +229,8 @@ export function AppLayout({
                                   variant="outline"
                                   className={`rounded-full px-1.5 py-0 text-[9px] ${
                                     isActive
-                                      ? "border-white/25 bg-white/20 text-purple-950"
-                                      : item.badgeColor || "border-purple-100 bg-purple-50 text-purple-700"
+                                      ? "border-white/25 bg-white/15 text-white"
+                                      : item.badgeColor || "border-teal-100 bg-teal-50 text-teal-700"
                                   }`}
                                 >
                                   {item.badge}
@@ -245,23 +246,23 @@ export function AppLayout({
               </SidebarGroup>
             </SidebarContent>
 
-            <SidebarFooter className="sticky bottom-0 z-20 mt-auto border-t border-purple-100/70 bg-white/92 p-3 backdrop-blur-md">
+            <SidebarFooter className="sticky bottom-0 z-20 mt-auto border-t border-white/70 bg-white/92 p-3 backdrop-blur-md">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="flex w-full items-center gap-3 rounded-2xl border border-purple-100/70 bg-white/80 p-2.5 text-left shadow-[0_14px_30px_rgba(124,58,237,0.05)] transition hover:-translate-y-0.5 hover:bg-white">
-                    <Avatar className="h-10 w-10 border border-purple-100">
-                      <AvatarFallback className="bg-gradient-to-br from-[#ecd0ff] to-[#e1b3ff] text-xs font-bold text-purple-900">
+                  <button className="flex w-full items-center gap-3 rounded-2xl border border-white/70 bg-white/75 p-2.5 text-left shadow-[0_14px_30px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:bg-white">
+                    <Avatar className="h-10 w-10 border border-teal-100">
+                      <AvatarFallback className="bg-gradient-to-br from-teal-100 to-cyan-100 text-xs font-bold text-teal-800">
                         {initials}
                       </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-xs font-bold text-slate-900">{displayName}</p>
-                      <p className="truncate text-[10px] font-semibold text-purple-700">{activeRole} portal</p>
+                      <p className="truncate text-[10px] font-semibold text-teal-700">{activeRole} portal</p>
                     </div>
-                    <ChevronDown className="h-4 w-4 text-purple-700/50" />
+                    <ChevronDown className="h-4 w-4 text-teal-700/50" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-72 rounded-2xl border-purple-100/70 bg-white/92 p-1 shadow-[0_24px_60px_rgba(124,58,237,0.10)] backdrop-blur-xl">
+                <DropdownMenuContent align="end" className="w-72 rounded-2xl border-white/70 bg-white/92 p-1 shadow-[0_24px_60px_rgba(15,23,42,0.12)] backdrop-blur-xl">
                   <DropdownMenuItem onClick={() => setIsChangePasswordOpen(true)} className="cursor-pointer rounded-xl text-xs">
                     <KeyRound className="mr-2 h-4 w-4" /> Change Password
                   </DropdownMenuItem>
@@ -277,10 +278,10 @@ export function AppLayout({
           </Sidebar>
 
           <SidebarInset className="flex min-w-0 flex-1 flex-col bg-transparent overflow-y-auto">
-            <header className="print-hidden sticky top-0 z-20 flex h-[72px] items-center justify-between border-b border-white/70 bg-white/68 px-4 backdrop-blur-xl md:px-6">
+            <header className="print-hidden sticky top-0 z-20 flex h-[72px] items-center justify-between border-b border-white/70 bg-white/62 px-4 backdrop-blur-xl md:px-6">
               <div className="flex min-w-0 items-center gap-3">
                 <SidebarTrigger className="rounded-xl text-teal-800 hover:bg-white" />
-                <div className="hidden h-7 w-px bg-purple-100 sm:block" />
+                <div className="hidden h-7 w-px bg-teal-100 sm:block" />
                 <div className="min-w-0">
                   <p className="truncate font-display text-base font-bold text-slate-900">
                     Department of Pediatrics
@@ -298,19 +299,19 @@ export function AppLayout({
                     size="sm"
                     onClick={() => window.open('/print', '_blank')}
                     title="Print the complete consolidated record."
-                    className="hidden border-purple-100/70 bg-white/80 text-purple-800 shadow-[0_12px_24px_rgba(124,58,237,0.05)] sm:inline-flex"
+                    className="hidden border-white/70 bg-white/75 text-teal-800 shadow-[0_12px_24px_rgba(15,23,42,0.05)] sm:inline-flex"
                   >
                     <Printer className="h-4 w-4 mr-2" /> Print PDF
                   </Button>
                 )}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="relative rounded-xl border border-purple-100/70 bg-white/76 p-2 text-purple-800 shadow-[0_12px_24px_rgba(124,58,237,0.05)] transition hover:-translate-y-0.5 hover:bg-white">
+                    <button className="relative rounded-xl border border-white/70 bg-white/72 p-2 text-teal-800 shadow-[0_12px_24px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:bg-white">
                       <Bell className="h-4 w-4" />
                       <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-rose-500 ring-2 ring-white" />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-80 rounded-2xl border-purple-100/70 bg-white/92 p-2 shadow-[0_24px_60px_rgba(124,58,237,0.10)] backdrop-blur-xl">
+                  <DropdownMenuContent align="end" className="w-80 rounded-2xl border-white/70 bg-white/92 p-2 shadow-[0_24px_60px_rgba(15,23,42,0.12)] backdrop-blur-xl">
                     <DropdownMenuLabel className="px-3 pt-2">Notifications</DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem className="rounded-xl px-3 py-2">

@@ -1,11 +1,105 @@
 import { Router, type IRouter } from "express";
-import { db, usersTable, studentsTable, departmentsTable } from "@workspace/db";
-import { eq, ilike } from "drizzle-orm";
+import { db, usersTable, studentsTable, departmentsTable, registrationOtpsTable } from "@workspace/db";
+import { eq, ilike, and, desc } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { sendOtpEmail } from "../lib/mailer.js";
 
 const router: IRouter = Router();
 const JWT_SECRET = process.env.JWT_SECRET || "fallback-secret-for-dev-only";
+
+router.post("/send-otp", async (req, res) => {
+  const { email } = req.body;
+  if (!email) {
+    res.status(400).json({ message: "Email is required" });
+    return;
+  }
+
+  try {
+    const existingUser = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
+    if (existingUser.length > 0) {
+      res.status(400).json({ message: "Email already registered" });
+      return;
+    }
+
+    const recentOtp = await db.select().from(registrationOtpsTable)
+      .where(eq(registrationOtpsTable.email, email))
+      .orderBy(desc(registrationOtpsTable.createdAt))
+      .limit(1);
+
+    const now = new Date();
+    if (recentOtp.length > 0) {
+      const timeSinceCreation = now.getTime() - new Date(recentOtp[0].createdAt).getTime();
+      if (timeSinceCreation < 60000) {
+        res.status(429).json({ message: "Please wait 60 seconds before requesting another OTP" });
+        return;
+      }
+    }
+
+    await db.delete(registrationOtpsTable).where(
+      and(eq(registrationOtpsTable.email, email), eq(registrationOtpsTable.verified, false))
+    );
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpHash = await bcrypt.hash(otp, 10);
+    const expiresAt = new Date(now.getTime() + 10 * 60000);
+
+    await db.insert(registrationOtpsTable).values({
+      email,
+      otpHash,
+      expiresAt,
+    });
+
+    await sendOtpEmail(email, otp);
+
+    res.status(200).json({ message: "OTP sent" });
+  } catch (error) {
+    req.log.error(error, "Error sending OTP");
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+router.post("/verify-otp", async (req, res) => {
+  const { email, otp } = req.body;
+  if (!email || !otp) {
+    res.status(400).json({ message: "Email and OTP are required" });
+    return;
+  }
+
+  try {
+    const latestOtp = await db.select().from(registrationOtpsTable)
+      .where(eq(registrationOtpsTable.email, email))
+      .orderBy(desc(registrationOtpsTable.createdAt))
+      .limit(1);
+
+    if (latestOtp.length === 0) {
+      res.status(400).json({ message: "No OTP found for this email" });
+      return;
+    }
+
+    const otpRecord = latestOtp[0];
+
+    if (new Date() > new Date(otpRecord.expiresAt)) {
+      res.status(400).json({ message: "OTP has expired" });
+      return;
+    }
+
+    const isValid = await bcrypt.compare(otp, otpRecord.otpHash);
+    if (!isValid) {
+      res.status(400).json({ message: "Invalid OTP" });
+      return;
+    }
+
+    await db.update(registrationOtpsTable)
+      .set({ verified: true })
+      .where(eq(registrationOtpsTable.id, otpRecord.id));
+
+    res.status(200).json({ message: "Email verified" });
+  } catch (error) {
+    req.log.error(error, "Error verifying OTP");
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
 
 router.post("/register", async (req, res) => {
   try {
@@ -22,6 +116,21 @@ router.post("/register", async (req, res) => {
 
     if (!fullName || !email || !password || !registrationNumber || !batch || !dateOfJoining || !kuhsId || !specialty) {
       res.status(400).json({ message: "All fields are required" });
+      return;
+    }
+
+    const verifiedOtp = await db.select().from(registrationOtpsTable)
+      .where(
+        and(
+          eq(registrationOtpsTable.email, email),
+          eq(registrationOtpsTable.verified, true)
+        )
+      )
+      .orderBy(desc(registrationOtpsTable.createdAt))
+      .limit(1);
+
+    if (verifiedOtp.length === 0 || new Date() > new Date(verifiedOtp[0].expiresAt)) {
+      res.status(400).json({ message: "Email not verified. Please verify your email before registering." });
       return;
     }
 
@@ -78,6 +187,8 @@ router.post("/register", async (req, res) => {
       kuhsId,
       specialty
     });
+
+    await db.delete(registrationOtpsTable).where(eq(registrationOtpsTable.email, email));
 
     res.status(201).json({ message: "Registration successful. Pending HOD approval." });
   } catch (error) {

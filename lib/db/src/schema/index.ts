@@ -13,3 +13,4 @@ export * from "./appraisals.js";
 export * from "./assessments.js";
 export * from "./department_configs.js";
 export * from "./procedure_types.js";
+export * from "./otp.js";

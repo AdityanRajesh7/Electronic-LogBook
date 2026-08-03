@@ -210,7 +210,8 @@
   }
 
   .hover-elevate {
-    @apply surface-interactive;
+    transition: transform 200ms ease, box-shadow 200ms ease, background-color 200ms ease, border-color 200ms ease;
+    will-change: transform, box-shadow;
   }
 
   .hover-elevate:hover {

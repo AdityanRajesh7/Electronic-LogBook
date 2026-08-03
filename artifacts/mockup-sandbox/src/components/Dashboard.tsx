@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { formatLogbookDate } from "@/lib/logbook-config";
 import { apiGet } from "@/lib/apiClient";
 import { getCurrentUser } from "@/lib/session";
@@ -38,9 +39,9 @@ function calculateExpectedCompletion(dateOfJoining: string) {
 export function Dashboard() {
   const user = React.useMemo(() => getCurrentUser(), []);
   const [logs, setLogs] = React.useState<any>(null);
-  const [summary, setSummary] = React.useState<any>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [deptConfig, setDeptConfig] = React.useState({ requiredCases: 50, requiredProcedures: 101, requiredAcademic: 50 });
 
   const fetchDashboardData = React.useCallback(async () => {
     if (!user?.studentProfileId) {
@@ -51,12 +52,12 @@ export function Dashboard() {
     try {
       setIsLoading(true);
       setError(null);
-      const [summaryData, logsData] = await Promise.all([
-        apiGet(`/api/students/${user.studentProfileId}/dashboard`),
+      const [logsData, configData] = await Promise.all([
         apiGet(`/api/students/${user.studentProfileId}/logs`),
+        apiGet(`/api/departments/${user.departmentId}/config`).catch(() => null)
       ]);
-      setSummary(summaryData);
       setLogs(logsData);
+      if (configData) setDeptConfig(configData);
     } catch (err: any) {
       setError(err.message || "Failed to load dashboard data");
     } finally {
@@ -91,50 +92,15 @@ export function Dashboard() {
 
   if (!logs) return null;
 
-  const profile = summary?.student || logs.profile || {};
-  const categories = summary?.categories || [
-    {
-      id: "cases",
-      label: "Clinical cases",
-      name: "Clinical cases",
-      logged: logs.caseLogs?.length || 0,
-      required: 50,
-      verified: logs.caseLogs?.filter((item: any) => item.status === "verified").length || 0,
-      href: "/cases",
-    },
-    {
-      id: "procedures",
-      label: "Procedures",
-      name: "Procedures",
-      logged: logs.procedureLogs?.length || 0,
-      required: 101,
-      verified: logs.procedureLogs?.filter((item: any) => item.status === "verified").length || 0,
-      href: "/procedures",
-    },
-    {
-      id: "academics",
-      label: "Case discussions",
-      name: "Case discussions",
-      logged: logs.academicLogs?.length || 0,
-      required: 50,
-      verified: logs.academicLogs?.filter((item: any) => item.status === "verified").length || 0,
-      href: "/academics",
-    },
+  const categories = [
+    { label: "Clinical cases", logged: logs.caseLogs?.length || 0, required: deptConfig.requiredCases, icon: FileText, href: "/cases", tone: "from-teal-500 to-cyan-500" },
+    { label: "Procedures", logged: logs.procedureLogs?.length || 0, required: deptConfig.requiredProcedures, icon: Stethoscope, href: "/procedures", tone: "from-cyan-500 to-sky-500" },
+    { label: "Case discussions", logged: logs.academicLogs?.length || 0, required: deptConfig.requiredAcademic, icon: GraduationCap, href: "/academics", tone: "from-emerald-500 to-teal-500" },
   ];
 
-  const totalLogged = categories.reduce((sum: number, item: any) => sum + Number(item.logged || 0), 0);
-  const totalVerified = categories.reduce((sum: number, item: any) => sum + Number(item.verified || 0), 0);
-  const totalRequired = categories.reduce((sum: number, item: any) => sum + Number(item.required || 0), 0);
-  const completion = totalRequired ? Math.min(100, Math.round((totalVerified / totalRequired) * 100)) : 0;
-  const remaining = Math.max(totalRequired - totalVerified, 0);
-  const pendingReview = Math.max(totalLogged - totalVerified, 0);
-  const profileName = profile.name || user?.name || "Student";
-  const profileInitials = profileName
-    .split(" ")
-    .map((word: string) => word[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
+  const completion = Math.round(
+    categories.reduce((sum, item) => sum + Math.min(item.logged / item.required, 1), 0) / categories.length * 100,
+  );
 
   const mappedCaseLogs = (logs.caseLogs || []).map((l: any) => ({
     number: l.id, date: l.date, type: "Case", title: l.diagnosisProvisional || "Case Log", patientUhid: l.patientUhid, status: l.status, timestamp: new Date(l.createdAt).getTime()
@@ -150,99 +116,111 @@ export function Dashboard() {
     .sort((a, b) => b.timestamp - a.timestamp)
     .slice(0, 5);
 
+  const overallRemaining = categories.reduce((sum, item) => sum + Math.max(item.required - item.logged, 0), 0);
+  const nextDeadlineDays = 18;
+
   return (
     <div className="section-spacing pb-12">
-      <Card className="overflow-hidden border-white/75 bg-white/82 layer-2">
-        <div className="h-28 bg-gradient-to-r from-[#ecd0ff] via-[#e8c7fd] to-[#dbb0f6]" />
-        <CardContent className="p-0">
-          <div className="px-6 pb-6 md:px-8">
-            <div className="-mt-12 flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
-              <div className="flex items-start gap-4">
-                <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full border-4 border-white bg-[#e5beff] text-2xl font-semibold text-purple-950 shadow-[0_16px_40px_rgba(124,58,237,0.18)]">
-                  {profileInitials}
-                </div>
-                <div className="pt-10 md:pt-12">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <h1 className="text-3xl font-semibold tracking-tight text-slate-950 md:text-4xl">{profileName}</h1>
-                    <Badge className="rounded-full border-0 bg-[#dbb0f6] px-3 py-1 text-[11px] font-semibold text-purple-950 shadow-[0_8px_18px_rgba(124,58,237,0.12)]">
-                      Live profile data
-                    </Badge>
-                  </div>
-                  <p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-600">
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-purple-50 px-2.5 py-1 text-xs font-semibold text-purple-900">
-                      <CalendarDays className="h-3.5 w-3.5" /> Joined {formatLogbookDate(profile.dateOfJoining || logs.profile?.dateOfJoining || "") || "—"}
-                    </span>
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-purple-50 px-2.5 py-1 text-xs font-semibold text-purple-900">
-                      {profile.department || logs.profile?.department || "Department not set"}
-                    </span>
-                  </p>
+      <Card className="overflow-hidden border-white/70 bg-white/72 layer-2 animate-float-up">
+        <div className="h-1.5 bg-gradient-to-r from-teal-500 via-cyan-400 to-emerald-400" />
+        <CardContent className="p-7 md:p-10 lg:p-14">
+          <div className="flex flex-col gap-8 xl:flex-row xl:items-start xl:justify-between">
+            <div className="max-w-3xl space-y-6">
+              <div className="flex flex-wrap items-center gap-3">
+                <Badge className="border-0 bg-teal-50/80 text-[10px] font-bold uppercase tracking-[.18em] text-teal-800">MCI logbook guidelines</Badge>
+                <div className="flex items-center gap-2 rounded-full border border-white/70 bg-white/80 px-3 py-1 text-[11px] font-semibold text-teal-900 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+                  <Sparkles className="h-3.5 w-3.5 text-teal-600" />
+                  <span>Personal dashboard</span>
                 </div>
               </div>
-              <div className="flex flex-wrap items-center gap-2 md:pt-12">
-                <Button asChild variant="outline" className="border-purple-100 bg-white/90 text-purple-900 shadow-[0_12px_24px_rgba(124,58,237,0.05)]">
-                  <Link href="/cases"><FileText className="h-4 w-4" /> Review entries</Link>
+              <div>
+                <p className="page-eyebrow">{logs.profile?.department || "Department Unassigned"}</p>
+                <h1 className="mt-2 text-5xl font-semibold leading-[1.02] tracking-tight text-slate-950 md:text-6xl">Postgraduate Electronic Logbook</h1>
+                <p className="mt-5 max-w-2xl text-base leading-7 text-slate-600 md:text-lg">
+                  Maintain complete, dated clinical and academic records using patient UHID only. Submit entries regularly for professor verification.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <Button asChild className="bg-gradient-to-r from-teal-600 via-teal-500 to-cyan-500 text-white shadow-[0_16px_36px_rgba(13,148,136,0.20)] hover:shadow-[0_20px_48px_rgba(13,148,136,0.25)]">
+                  <Link href="/cases"><FileText className="h-4 w-4" /> Log a case</Link>
+                </Button>
+                <Button asChild variant="outline" className="border-white/70 bg-white/80 text-teal-800 shadow-[0_12px_24px_rgba(15,23,42,0.04)]">
+                  <Link href="/procedures"><Stethoscope className="h-4 w-4" /> Log a procedure</Link>
+                </Button>
+                <Button asChild variant="outline" className="border-white/70 bg-white/80 text-teal-800 shadow-[0_12px_24px_rgba(15,23,42,0.04)]">
+                  <Link href="/postings"><CalendarDays className="h-4 w-4" /> Add posting / rotation</Link>
                 </Button>
               </div>
             </div>
-
-            <div className="mt-6 rounded-[24px] border border-purple-100/80 bg-white/92 p-6 shadow-[0_18px_50px_rgba(124,58,237,0.05)]">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="page-eyebrow">Logbook details</p>
-                  <h2 className="mt-1 text-xl font-semibold text-slate-950">Profile overview</h2>
+            <Card className="min-w-0 max-w-2xl border-white/70 bg-white/74 layer-1">
+              <CardContent className="p-6 md:p-7">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <ProfileField label="Resident" value={user?.name || "Student"} />
+                  <ProfileField label="Registration number" value={logs.profile?.registrationNumber || "—"} />
+                  <ProfileField label="Date of joining" value={formatLogbookDate(logs.profile?.dateOfJoining || "—")} />
+                  <ProfileField label="Expected completion" value={formatLogbookDate(calculateExpectedCompletion(logs.profile?.dateOfJoining))} />
                 </div>
-                <div className="hidden items-center gap-2 rounded-full border border-purple-100 bg-purple-50 px-3 py-1.5 text-xs font-semibold text-purple-900 sm:flex">
-                  <Sparkles className="h-3.5 w-3.5" /> Synced from database
+                <div className="mt-4 grid gap-3 rounded-[18px] border border-teal-100/70 bg-teal-50/60 p-4 sm:grid-cols-2">
+                  <div>
+                    <p className="metric-label">Current year</p>
+                    <p className="mt-1 text-xl font-semibold text-slate-950">{logs.profile?.joiningYear || "—"}</p>
+                  </div>
+                  <div>
+                    <p className="metric-label">Department</p>
+                    <p className="mt-1 text-xl font-semibold text-slate-950">{logs.profile?.department || "Unassigned"}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="overflow-hidden border-white/70 bg-white/78 layer-2">
+        <CardContent className="p-6 md:p-8">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-5">
+              <div className="relative flex h-24 w-24 items-center justify-center rounded-full border border-teal-100/80 bg-white shadow-[0_12px_32px_rgba(15,23,42,0.05)]">
+                <div className="flex h-18 w-18 items-center justify-center rounded-full border border-teal-100 bg-teal-50 text-center">
+                  <div>
+                    <div className="text-2xl font-semibold text-slate-950 transition-all duration-700">{completion}%</div>
+                    <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-teal-700">Overall progress</div>
+                  </div>
                 </div>
               </div>
-
-              <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                <ProfileField label="Full name" value={profileName} />
-                <ProfileField label="Department" value={profile.department || logs.profile?.department || "Department not set"} />
-                <ProfileField label="Registration no." value={profile.registrationNumber || logs.profile?.registrationNumber || "Registration unavailable"} />
-                <ProfileField label="Current year" value={String(profile.joiningYear || logs.profile?.joiningYear || "Batch unavailable")} />
-                <ProfileField label="Date of joining" value={formatLogbookDate(profile.dateOfJoining || logs.profile?.dateOfJoining || "") || "—"} />
-                <ProfileField label="Expected completion" value={formatLogbookDate(calculateExpectedCompletion(profile.dateOfJoining || logs.profile?.dateOfJoining || ""))} />
-                <ProfileField label="Student profile" value={profile.id ? `ID ${profile.id}` : "Profile ID unavailable"} />
-                <ProfileField label="Verified entries" value={`${totalVerified} verified`} />
+              <div>
+                <p className="page-eyebrow">Dashboard insights</p>
+                <h2 className="mt-1 text-2xl font-semibold text-slate-950">You need {overallRemaining} more entries to complete the core targets.</h2>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">On track for completion. Your next milestone is due in {nextDeadlineDays} days, and recent activity still needs verification.</p>
               </div>
             </div>
-
-            <div className="mt-6 flex flex-col gap-4 rounded-[24px] border border-purple-100/80 bg-gradient-to-r from-[#f4e8ff] to-[#efe2ff] p-5 md:flex-row md:items-center md:justify-between">
-              <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-purple-700 shadow-[0_10px_24px_rgba(124,58,237,0.08)]">
-                  <CheckCircle2 className="h-6 w-6" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-slate-950">{totalLogged} entries logged · {totalVerified} verified</p>
-                  <p className="text-sm text-slate-600">{pendingReview} entries pending professor review</p>
-                </div>
-              </div>
-              <div className="rounded-full border border-purple-100 bg-white px-4 py-2 text-sm font-semibold text-purple-950">
-                {remaining} verified entries remaining
-              </div>
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="secondary" className="rounded-full border-white/70 bg-white/80 px-3 py-1 text-teal-800">On track</Badge>
+              <Badge variant="outline" className="rounded-full border-white/70 bg-white/80 px-3 py-1 text-slate-700">Next due in {nextDeadlineDays} days</Badge>
+              <Badge variant="outline" className="rounded-full border-white/70 bg-white/80 px-3 py-1 text-slate-700">45% ahead of peers</Badge>
             </div>
           </div>
+          <Progress value={completion} className="mt-6 h-3 bg-teal-100/70" />
         </CardContent>
       </Card>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {categories.map((item) => {
           const Icon = item.icon;
-          const percent = Math.min(Math.round((Number(item.verified || 0) / Number(item.required || 1)) * 100), 100);
-          const remaining = Math.max(Number(item.required || 0) - Number(item.logged || 0), 0);
+          const percent = Math.min(Math.round(item.logged / item.required * 100), 100);
+          const remaining = Math.max(item.required - item.logged, 0);
           return (
-            <Link key={item.id || item.label} href={item.href}>
-              <Card className="h-full cursor-pointer border-white/75 bg-white/82 shadow-[0_18px_48px_rgba(124,58,237,0.05)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_24px_70px_rgba(124,58,237,0.08)]">
+            <Link key={item.label} href={item.href}>
+              <Card className="h-full cursor-pointer border-white/70 bg-white/76 shadow-[0_18px_48px_rgba(15,23,42,0.05)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_24px_70px_rgba(15,23,42,0.08)]">
                 <CardContent className="p-5">
                   <div className="flex items-start justify-between gap-4">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-[#e1b3ff] to-[#dbb0f6] text-purple-950 shadow-[0_12px_28px_rgba(124,58,237,0.16)]"><Icon className="h-5 w-5" /></div>
+                    <div className={`flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br ${item.tone} text-white shadow-[0_12px_28px_rgba(13,148,136,0.18)]`}><Icon className="h-5 w-5" /></div>
                     <div className="text-right">
                       <div className="text-4xl font-semibold leading-none text-slate-950 transition-all duration-700">{item.logged}</div>
                       <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Completed</div>
                     </div>
                   </div>
-                  <p className="mt-4 text-sm font-semibold text-slate-900">{item.name || item.label}</p>
+                  <p className="mt-4 text-sm font-semibold text-slate-900">{item.label}</p>
                   <p className="mt-1 text-[11px] text-slate-500">{item.logged} of {item.required} required</p>
                   <Progress value={percent} className="mt-4 h-2" />
                   <div className="mt-3 flex items-center justify-between text-[11px] text-slate-500">
@@ -257,8 +235,8 @@ export function Dashboard() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1.4fr_.6fr]">
-        <Card className="border-white/75 bg-white/82">
-          <CardHeader className="flex flex-row items-center justify-between border-b border-purple-100/80">
+        <Card className="border-white/70 bg-white/76">
+          <CardHeader className="flex flex-row items-center justify-between border-b border-white/70">
             <div>
               <p className="page-eyebrow">Student activity</p>
               <CardTitle className="mt-1 text-xl">Recent entries</CardTitle>
@@ -268,7 +246,7 @@ export function Dashboard() {
           <CardContent className="p-0">
             {recent.length === 0 ? (
               <div className="flex flex-col items-center justify-center p-12 text-center">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-purple-50 text-purple-700">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-50 text-teal-700">
                   <FileText className="h-6 w-6" />
                 </div>
                 <h3 className="mt-4 text-base font-semibold text-slate-950">No entries yet</h3>
@@ -286,9 +264,9 @@ export function Dashboard() {
                     <TableRow key={`${item.type}-${item.number}`}>
                       <TableCell className="font-bold">{item.number}</TableCell>
                       <TableCell>{formatLogbookDate(item.date)}</TableCell>
-                      <TableCell><Badge variant="outline" className="border-purple-100 bg-purple-50 text-purple-800">{item.type}</Badge></TableCell>
+                      <TableCell><Badge variant="outline" className="border-teal-100 bg-teal-50 text-teal-800">{item.type}</Badge></TableCell>
                       <TableCell className="max-w-xs font-semibold">{item.title}</TableCell>
-                      <TableCell className="text-xs font-semibold text-purple-800">{item.patientUhid}</TableCell>
+                      <TableCell className="text-xs font-semibold text-teal-800">{item.patientUhid}</TableCell>
                       <TableCell><Status value={item.status} /></TableCell>
                     </TableRow>
                   ))}
@@ -299,23 +277,23 @@ export function Dashboard() {
         </Card>
 
         <div className="space-y-4">
-          <Card className="border-white/75 bg-white/82">
+          <Card className="border-white/70 bg-white/76">
             <CardContent className="p-5">
               <div className="flex items-start gap-3">
-                <AlertTriangle className="mt-0.5 h-5 w-5 text-purple-700" />
+                <AlertTriangle className="mt-0.5 h-5 w-5 text-amber-700" />
                 <div>
-                  <p className="text-sm font-bold text-purple-950">Procedure shortfall</p>
-                  <p className="mt-1 text-xs leading-5 text-purple-900/80">Complete and verify every named procedure requirement; the combined target is 101.</p>
-                  <Button asChild variant="link" className="mt-2 h-auto p-0 text-purple-800"><Link href="/procedures">Review requirements <ArrowRight className="h-3 w-3" /></Link></Button>
+                  <p className="text-sm font-bold text-amber-950">Procedure shortfall</p>
+                  <p className="mt-1 text-xs leading-5 text-amber-900/80">Complete and verify every named procedure requirement; the combined target is 101.</p>
+                  <Button asChild variant="link" className="mt-2 h-auto p-0 text-amber-800"><Link href="/procedures">Review requirements <ArrowRight className="h-3 w-3" /></Link></Button>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-white/75 bg-white/82">
+          <Card className="border-white/70 bg-white/76">
             <CardContent className="p-5">
               <div className="flex items-start gap-3">
-                <Printer className="mt-0.5 h-5 w-5 text-purple-700" />
+                <Printer className="mt-0.5 h-5 w-5 text-cyan-700" />
                 <div>
                   <p className="text-sm font-bold text-slate-900">Print at any point</p>
                   <p className="mt-1 text-xs leading-5 text-slate-500">Use Print PDF for a current copy. Incomplete records are automatically marked Draft; finalized records print as an official copy.</p>
@@ -326,10 +304,10 @@ export function Dashboard() {
         </div>
       </div>
 
-      <Card className="border-white/75 bg-white/82">
+      <Card className="border-white/70 bg-white/76">
         <CardContent className="flex flex-col justify-between gap-4 p-5 sm:flex-row sm:items-center">
           <div className="flex items-center gap-3">
-            <CalendarDays className="h-5 w-5 text-purple-600" />
+            <CalendarDays className="h-5 w-5 text-teal-600" />
             <div><p className="text-sm font-bold">Next quarterly assessment</p><p className="text-xs text-slate-500 italic">Assessment tracking coming soon</p></div>
           </div>
           <Button asChild variant="outline" size="sm" disabled className="opacity-50 cursor-not-allowed">
@@ -342,11 +320,11 @@ export function Dashboard() {
 }
 
 function ProfileField({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-[18px] border border-purple-100/80 bg-white/90 px-4 py-3 shadow-[0_10px_24px_rgba(124,58,237,0.05)]"><p className="text-[9px] font-bold uppercase tracking-[.15em] text-purple-700">{label}</p><p className="mt-1 truncate text-sm font-semibold text-slate-950">{value}</p></div>;
+  return <div className="rounded-[18px] border border-white/70 bg-white/80 px-4 py-3 shadow-[0_10px_24px_rgba(15,23,42,0.04)]"><p className="text-[9px] font-bold uppercase tracking-[.15em] text-teal-700">{label}</p><p className="mt-1 truncate text-sm font-semibold text-slate-950">{value}</p></div>;
 }
 
 function Status({ value }: { value: string }) {
   if (value === "verified") return <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700"><CheckCircle2 className="mr-1 h-3 w-3" /> Verified</Badge>;
   if (value === "rejected") return <Badge className="border-rose-200 bg-rose-50 text-rose-700">Revision</Badge>;
-  return <Badge className="border-purple-200 bg-purple-50 text-purple-700">Pending</Badge>;
+  return <Badge className="border-amber-200 bg-amber-50 text-amber-700">Pending</Badge>;
 }

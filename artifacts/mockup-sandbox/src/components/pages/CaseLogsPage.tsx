@@ -20,6 +20,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { Kbd } from "@/components/ui/kbd";
 import { formatLogbookDate, todayForInput } from "@/lib/logbook-config";
 
 type CaseLog = {
@@ -218,7 +219,12 @@ export function CaseLogsPage() {
         <CardHeader className="flex flex-col justify-between gap-4 border-b border-teal-100 md:flex-row md:items-center">
           <div className="relative w-full max-w-md">
             <Search className="absolute left-3 top-3 h-4 w-4 text-teal-600" />
-            <Input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" placeholder="Search number, diagnosis, UHID or complaint…" />
+            <Input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="h-11 pl-9 pr-24" placeholder="Search patient, UHID or diagnosis..." />
+            <div className="pointer-events-none absolute right-3 top-2.5 flex items-center gap-1">
+              <Kbd>Ctrl</Kbd>
+              <span className="text-[10px] text-slate-400">+</span>
+              <Kbd>K</Kbd>
+            </div>
           </div>
           <Badge variant="outline" className="w-fit border-teal-100 bg-teal-50 px-3 py-1 text-teal-800">{caseLogs.length} of 50 cases logged</Badge>
         </CardHeader>
@@ -229,8 +235,14 @@ export function CaseLogsPage() {
               <p className="text-sm font-medium text-slate-500">Loading cases...</p>
             </div>
           ) : filteredLogs.length === 0 ? (
-            <div className="flex h-48 flex-col items-center justify-center space-y-4 text-slate-500">
-              <p>No cases found.</p>
+            <div className="flex h-56 flex-col items-center justify-center space-y-4 text-slate-500">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-50 text-teal-700">
+                <FileText className="h-6 w-6" />
+              </div>
+              <div className="space-y-1 text-center">
+                <p className="text-base font-semibold text-slate-950">No cases found</p>
+                <p className="max-w-sm text-sm leading-6 text-slate-500">Try a different UHID, diagnosis, or case number, or clear the search to see all records.</p>
+              </div>
             </div>
           ) : (
             <Table>

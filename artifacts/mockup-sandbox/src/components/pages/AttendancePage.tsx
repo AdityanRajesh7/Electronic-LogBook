@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { formatLogbookDate, todayForInput } from "@/lib/logbook-config";
 import { apiGet, apiPost } from "@/lib/apiClient";
 import { getCurrentUser } from "@/lib/session";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 
 type LeaveStatus = "pending" | "approved" | "rejected";
 
@@ -113,7 +114,7 @@ export function AttendancePage() {
   const pendingCount = leaves.filter((leave) => leave.status === "pending").length;
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="section-spacing pb-12">
       <div>
         <p className="page-eyebrow">Attendance administration</p>
         <h2 className="page-title mt-1">Leave records</h2>
@@ -126,9 +127,9 @@ export function AttendancePage() {
         <SummaryCard label="Pending Approval" value={pendingCount} tone="amber" />
       </div>
 
-      <Card className="border border-slate-200 bg-white">
-        <CardHeader className="border-b border-slate-100 pb-3">
-          <CardTitle className="text-sm font-bold text-slate-900">New Leave Application</CardTitle>
+      <Card className="border-white/70 bg-white/76">
+        <CardHeader className="border-b border-white/70 pb-3">
+          <CardTitle className="text-sm font-bold text-slate-950">New Leave Application</CardTitle>
         </CardHeader>
         <CardContent className="p-4">
           <form onSubmit={handleApplyLeave} className="space-y-4">
@@ -164,48 +165,58 @@ export function AttendancePage() {
                 required
               />
             </div>
-            <Button type="submit" className="bg-teal-600 text-xs font-semibold text-white hover:bg-teal-700">
+            <Button type="submit" className="bg-gradient-to-r from-teal-600 via-teal-500 to-cyan-500 text-xs font-semibold text-white shadow-[0_14px_30px_rgba(13,148,136,0.18)] hover:shadow-[0_18px_38px_rgba(13,148,136,0.24)]">
               Submit Leave Application
             </Button>
           </form>
         </CardContent>
       </Card>
 
-      <Card className="border border-slate-200 bg-white">
-        <CardHeader className="border-b border-slate-100 pb-3">
-          <CardTitle className="text-base font-bold text-slate-900">Leave Records</CardTitle>
+      <Card className="border-white/70 bg-white/76">
+        <CardHeader className="border-b border-white/70 pb-3">
+          <CardTitle className="text-base font-bold text-slate-950">Leave Records</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader className="bg-slate-50">
-              <TableRow>
-                <TableHead className="text-xs font-semibold">Application</TableHead>
-                <TableHead className="text-xs font-semibold">Leave Type</TableHead>
-                <TableHead className="text-xs font-semibold">Leave Period</TableHead>
-                <TableHead className="text-xs font-semibold">Reason</TableHead>
-                <TableHead className="text-xs font-semibold">HOD decision</TableHead>
-                <TableHead className="text-xs font-semibold">Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {leaves.map((leave, idx) => (
-                <TableRow key={leave.number}>
-                  <TableCell className="py-3 text-xs font-bold text-slate-900">
-                    {idx + 1}
-                    <p className="text-[10px] font-normal text-slate-400">Applied {formatLogbookDate(leave.appliedOn)}</p>
-                  </TableCell>
-                  <TableCell className="py-3 text-xs font-medium text-slate-700">{leave.leaveType}</TableCell>
-                  <TableCell className="py-3 text-xs text-slate-700">
-                    {formatLogbookDate(leave.fromDate)} to {formatLogbookDate(leave.toDate)}
-                    <p className="text-[10px] text-slate-400">{leave.totalDays} day(s)</p>
-                  </TableCell>
-                  <TableCell className="max-w-[260px] py-3 text-xs text-slate-600">{leave.reason}</TableCell>
-                  <TableCell className="py-3 text-xs text-slate-600">{leave.approvedBy}</TableCell>
-                  <TableCell className="py-3">{renderLeaveStatus(leave.status)}</TableCell>
+          {leaves.length === 0 ? (
+            <Empty className="py-14">
+              <EmptyHeader>
+                <EmptyMedia variant="icon"><CalendarDays className="h-6 w-6" /></EmptyMedia>
+                <EmptyTitle>No leave records yet</EmptyTitle>
+                <EmptyDescription>Submit a leave application to see HOD decisions, dates, and total days here.</EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs font-semibold">Application</TableHead>
+                  <TableHead className="text-xs font-semibold">Leave Type</TableHead>
+                  <TableHead className="text-xs font-semibold">Leave Period</TableHead>
+                  <TableHead className="text-xs font-semibold">Reason</TableHead>
+                  <TableHead className="text-xs font-semibold">HOD decision</TableHead>
+                  <TableHead className="text-xs font-semibold">Status</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {leaves.map((leave, idx) => (
+                  <TableRow key={leave.number}>
+                    <TableCell className="py-3 text-xs font-bold text-slate-950">
+                      {idx + 1}
+                      <p className="text-[10px] font-normal text-slate-400">Applied {formatLogbookDate(leave.appliedOn)}</p>
+                    </TableCell>
+                    <TableCell className="py-3 text-xs font-medium text-slate-700">{leave.leaveType}</TableCell>
+                    <TableCell className="py-3 text-xs text-slate-700">
+                      {formatLogbookDate(leave.fromDate)} to {formatLogbookDate(leave.toDate)}
+                      <p className="text-[10px] text-slate-400">{leave.totalDays} day(s)</p>
+                    </TableCell>
+                    <TableCell className="max-w-[260px] py-3 text-xs text-slate-600">{leave.reason}</TableCell>
+                    <TableCell className="py-3 text-xs text-slate-600">{leave.approvedBy}</TableCell>
+                    <TableCell className="py-3">{renderLeaveStatus(leave.status)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -221,17 +232,17 @@ function getInclusiveDays(fromDate: string, toDate: string) {
 
 function SummaryCard({ label, value, tone, total }: { label: string; value: number; tone: "teal" | "amber" | "slate", total?: number }) {
   const toneClass = {
-    teal: "border-teal-200 bg-teal-50 text-teal-900",
-    amber: "border-amber-200 bg-amber-50 text-amber-900",
-    slate: "border-slate-200 bg-white text-slate-900",
+    teal: "border-white/70 bg-white/76 text-teal-900",
+    amber: "border-white/70 bg-white/76 text-amber-900",
+    slate: "border-white/70 bg-white/76 text-slate-900",
   }[tone];
 
   return (
-    <div className={`rounded-xl border p-4 ${toneClass}`}>
-      <p className="text-2xl font-black">
+    <div className={`rounded-[18px] border p-4 shadow-[0_18px_48px_rgba(15,23,42,0.05)] ${toneClass}`}>
+      <p className="text-4xl font-semibold leading-none text-slate-950">
         {value} <span className="text-sm font-semibold opacity-60">{total ? `/ ${total} used` : ""}</span>
       </p>
-      <p className="text-[11px] font-semibold uppercase tracking-wide opacity-70">{label}</p>
+      <p className="mt-2 text-[11px] font-bold uppercase tracking-[0.18em] opacity-70">{label}</p>
     </div>
   );
 }

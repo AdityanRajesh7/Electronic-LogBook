@@ -179,11 +179,11 @@ export function AppLayout({
   return (
     <SidebarProvider defaultOpen>
       <div className="medical-grid h-screen w-full overflow-hidden p-0 text-slate-900 md:p-3 lg:p-4">
-        <div className="glass-panel mx-auto flex h-[100dvh] md:h-[calc(100vh-24px)] lg:h-[calc(100vh-32px)] w-full max-w-[1600px] overflow-hidden rounded-none border-white/70 md:rounded-[30px]">
-          <Sidebar className="print-hidden border-r border-teal-100/80 bg-white/56">
-            <SidebarHeader className="border-b border-teal-100/80 p-4">
+        <div className="glass-panel mx-auto flex h-[100dvh] w-full max-w-[1600px] overflow-hidden rounded-none border-white/70 md:h-[calc(100vh-24px)] md:rounded-[30px] lg:h-[calc(100vh-32px)]">
+          <Sidebar className="print-hidden border-r border-white/70 bg-white/60 shadow-[0_24px_80px_rgba(15,23,42,0.06)] backdrop-blur-xl">
+            <SidebarHeader className="border-b border-white/70 p-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-500 to-cyan-500 text-white shadow-lg shadow-teal-500/20">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-500 via-teal-500 to-cyan-500 text-white shadow-[0_16px_34px_rgba(13,148,136,0.22)]">
                   <BookOpenCheck className="h-6 w-6" />
                 </div>
                 <div>
@@ -212,10 +212,10 @@ export function AppLayout({
                           <SidebarMenuButton
                             asChild
                             isActive={isActive}
-                            className={`h-11 w-full rounded-xl px-3 transition-all ${
+                            className={`h-11 w-full rounded-xl px-3 transition-all duration-200 ${
                               isActive
-                                ? "bg-gradient-to-r from-teal-600 to-cyan-600 font-semibold text-white shadow-md shadow-teal-700/15 hover:text-white"
-                                : "text-slate-600 hover:bg-white/80 hover:text-teal-900"
+                                ? "border border-white/60 bg-gradient-to-r from-teal-600 to-cyan-500 font-semibold text-white shadow-[0_16px_36px_rgba(13,148,136,0.22)] hover:text-white"
+                                : "text-slate-600 hover:border hover:border-white/70 hover:bg-white/80 hover:text-teal-900"
                             }`}
                           >
                             <Link href={item.href} className="flex w-full items-center gap-3">
@@ -246,10 +246,10 @@ export function AppLayout({
               </SidebarGroup>
             </SidebarContent>
 
-            <SidebarFooter className="sticky bottom-0 z-20 mt-auto border-t border-teal-100/80 bg-white/95 p-3 backdrop-blur-md">
+            <SidebarFooter className="sticky bottom-0 z-20 mt-auto border-t border-white/70 bg-white/92 p-3 backdrop-blur-md">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="flex w-full items-center gap-3 rounded-2xl border border-white/80 bg-white/72 p-2.5 text-left shadow-sm transition hover:bg-white">
+                  <button className="flex w-full items-center gap-3 rounded-2xl border border-white/70 bg-white/75 p-2.5 text-left shadow-[0_14px_30px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:bg-white">
                     <Avatar className="h-10 w-10 border border-teal-100">
                       <AvatarFallback className="bg-gradient-to-br from-teal-100 to-cyan-100 text-xs font-bold text-teal-800">
                         {initials}
@@ -262,7 +262,7 @@ export function AppLayout({
                     <ChevronDown className="h-4 w-4 text-teal-700/50" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-64 rounded-2xl border-teal-100 bg-white/95 p-1 shadow-xl">
+                <DropdownMenuContent align="end" className="w-72 rounded-2xl border-white/70 bg-white/92 p-1 shadow-[0_24px_60px_rgba(15,23,42,0.12)] backdrop-blur-xl">
                   <DropdownMenuItem onClick={() => setIsChangePasswordOpen(true)} className="cursor-pointer rounded-xl text-xs">
                     <KeyRound className="mr-2 h-4 w-4" /> Change Password
                   </DropdownMenuItem>
@@ -278,7 +278,7 @@ export function AppLayout({
           </Sidebar>
 
           <SidebarInset className="flex min-w-0 flex-1 flex-col bg-transparent overflow-y-auto">
-            <header className="print-hidden sticky top-0 z-20 flex h-[72px] items-center justify-between border-b border-white/70 bg-white/58 px-4 backdrop-blur-xl md:px-6">
+            <header className="print-hidden sticky top-0 z-20 flex h-[72px] items-center justify-between border-b border-white/70 bg-white/62 px-4 backdrop-blur-xl md:px-6">
               <div className="flex min-w-0 items-center gap-3">
                 <SidebarTrigger className="rounded-xl text-teal-800 hover:bg-white" />
                 <div className="hidden h-7 w-px bg-teal-100 sm:block" />
@@ -299,15 +299,41 @@ export function AppLayout({
                     size="sm"
                     onClick={() => window.open('/print', '_blank')}
                     title="Print the complete consolidated record."
-                    className="hidden border-white bg-white/70 text-teal-800 sm:inline-flex"
+                    className="hidden border-white/70 bg-white/75 text-teal-800 shadow-[0_12px_24px_rgba(15,23,42,0.05)] sm:inline-flex"
                   >
                     <Printer className="h-4 w-4 mr-2" /> Print PDF
                   </Button>
                 )}
-                <button onClick={() => toast.info("No new notifications")} className="relative rounded-xl border border-white/80 bg-white/65 p-2 text-teal-800 shadow-sm transition hover:bg-white">
-                  <Bell className="h-4 w-4" />
-                  <span className="hidden absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-rose-500 ring-2 ring-white" />
-                </button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="relative rounded-xl border border-white/70 bg-white/72 p-2 text-teal-800 shadow-[0_12px_24px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:bg-white">
+                      <Bell className="h-4 w-4" />
+                      <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-rose-500 ring-2 ring-white" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-80 rounded-2xl border-white/70 bg-white/92 p-2 shadow-[0_24px_60px_rgba(15,23,42,0.12)] backdrop-blur-xl">
+                    <DropdownMenuLabel className="px-3 pt-2">Notifications</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="rounded-xl px-3 py-2">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs font-semibold text-slate-900">3 procedures due this week</span>
+                        <span className="text-[11px] text-slate-500">Keep the logbook moving to stay on track.</span>
+                      </div>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="rounded-xl px-3 py-2">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs font-semibold text-slate-900">Professor remarks pending</span>
+                        <span className="text-[11px] text-slate-500">Recent entries are waiting for verification.</span>
+                      </div>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="rounded-xl px-3 py-2">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs font-semibold text-slate-900">Next milestone due in 18 days</span>
+                        <span className="text-[11px] text-slate-500">Thesis planning and leave review are both active.</span>
+                      </div>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </header>
 

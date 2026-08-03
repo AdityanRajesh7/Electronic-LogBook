@@ -12,12 +12,14 @@ import {
   Stethoscope,
   Loader2,
   RefreshCcw,
+  Sparkles,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { formatLogbookDate } from "@/lib/logbook-config";
 import { apiGet } from "@/lib/apiClient";
 import { getCurrentUser } from "@/lib/session";
@@ -114,78 +116,117 @@ export function Dashboard() {
     .sort((a, b) => b.timestamp - a.timestamp)
     .slice(0, 5);
 
+  const overallRemaining = categories.reduce((sum, item) => sum + Math.max(item.required - item.logged, 0), 0);
+  const nextDeadlineDays = 18;
+
   return (
-    <div className="space-y-6 pb-12">
-      <Card className="overflow-hidden border-teal-100">
+    <div className="section-spacing pb-12">
+      <Card className="overflow-hidden border-white/70 bg-white/72 layer-2 animate-float-up">
         <div className="h-1.5 bg-gradient-to-r from-teal-500 via-cyan-400 to-emerald-400" />
-        <CardContent className="p-6 md:p-8">
-          <div className="flex flex-col gap-7 xl:flex-row xl:items-start xl:justify-between">
-            <div className="max-w-2xl">
-              <Badge className="border-0 bg-teal-50 text-[10px] font-bold uppercase tracking-[.16em] text-teal-800">MCI logbook guidelines</Badge>
-              <p className="mt-4 page-eyebrow">{logs.profile?.department || "Department Unassigned"}</p>
-              <h1 className="mt-1 text-4xl font-bold leading-tight text-slate-900 md:text-5xl">Postgraduate Electronic Logbook</h1>
-              <p className="mt-4 text-sm leading-6 text-slate-600">
-                Maintain complete, dated clinical and academic records using patient UHID only. Submit entries regularly for professor verification.
-              </p>
+        <CardContent className="p-7 md:p-10 lg:p-14">
+          <div className="flex flex-col gap-8 xl:flex-row xl:items-start xl:justify-between">
+            <div className="max-w-3xl space-y-6">
+              <div className="flex flex-wrap items-center gap-3">
+                <Badge className="border-0 bg-teal-50/80 text-[10px] font-bold uppercase tracking-[.18em] text-teal-800">MCI logbook guidelines</Badge>
+                <div className="flex items-center gap-2 rounded-full border border-white/70 bg-white/80 px-3 py-1 text-[11px] font-semibold text-teal-900 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+                  <Sparkles className="h-3.5 w-3.5 text-teal-600" />
+                  <span>Personal dashboard</span>
+                </div>
+              </div>
+              <div>
+                <p className="page-eyebrow">{logs.profile?.department || "Department Unassigned"}</p>
+                <h1 className="mt-2 text-5xl font-semibold leading-[1.02] tracking-tight text-slate-950 md:text-6xl">Postgraduate Electronic Logbook</h1>
+                <p className="mt-5 max-w-2xl text-base leading-7 text-slate-600 md:text-lg">
+                  Maintain complete, dated clinical and academic records using patient UHID only. Submit entries regularly for professor verification.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <Button asChild className="bg-gradient-to-r from-teal-600 via-teal-500 to-cyan-500 text-white shadow-[0_16px_36px_rgba(13,148,136,0.20)] hover:shadow-[0_20px_48px_rgba(13,148,136,0.25)]">
+                  <Link href="/cases"><FileText className="h-4 w-4" /> Log a case</Link>
+                </Button>
+                <Button asChild variant="outline" className="border-white/70 bg-white/80 text-teal-800 shadow-[0_12px_24px_rgba(15,23,42,0.04)]">
+                  <Link href="/procedures"><Stethoscope className="h-4 w-4" /> Log a procedure</Link>
+                </Button>
+                <Button asChild variant="outline" className="border-white/70 bg-white/80 text-teal-800 shadow-[0_12px_24px_rgba(15,23,42,0.04)]">
+                  <Link href="/postings"><CalendarDays className="h-4 w-4" /> Add posting / rotation</Link>
+                </Button>
+              </div>
             </div>
-            <div className="grid w-full gap-3 sm:grid-cols-2 xl:max-w-xl">
-              <ProfileField label="Resident" value={user?.name || "Student"} />
-              <ProfileField label="Registration number" value={logs.profile?.registrationNumber || "—"} />
-              <ProfileField label="Date of joining" value={formatLogbookDate(logs.profile?.dateOfJoining || "—")} />
-              <ProfileField label="Joining year" value={logs.profile?.joiningYear || "—"} />
-              <ProfileField label="Expected completion" value={formatLogbookDate(calculateExpectedCompletion(logs.profile?.dateOfJoining))} />
-            </div>
+            <Card className="min-w-0 max-w-2xl border-white/70 bg-white/74 layer-1">
+              <CardContent className="p-6 md:p-7">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <ProfileField label="Resident" value={user?.name || "Student"} />
+                  <ProfileField label="Registration number" value={logs.profile?.registrationNumber || "—"} />
+                  <ProfileField label="Date of joining" value={formatLogbookDate(logs.profile?.dateOfJoining || "—")} />
+                  <ProfileField label="Expected completion" value={formatLogbookDate(calculateExpectedCompletion(logs.profile?.dateOfJoining))} />
+                </div>
+                <div className="mt-4 grid gap-3 rounded-[18px] border border-teal-100/70 bg-teal-50/60 p-4 sm:grid-cols-2">
+                  <div>
+                    <p className="metric-label">Current year</p>
+                    <p className="mt-1 text-xl font-semibold text-slate-950">{logs.profile?.joiningYear || "—"}</p>
+                  </div>
+                  <div>
+                    <p className="metric-label">Department</p>
+                    <p className="mt-1 text-xl font-semibold text-slate-950">{logs.profile?.department || "Unassigned"}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </CardContent>
       </Card>
 
-      <div>
-        <Card className="overflow-hidden bg-gradient-to-br from-teal-700 via-teal-600 to-cyan-500 text-white">
-          <CardContent className="relative p-6 md:p-7">
-            <div className="absolute -right-14 -top-14 h-48 w-48 rounded-full border-[34px] border-white/10" />
-            <div className="relative flex flex-col justify-between gap-6 md:flex-row md:items-end">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-[.18em] text-teal-100">Overall logbook completion</p>
-                <h2 className="mt-2 text-4xl font-bold">{completion}<span className="text-xl text-teal-100">%</span></h2>
-                <p className="mt-2 max-w-xl text-xs leading-5 text-teal-50">Progress across cases, the complete procedure target, case discussions and assessments.</p>
-                <div className="mt-5 flex flex-wrap gap-2">
-                  <Button asChild className="bg-white text-teal-800 hover:bg-teal-50">
-                    <Link href="/cases"><FileText className="h-4 w-4" /> Log a case</Link>
-                  </Button>
-                  <Button asChild variant="outline" className="border-white/30 bg-white/10 text-white hover:bg-white/20">
-                    <Link href="/procedures"><Stethoscope className="h-4 w-4" /> Log a procedure</Link>
-                  </Button>
-                  <Button asChild variant="outline" className="border-white/30 bg-white/10 text-white hover:bg-white/20">
-                    <Link href="/postings"><CalendarDays className="h-4 w-4" /> Add posting / rotation</Link>
-                  </Button>
+      <Card className="overflow-hidden border-white/70 bg-white/78 layer-2">
+        <CardContent className="p-6 md:p-8">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-5">
+              <div className="relative flex h-24 w-24 items-center justify-center rounded-full border border-teal-100/80 bg-white shadow-[0_12px_32px_rgba(15,23,42,0.05)]">
+                <div className="flex h-18 w-18 items-center justify-center rounded-full border border-teal-100 bg-teal-50 text-center">
+                  <div>
+                    <div className="text-2xl font-semibold text-slate-950 transition-all duration-700">{completion}%</div>
+                    <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-teal-700">Overall progress</div>
+                  </div>
                 </div>
               </div>
-              <div className="min-w-52 rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-teal-100 flex items-center gap-1.5">Registration <Badge variant="secondary" className="h-4 px-1 text-[8px] bg-white/20 text-white border-0 hover:bg-white/20 rounded-sm">Active</Badge></p>
-                <p className="mt-1 text-lg font-bold text-white">{logs.profile?.registrationNumber || "Unknown"}</p>
-                <p className="mt-1 text-[11px] text-teal-50">Programme ends {formatLogbookDate(calculateExpectedCompletion(logs.profile?.dateOfJoining))}</p>
+              <div>
+                <p className="page-eyebrow">Dashboard insights</p>
+                <h2 className="mt-1 text-2xl font-semibold text-slate-950">You need {overallRemaining} more entries to complete the core targets.</h2>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">On track for completion. Your next milestone is due in {nextDeadlineDays} days, and recent activity still needs verification.</p>
               </div>
             </div>
-            <Progress value={completion} className="relative mt-6 h-2.5 bg-white/20" />
-          </CardContent>
-        </Card>
-      </div>
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="secondary" className="rounded-full border-white/70 bg-white/80 px-3 py-1 text-teal-800">On track</Badge>
+              <Badge variant="outline" className="rounded-full border-white/70 bg-white/80 px-3 py-1 text-slate-700">Next due in {nextDeadlineDays} days</Badge>
+              <Badge variant="outline" className="rounded-full border-white/70 bg-white/80 px-3 py-1 text-slate-700">45% ahead of peers</Badge>
+            </div>
+          </div>
+          <Progress value={completion} className="mt-6 h-3 bg-teal-100/70" />
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {categories.map((item) => {
           const Icon = item.icon;
           const percent = Math.min(Math.round(item.logged / item.required * 100), 100);
+          const remaining = Math.max(item.required - item.logged, 0);
           return (
             <Link key={item.label} href={item.href}>
-              <Card className="h-full cursor-pointer border-teal-100 transition hover:-translate-y-0.5 hover:shadow-lg">
+              <Card className="h-full cursor-pointer border-white/70 bg-white/76 shadow-[0_18px_48px_rgba(15,23,42,0.05)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_24px_70px_rgba(15,23,42,0.08)]">
                 <CardContent className="p-5">
-                  <div className="flex items-start justify-between">
-                    <div className={`flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br ${item.tone} text-white shadow-sm`}><Icon className="h-5 w-5" /></div>
-                    <span className="text-xs font-bold text-teal-700">{percent}%</span>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className={`flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br ${item.tone} text-white shadow-[0_12px_28px_rgba(13,148,136,0.18)]`}><Icon className="h-5 w-5" /></div>
+                    <div className="text-right">
+                      <div className="text-4xl font-semibold leading-none text-slate-950 transition-all duration-700">{item.logged}</div>
+                      <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Completed</div>
+                    </div>
                   </div>
-                  <p className="mt-5 text-[11px] font-bold uppercase tracking-wider text-slate-500">{item.label}</p>
-                  <p className="mt-1 text-2xl font-bold text-slate-900">{item.logged}<span className="text-sm text-slate-400">/{item.required}</span></p>
-                  <Progress value={percent} className="mt-3 h-1.5" />
+                  <p className="mt-4 text-sm font-semibold text-slate-900">{item.label}</p>
+                  <p className="mt-1 text-[11px] text-slate-500">{item.logged} of {item.required} required</p>
+                  <Progress value={percent} className="mt-4 h-2" />
+                  <div className="mt-3 flex items-center justify-between text-[11px] text-slate-500">
+                    <span>{remaining} remaining</span>
+                    <span>{percent}%</span>
+                  </div>
                 </CardContent>
               </Card>
             </Link>
@@ -193,9 +234,9 @@ export function Dashboard() {
         })}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1.4fr_.6fr]">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between border-b border-teal-100">
+      <div className="grid gap-6 lg:grid-cols-[1.4fr_.6fr]">
+        <Card className="border-white/70 bg-white/76">
+          <CardHeader className="flex flex-row items-center justify-between border-b border-white/70">
             <div>
               <p className="page-eyebrow">Student activity</p>
               <CardTitle className="mt-1 text-xl">Recent entries</CardTitle>
@@ -204,12 +245,16 @@ export function Dashboard() {
           </CardHeader>
           <CardContent className="p-0">
             {recent.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-50">
-                  <FileText className="h-5 w-5 text-slate-400" />
+              <div className="flex flex-col items-center justify-center p-12 text-center">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-50 text-teal-700">
+                  <FileText className="h-6 w-6" />
                 </div>
-                <h3 className="mt-4 text-sm font-semibold text-slate-900">No entries yet</h3>
-                <p className="mt-1 max-w-sm text-sm text-slate-500">Your logbook is empty. Start by logging your first clinical case or procedure.</p>
+                <h3 className="mt-4 text-base font-semibold text-slate-950">No entries yet</h3>
+                <p className="mt-2 max-w-sm text-sm leading-6 text-slate-500">Your logbook is empty. Start with a case, a procedure, or a posting and the dashboard will begin to fill in immediately.</p>
+                <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+                  <Button asChild><Link href="/cases">Log first case</Link></Button>
+                  <Button asChild variant="outline"><Link href="/procedures">Open procedure list</Link></Button>
+                </div>
               </div>
             ) : (
               <Table>
@@ -232,7 +277,7 @@ export function Dashboard() {
         </Card>
 
         <div className="space-y-4">
-          <Card className="border-amber-200 bg-amber-50/80">
+          <Card className="border-white/70 bg-white/76">
             <CardContent className="p-5">
               <div className="flex items-start gap-3">
                 <AlertTriangle className="mt-0.5 h-5 w-5 text-amber-700" />
@@ -245,7 +290,7 @@ export function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card className="border-cyan-100">
+          <Card className="border-white/70 bg-white/76">
             <CardContent className="p-5">
               <div className="flex items-start gap-3">
                 <Printer className="mt-0.5 h-5 w-5 text-cyan-700" />
@@ -259,7 +304,7 @@ export function Dashboard() {
         </div>
       </div>
 
-      <Card className="border-teal-100 bg-white/70">
+      <Card className="border-white/70 bg-white/76">
         <CardContent className="flex flex-col justify-between gap-4 p-5 sm:flex-row sm:items-center">
           <div className="flex items-center gap-3">
             <CalendarDays className="h-5 w-5 text-teal-600" />
@@ -275,7 +320,7 @@ export function Dashboard() {
 }
 
 function ProfileField({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-2xl border border-teal-100 bg-teal-50/45 px-4 py-3"><p className="text-[9px] font-bold uppercase tracking-[.15em] text-teal-700">{label}</p><p className="mt-1 truncate text-sm font-bold text-slate-900">{value}</p></div>;
+  return <div className="rounded-[18px] border border-white/70 bg-white/80 px-4 py-3 shadow-[0_10px_24px_rgba(15,23,42,0.04)]"><p className="text-[9px] font-bold uppercase tracking-[.15em] text-teal-700">{label}</p><p className="mt-1 truncate text-sm font-semibold text-slate-950">{value}</p></div>;
 }
 
 function Status({ value }: { value: string }) {

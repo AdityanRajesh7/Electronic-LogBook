@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import {
   formatLogbookDate,
   POSTING_CHIEFS,
@@ -158,19 +159,24 @@ export function PostingsPage() {
         </Dialog>
       </div>
 
-      <Card>
-        <CardHeader className="border-b">
+      <Card className="border-white/70 bg-white/76">
+        <CardHeader className="border-b border-white/70">
           <CardTitle className="text-lg">Posting Records</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
              <div className="p-8 text-center text-slate-500">Loading...</div>
           ) : postings.length === 0 ? (
-            <div className="flex flex-col items-center justify-center p-12 text-center">
-              <CalendarDays className="h-12 w-12 text-slate-300 mb-4" />
-              <h3 className="text-lg font-bold text-slate-700">No postings logged</h3>
-              <p className="mt-2 text-sm text-slate-500">You haven't added any postings yet.</p>
-            </div>
+            <Empty className="py-14">
+              <EmptyHeader>
+                <EmptyMedia variant="icon"><CalendarDays className="h-6 w-6" /></EmptyMedia>
+                <EmptyTitle>No postings logged</EmptyTitle>
+                <EmptyDescription>Add your current ward or rotation and keep the timeline readable for review.</EmptyDescription>
+              </EmptyHeader>
+              <EmptyContent>
+                <Button onClick={() => setOpen(true)}>Add posting</Button>
+              </EmptyContent>
+            </Empty>
           ) : (
             <Table>
               <TableHeader className="bg-slate-50">

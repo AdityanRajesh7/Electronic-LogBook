@@ -2,6 +2,7 @@ import * as React from "react";
 import { ClipboardCheck, TrendingUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatLogbookDate } from "@/lib/logbook-config";
 import { apiGet } from "@/lib/apiClient";
@@ -51,19 +52,21 @@ export function AssessmentsPage() {
         </div>
       </div>
 
-      <Card>
-        <CardHeader className="border-b">
+      <Card className="border-white/70 bg-white/76">
+        <CardHeader className="border-b border-white/70">
           <CardTitle className="text-lg">Assessment Records</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
              <div className="p-8 text-center text-slate-500">Loading...</div>
           ) : assessments.length === 0 ? (
-            <div className="flex flex-col items-center justify-center p-12 text-center">
-              <ClipboardCheck className="h-12 w-12 text-slate-300 mb-4" />
-              <h3 className="text-lg font-bold text-slate-700">No assessments recorded</h3>
-              <p className="mt-2 text-sm text-slate-500">Assessment scores will appear here once your professor enters them.</p>
-            </div>
+            <Empty className="py-14">
+              <EmptyHeader>
+                <EmptyMedia variant="icon"><ClipboardCheck className="h-6 w-6" /></EmptyMedia>
+                <EmptyTitle>No assessments recorded</EmptyTitle>
+                <EmptyDescription>Assessment scores will appear here once your professor enters them.</EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           ) : (
             <Table>
               <TableHeader className="bg-slate-50">

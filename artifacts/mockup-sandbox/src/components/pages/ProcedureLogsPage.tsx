@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { formatLogbookDate, PROCEDURE_GROUPS, PROCEDURE_REQUIREMENTS, REQUIRED_PROCEDURE_COUNT, todayForInput, type ProcedureGroup } from "@/lib/logbook-config";
 
 type ProcedureLog = {
@@ -265,9 +266,16 @@ export function ProcedureLogsPage() {
               <p className="text-sm font-medium text-slate-500">Loading procedures...</p>
             </div>
           ) : logs.length === 0 ? (
-            <div className="flex h-48 flex-col items-center justify-center space-y-4 text-slate-500">
-              <p>No procedures found.</p>
-            </div>
+            <Empty className="py-14">
+              <EmptyHeader>
+                <EmptyMedia variant="icon"><Stethoscope className="h-6 w-6" /></EmptyMedia>
+                <EmptyTitle>No procedures logged yet</EmptyTitle>
+                <EmptyDescription>Record emergency or invasive procedures to start building your competency history.</EmptyDescription>
+              </EmptyHeader>
+              <EmptyContent>
+                <Button onClick={() => setOpen(true)}>Log procedure</Button>
+              </EmptyContent>
+            </Empty>
           ) : (
             <Table>
               <TableHeader><TableRow><TableHead>Number</TableHead><TableHead>Date</TableHead><TableHead>Group</TableHead><TableHead>Procedure</TableHead><TableHead>Patient UHID</TableHead><TableHead>Age</TableHead><TableHead>Experience</TableHead><TableHead>Verified competency</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>

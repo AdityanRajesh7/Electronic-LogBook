@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { ACADEMIC_REQUIREMENTS, formatLogbookDate, todayForInput } from "@/lib/logbook-config";
 
 type AcademicLog = {
@@ -238,9 +239,16 @@ export function AcademicLogsPage() {
               <p className="text-sm font-medium text-slate-500">Loading academic activities...</p>
             </div>
           ) : logs.length === 0 ? (
-            <div className="flex h-48 flex-col items-center justify-center space-y-4 text-slate-500">
-              <p>No academic activities found.</p>
-            </div>
+            <Empty className="py-14">
+              <EmptyHeader>
+                <EmptyMedia variant="icon"><GraduationCap className="h-6 w-6" /></EmptyMedia>
+                <EmptyTitle>No academic activities yet</EmptyTitle>
+                <EmptyDescription>Journal clubs, case discussions, and conferences will appear here once you log your first activity.</EmptyDescription>
+              </EmptyHeader>
+              <EmptyContent>
+                <Button onClick={() => setOpen(true)}>Log academic activity</Button>
+              </EmptyContent>
+            </Empty>
           ) : (
             <Table>
               <TableHeader><TableRow><TableHead>Number</TableHead><TableHead>Date</TableHead><TableHead>Activity</TableHead><TableHead>Presentation</TableHead><TableHead>Topic / conference</TableHead><TableHead>Reviewing professor</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>

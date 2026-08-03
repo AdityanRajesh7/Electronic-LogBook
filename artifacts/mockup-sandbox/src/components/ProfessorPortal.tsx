@@ -48,13 +48,13 @@ import {
   FileCheck,
   Award,
   AlertTriangle,
-  Send,
+  PlusCircle,
   BookOpen,
   User,
   FileText,
 } from "lucide-react";
 import { DEPARTMENTS, formatLogbookDate } from "@/lib/logbook-config";
-import { apiGet, apiPatch } from "@/lib/apiClient";
+import { apiGet, apiPatch, apiPost } from "@/lib/apiClient";
 import { getCurrentUser } from "@/lib/session";
 
 export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
@@ -73,10 +73,18 @@ export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
   // Selected mentee for Logbook Inspector Modal
   const [selectedMentee, setSelectedMentee] = React.useState<any | null>(null);
 
+  // Assessment form state
+  const [assessExamName, setAssessExamName] = React.useState("");
+  const [assessStudentId, setAssessStudentId] = React.useState("");
+  const [assessMarks, setAssessMarks] = React.useState("");
+  const [assessType, setAssessType] = React.useState<"quarterly" | "annual">("quarterly");
+  const [assessDate, setAssessDate] = React.useState(() => new Date().toISOString().slice(0, 10));
+  const [assessSubmitting, setAssessSubmitting] = React.useState(false);
+
   const getTabFromPath = () => {
     if (activeTab) return activeTab;
     if (location === "/mentees") return "mentees";
-    if (location === "/appraisals") return "appraisals";
+    if (location === "/assessments") return "assessments";
     return "review-queue";
   };
 
@@ -84,7 +92,7 @@ export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
 
   const handleTabChange = (val: string) => {
     if (val === "mentees") setLocation("/mentees");
-    else if (val === "appraisals") setLocation("/appraisals");
+    else if (val === "assessments") setLocation("/assessments");
     else setLocation("/");
   };
 
@@ -214,8 +222,8 @@ export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
           <TabsTrigger value="mentees" className="gap-2 text-xs font-semibold">
             <UserCheck className="h-4 w-4" /> All Students ({allStudents.length})
           </TabsTrigger>
-          <TabsTrigger value="appraisals" className="gap-2 text-xs font-semibold">
-            <Award className="h-4 w-4" /> MCI Quarterly Appraisal
+          <TabsTrigger value="assessments" className="gap-2 text-xs font-semibold">
+            <Award className="h-4 w-4" /> Add Assessment
           </TabsTrigger>
         </TabsList>
 
@@ -443,91 +451,114 @@ export function ProfessorPortal({ activeTab }: { activeTab?: string }) {
           </Card>
         </TabsContent>
 
-        {/* Tab 3: Appraisal Form */}
-        <TabsContent value="appraisals" className="pt-4 space-y-4">
+        {/* Tab 3: Add Assessment */}
+        <TabsContent value="assessments" className="pt-4 space-y-4">
           <Card className="border border-slate-200 bg-white">
             <CardHeader className="pb-3 border-b border-slate-100">
-              <CardTitle className="text-base font-bold text-slate-900">MCI Quarterly Appraisal Form</CardTitle>
+              <CardTitle className="text-base font-bold text-slate-900">Add Assessment Score</CardTitle>
               <CardDescription className="text-xs text-slate-500">
-                Quarterly evaluation covering scholastic performance, patient care competency, and professional attributes.
+                Enter exam results for a student in your department. The assessment will be attributed to your account automatically.
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-700">Select Resident</label>
-                  <Select defaultValue="1">
-                    <SelectTrigger className="text-xs">
-                      <SelectValue placeholder="Select Resident" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {allStudents.map((student: any) => (
-                        <SelectItem key={student.id} value={String(student.id)}>{student.name} ({student.department})</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-700">Evaluation Period</label>
-                  <Input value="Q2 2026 (Apr - Jun)" readOnly className="text-xs bg-slate-50" />
-                </div>
-              </div>
-
-              <div className="space-y-3 pt-2">
-                <h4 className="text-xs font-bold uppercase text-slate-500">Evaluation Criteria</h4>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                    <p className="text-xs font-bold text-slate-900 mb-2">1. Scholastic Knowledge</p>
-                    <Select defaultValue="satisfactory">
-                      <SelectTrigger className="text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="excellent">Excellent</SelectItem>
-                        <SelectItem value="satisfactory">Satisfactory</SelectItem>
-                        <SelectItem value="needs_improvement">Needs Improvement</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                    <p className="text-xs font-bold text-slate-900 mb-2">2. Clinical &amp; Patient Care</p>
-                    <Select defaultValue="excellent">
-                      <SelectTrigger className="text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="excellent">Excellent</SelectItem>
-                        <SelectItem value="satisfactory">Satisfactory</SelectItem>
-                        <SelectItem value="needs_improvement">Needs Improvement</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                    <p className="text-xs font-bold text-slate-900 mb-2">3. Professional Attributes</p>
-                    <Select defaultValue="satisfactory">
-                      <SelectTrigger className="text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="excellent">Excellent</SelectItem>
-                        <SelectItem value="satisfactory">Satisfactory</SelectItem>
-                        <SelectItem value="needs_improvement">Needs Improvement</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-
-              <Button
-                onClick={() => toast.success("MCI Quarterly Appraisal Signed & Submitted!", {
-                  description: "Report archived into Dr. Anilkumar A's permanent compliance record."
-                })}
-                className="bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs gap-2"
+            <CardContent className="p-6">
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!assessExamName || !assessMarks || !assessStudentId) {
+                    toast.error("Please fill in all required fields");
+                    return;
+                  }
+                  setAssessSubmitting(true);
+                  try {
+                    await apiPost(`/api/students/${assessStudentId}/assessments`, {
+                      examName: assessExamName,
+                      type: assessType,
+                      date: assessDate,
+                      marks: assessMarks,
+                    });
+                    toast.success("Assessment recorded successfully");
+                    setAssessExamName("");
+                    setAssessStudentId("");
+                    setAssessMarks("");
+                    setAssessType("quarterly");
+                    setAssessDate(new Date().toISOString().slice(0, 10));
+                  } catch (err: any) {
+                    toast.error(err.message || "Failed to record assessment");
+                  } finally {
+                    setAssessSubmitting(false);
+                  }
+                }}
+                className="space-y-5"
               >
-                <Send className="h-4 w-4" /> Submit Signed Quarterly Appraisal
-              </Button>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-700">Student <span className="text-rose-500">*</span></label>
+                    <Select value={assessStudentId} onValueChange={setAssessStudentId}>
+                      <SelectTrigger className="text-xs">
+                        <SelectValue placeholder="Select student" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {allStudents.map((s: any) => (
+                          <SelectItem key={s.id} value={String(s.id)}>
+                            {s.name}
+                            {s.registrationNumber ? ` — ${s.registrationNumber}` : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-700">Exam Name <span className="text-rose-500">*</span></label>
+                    <Input
+                      value={assessExamName}
+                      onChange={(e) => setAssessExamName(e.target.value)}
+                      placeholder="e.g. Q1 Theory Exam 2026"
+                      className="text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-700">Marks (out of 100) <span className="text-rose-500">*</span></label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={assessMarks}
+                      onChange={(e) => setAssessMarks(e.target.value)}
+                      placeholder="e.g. 78"
+                      className="text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-700">Type</label>
+                    <Select value={assessType} onValueChange={(val: any) => setAssessType(val)}>
+                      <SelectTrigger className="text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="quarterly">Quarterly</SelectItem>
+                        <SelectItem value="annual">Annual</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-700">Date</label>
+                    <Input
+                      type="date"
+                      value={assessDate}
+                      onChange={(e) => setAssessDate(e.target.value)}
+                      className="text-xs"
+                    />
+                  </div>
+                </div>
+                <Button
+                  type="submit"
+                  disabled={assessSubmitting}
+                  className="bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs gap-2"
+                >
+                  <PlusCircle className="h-4 w-4" />
+                  {assessSubmitting ? "Saving..." : "Record Assessment"}
+                </Button>
+              </form>
             </CardContent>
           </Card>
         </TabsContent>

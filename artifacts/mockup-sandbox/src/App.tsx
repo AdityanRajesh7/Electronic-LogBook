@@ -186,12 +186,14 @@ function App() {
       {activeRole === "Professor" && (
         <Switch>
           <Route path="/mentees" component={() => <ProfessorPortal activeTab="mentees" />} />
-          <Route path="/appraisals" component={() => <ProfessorPortal activeTab="appraisals" />} />
+          <Route path="/assessments" component={() => <ProfessorPortal activeTab="assessments" />} />
           <Route component={() => <ProfessorPortal activeTab="review-queue" />} />
         </Switch>
       )}
       {activeRole === "HOD" && (
         <Switch>
+          <Route path="/review-queue" component={() => <HODPortal activeTab="review-queue" />} />
+          <Route path="/roster" component={() => <HODPortal activeTab="roster" />} />
           <Route path="/student-access" component={() => <HODPortal activeTab="student-access" />} />
           <Route path="/professors" component={() => <HODPortal activeTab="professors" />} />
           <Route path="/leave-approvals" component={() => <HODPortal activeTab="leave-approvals" />} />

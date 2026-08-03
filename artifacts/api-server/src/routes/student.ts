@@ -1,10 +1,11 @@
 import { Router, type IRouter } from "express";
 import { 
   db, studentsTable, caseLogsTable, procedureLogsTable, 
-  academicLogsTable, usersTable, departmentsTable,
+  academicLogsTable, usersTable, departmentsTable, departmentConfigsTable,
   postingsTable, leaveRecordsTable, appraisalsTable, researchTable, assessmentsTable
 } from "@workspace/db";
 import { eq, desc, count, sql } from "drizzle-orm";
+import { requireAuth, requireRole } from "../middlewares/auth.js";
 
 const router: IRouter = Router();
 
@@ -57,6 +58,7 @@ router.get("/:studentId/dashboard", async (req, res) => {
       dateOfJoining: studentsTable.dateOfJoining,
       batch: studentsTable.batch,
       department: departmentsTable.name,
+      departmentId: usersTable.departmentId,
     })
     .from(studentsTable)
     .innerJoin(usersTable, eq(studentsTable.userId, usersTable.id))
@@ -84,6 +86,14 @@ router.get("/:studentId/dashboard", async (req, res) => {
     const procs = calcCounts(procLogsCounts);
     const acads = calcCounts(acadLogsCounts);
 
+    let reqCases = 50, reqProcs = 101, reqAcad = 50;
+    if (student.departmentId) {
+      const [config] = await db.select().from(departmentConfigsTable).where(eq(departmentConfigsTable.departmentId, student.departmentId));
+      reqCases = config?.requiredCases || 50;
+      reqProcs = config?.requiredProcedures || 101;
+      reqAcad = config?.requiredAcademic || 50;
+    }
+
     // Recent Logs (simplified for dashboard)
     const recentCases = await db.select().from(caseLogsTable).where(eq(caseLogsTable.studentId, studentId)).orderBy(desc(caseLogsTable.createdAt)).limit(1);
     const recentProcs = await db.select().from(procedureLogsTable).where(eq(procedureLogsTable.studentId, studentId)).orderBy(desc(procedureLogsTable.createdAt)).limit(1);
@@ -98,9 +108,9 @@ router.get("/:studentId/dashboard", async (req, res) => {
         department: student.department || "Unassigned",
       },
       categories: [
-        { id: "cases", name: "Clinical Cases Presented", logged: cases.total, required: 50, verified: cases.verified, percentage: Math.min(100, Math.round((cases.verified / 50) * 100)) },
-        { id: "procedures", name: "Required Procedures", logged: procs.total, required: 101, verified: procs.verified, percentage: Math.min(100, Math.round((procs.verified / 101) * 100)) },
-        { id: "academics", name: "Case Discussions", logged: acads.total, required: 50, verified: acads.verified, percentage: Math.min(100, Math.round((acads.verified / 50) * 100)) },
+        { id: "cases", name: "Clinical Cases Presented", logged: cases.total, required: reqCases, verified: cases.verified, percentage: Math.min(100, Math.round((cases.verified / (reqCases || 1)) * 100)) },
+        { id: "procedures", name: "Required Procedures", logged: procs.total, required: reqProcs, verified: procs.verified, percentage: Math.min(100, Math.round((procs.verified / (reqProcs || 1)) * 100)) },
+        { id: "academics", name: "Case Discussions", logged: acads.total, required: reqAcad, verified: acads.verified, percentage: Math.min(100, Math.round((acads.verified / (reqAcad || 1)) * 100)) },
       ],
       recentLogs: [...recentCases, ...recentProcs]
     });
@@ -212,6 +222,74 @@ router.post("/:studentId/postings", async (req, res) => {
 });
 
 // Leave Records
+router.get("/:studentId/leave-balance", requireAuth, async (req, res) => {
+  try {
+    const studentId = parseInt(req.params.studentId, 10);
+    const caller = req.user!;
+
+    if (caller.role === "student") {
+      const [ownProfile] = await db
+        .select({ id: studentsTable.id })
+        .from(studentsTable)
+        .where(eq(studentsTable.userId, caller.id));
+      if (!ownProfile || ownProfile.id !== studentId) {
+        res.status(403).json({ message: "Forbidden: you may only view your own leave balance" });
+        return;
+      }
+    } else if (caller.role === "professor" || caller.role === "hod") {
+      if (caller.departmentId !== null) {
+        const [studentUser] = await db
+          .select({ departmentId: usersTable.departmentId })
+          .from(studentsTable)
+          .innerJoin(usersTable, eq(studentsTable.userId, usersTable.id))
+          .where(eq(studentsTable.id, studentId));
+        if (!studentUser) {
+          res.status(404).json({ message: "Student not found" });
+          return;
+        }
+        if (studentUser.departmentId !== caller.departmentId) {
+          res.status(403).json({ message: "Forbidden: student is in a different department" });
+          return;
+        }
+      }
+    }
+
+    const currentYear = new Date().getFullYear().toString();
+    
+    const approvedLeaves = await db.select({
+      leaveType: leaveRecordsTable.leaveType,
+      startDate: leaveRecordsTable.startDate,
+      endDate: leaveRecordsTable.endDate
+    })
+    .from(leaveRecordsTable)
+    .where(sql`${leaveRecordsTable.studentId} = ${studentId} AND ${leaveRecordsTable.status} = 'approved' AND ${leaveRecordsTable.startDate} LIKE ${currentYear + '-%'}`);
+
+    let casualUsed = 0;
+    let academicUsed = 0;
+
+    for (const l of approvedLeaves) {
+      if (!l.startDate || !l.endDate) continue;
+      const start = new Date(l.startDate);
+      const end = new Date(l.endDate);
+      const diffTime = end.getTime() - start.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 to include both start and end dates
+      
+      if (diffDays > 0) {
+        if (l.leaveType === 'casual') casualUsed += diffDays;
+        else if (l.leaveType === 'academic') academicUsed += diffDays;
+      }
+    }
+
+    res.json({
+      casual: { used: casualUsed, total: 20 },
+      academic: { used: academicUsed, total: 15 }
+    });
+  } catch (error) {
+    req.log.error(error, "Error fetching leave balance");
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
 router.get("/:studentId/leave-records", async (req, res) => {
   try {
     const studentId = parseInt(req.params.studentId, 10);
@@ -244,10 +322,42 @@ router.post("/:studentId/leave-records", async (req, res) => {
   }
 });
 
-// Assessments and Thesis (Return empty for now or map to DB if available)
-router.get("/:studentId/assessments", async (req, res) => {
+// Assessments — GET is auth-required with ownership/department check
+router.get("/:studentId/assessments", requireAuth, async (req, res) => {
   try {
     const studentId = parseInt(req.params.studentId, 10);
+    const caller = req.user!;
+
+    if (caller.role === "student") {
+      // Students may only read their own assessments
+      const [ownProfile] = await db
+        .select({ id: studentsTable.id })
+        .from(studentsTable)
+        .where(eq(studentsTable.userId, caller.id));
+      if (!ownProfile || ownProfile.id !== studentId) {
+        res.status(403).json({ message: "Forbidden: you may only view your own assessments" });
+        return;
+      }
+    } else if (caller.role === "professor" || caller.role === "hod") {
+      // Professors/HODs may only read assessments for students in their department
+      if (caller.departmentId !== null) {
+        const [studentUser] = await db
+          .select({ departmentId: usersTable.departmentId })
+          .from(studentsTable)
+          .innerJoin(usersTable, eq(studentsTable.userId, usersTable.id))
+          .where(eq(studentsTable.id, studentId));
+        if (!studentUser) {
+          res.status(404).json({ message: "Student not found" });
+          return;
+        }
+        if (studentUser.departmentId !== caller.departmentId) {
+          res.status(403).json({ message: "Forbidden: student is not in your department" });
+          return;
+        }
+      }
+    }
+    // admin role: no restriction
+
     const data = await db
       .select({
         id: assessmentsTable.id,
@@ -271,16 +381,47 @@ router.get("/:studentId/assessments", async (req, res) => {
   }
 });
 
-router.post("/:studentId/assessments", async (req, res) => {
+// POST /students/:studentId/assessments — professors only; assessorId set server-side
+router.post("/:studentId/assessments", requireAuth, requireRole(["professor", "hod"]), async (req, res) => {
   try {
+    const professorId = req.user!.id;
+    const professorDeptId = req.user!.departmentId;
     const studentId = parseInt(req.params.studentId, 10);
-    const { examName, type, date, marks, assessorId } = req.body;
+
+    // Validate the student belongs to the professor's department
+    const [student] = await db
+      .select({ id: studentsTable.id, userId: studentsTable.userId })
+      .from(studentsTable)
+      .innerJoin(usersTable, eq(studentsTable.userId, usersTable.id))
+      .where(eq(studentsTable.id, studentId));
+
+    if (!student) {
+      res.status(404).json({ message: "Student not found" });
+      return;
+    }
+
+    const [studentUser] = await db
+      .select({ departmentId: usersTable.departmentId })
+      .from(usersTable)
+      .where(eq(usersTable.id, student.userId));
+
+    if (professorDeptId !== null && studentUser?.departmentId !== professorDeptId) {
+      res.status(403).json({ message: "Student does not belong to your department" });
+      return;
+    }
+
+    const { examName, type, date, marks } = req.body;
+    if (!examName || !marks) {
+      res.status(400).json({ message: "examName and marks are required" });
+      return;
+    }
+
     const [inserted] = await db.insert(assessmentsTable).values({
       examName,
-      type,
-      date,
+      type: type || "quarterly",
+      date: date || new Date().toISOString().slice(0, 10),
       marks: parseInt(marks, 10) || 0,
-      assessorId: parseInt(assessorId, 10) || null,
+      assessorId: professorId,   // always set from JWT — never client-supplied
       studentId
     }).returning();
     res.status(201).json(inserted);

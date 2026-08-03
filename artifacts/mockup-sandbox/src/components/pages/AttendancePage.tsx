@@ -39,24 +39,38 @@ export function AttendancePage() {
   const [reason, setReason] = React.useState("");
 
   const [leaves, setLeaves] = React.useState<LeaveRecord[]>([]);
+  const [balance, setBalance] = React.useState({
+    casual: { used: 0, total: 20 },
+    academic: { used: 0, total: 15 }
+  });
   const user = React.useMemo(() => getCurrentUser(), []);
 
   const fetchLeaves = React.useCallback(async () => {
     if (!user?.studentProfileId) return;
     try {
-      const data = await apiGet(`/api/students/${user.studentProfileId}/leave-records`);
-      setLeaves(data.map((l: any) => ({
-        number: l.id,
-        appliedOn: l.createdAt ? l.createdAt.split("T")[0] : "",
+      const [leavesResponse, balanceData] = await Promise.all([
+        apiGet(`/api/students/${user.studentProfileId}/leave-records`),
+        apiGet<{casual: any, academic: any}>(`/api/students/${user.studentProfileId}/leave-balance`)
+      ]);
+
+      // Backend wraps leave-records in { data: [] }
+      const leavesData: any[] = Array.isArray(leavesResponse) ? leavesResponse : (leavesResponse?.data ?? []);
+      
+      setLeaves(leavesData.map((l: any) => ({
+        number: l.id.toString(),
+        appliedOn: new Date(l.createdAt).toISOString(),
+        leaveType: l.leaveType === "casual" ? "Casual Leave" : l.leaveType === "academic" ? "Academic Leave" : l.leaveType,
         fromDate: l.startDate,
         toDate: l.endDate,
-        totalDays: getInclusiveDays(l.startDate, l.endDate),
-        leaveType: l.leaveType === "casual" ? "Casual Leave" : l.leaveType === "academic" ? "Academic Leave" : l.leaveType,
         reason: l.reason,
         status: l.status,
         approvedBy: l.reviewedBy ? "HOD" : "Awaiting HOD",
+        totalDays: l.startDate && l.endDate ? Math.ceil((new Date(l.endDate).getTime() - new Date(l.startDate).getTime()) / (1000 * 3600 * 24)) + 1 : 1
       })));
-    } catch (err) {
+
+      setBalance(balanceData);
+    } catch (error) {
+      console.error("Error fetching leave data:", error);
       toast.error("Failed to load leave records");
     }
   }, [user?.studentProfileId]);
@@ -67,7 +81,9 @@ export function AttendancePage() {
 
   const handleApplyLeave = async (e: React.FormEvent) => {
     e.preventDefault();
-    const totalDays = getInclusiveDays(fromDate, toDate);
+    const start = new Date(fromDate);
+    const end = new Date(toDate);
+    const totalDays = fromDate && toDate ? Math.ceil((end.getTime() - start.getTime()) / (1000 * 3600 * 24)) + 1 : 0;
 
     if (!reason || totalDays < 1) {
       toast.error("Enter a valid leave period and reason.");
@@ -80,12 +96,12 @@ export function AttendancePage() {
       const payload = {
         startDate: fromDate,
         endDate: toDate,
-        leaveType: leaveType === "Casual Leave" ? "casual" : leaveType === "Academic Leave" ? "academic" : "casual",
+        leaveType: leaveType.split(" ")[0].toLowerCase(),
         reason
       };
       await apiPost(`/api/students/${user.studentProfileId}/leave-records`, payload);
       toast.success(`Leave application submitted`, {
-        description: `Sent to the HOD for approval (${formatLogbookDate(fromDate)} to ${formatLogbookDate(toDate)}).`,
+        description: `Sent to the HOD for approval.`,
       });
       setReason("");
       fetchLeaves();
@@ -93,14 +109,6 @@ export function AttendancePage() {
       toast.error(err.message || "Failed to submit leave application");
     }
   };
-
-  const casualUsed = leaves
-    .filter((leave) => leave.leaveType === "Casual Leave" && leave.status === "approved")
-    .reduce((total, leave) => total + leave.totalDays, 0);
-
-  const academicUsed = leaves
-    .filter((leave) => leave.leaveType === "Academic Leave" && leave.status === "approved")
-    .reduce((total, leave) => total + leave.totalDays, 0);
 
   const pendingCount = leaves.filter((leave) => leave.status === "pending").length;
 
@@ -112,9 +120,9 @@ export function AttendancePage() {
         <p className="mt-2 text-sm text-slate-500">Apply for leave and maintain the complete HOD decision record.</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <SummaryCard label="Casual Leave (20/yr)" value={casualUsed} total={20} tone="teal" />
-        <SummaryCard label="Academic Leave (15/yr)" value={academicUsed} total={15} tone="teal" />
+      <div className="grid gap-4 md:grid-cols-3">
+        <SummaryCard label={`Casual Leave (${balance.casual.total}/yr)`} value={balance.casual.used} total={balance.casual.total} tone="teal" />
+        <SummaryCard label={`Academic Leave (${balance.academic.total}/yr)`} value={balance.academic.used} total={balance.academic.total} tone="teal" />
         <SummaryCard label="Pending Approval" value={pendingCount} tone="amber" />
       </div>
 
@@ -180,10 +188,10 @@ export function AttendancePage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {leaves.map((leave) => (
+              {leaves.map((leave, idx) => (
                 <TableRow key={leave.number}>
                   <TableCell className="py-3 text-xs font-bold text-slate-900">
-                    {leave.number}
+                    {idx + 1}
                     <p className="text-[10px] font-normal text-slate-400">Applied {formatLogbookDate(leave.appliedOn)}</p>
                   </TableCell>
                   <TableCell className="py-3 text-xs font-medium text-slate-700">{leave.leaveType}</TableCell>

@@ -22,7 +22,7 @@ router.get("/:departmentId/config", async (req, res) => {
     }
 
     const [config] = await db.select().from(departmentConfigsTable).where(eq(departmentConfigsTable.departmentId, departmentId));
-    res.json(config || { requiredCases: 50, requiredProcedures: 101, requiredAcademic: 15 });
+    res.json(config || { requiredCases: 50, requiredProcedures: 101, requiredAcademic: 50 });
   } catch (error) {
     req.log.error(error, "Error fetching department config");
     res.status(500).json({ message: "Internal server error" });
@@ -157,7 +157,7 @@ router.get("/:departmentId/analytics", async (req, res) => {
       const [config] = await db.select().from(departmentConfigsTable).where(eq(departmentConfigsTable.departmentId, departmentId));
       const reqCases = config?.requiredCases || 50;
       const reqProcs = config?.requiredProcedures || 101;
-      const reqAcad = config?.requiredAcademic || 15;
+      const reqAcad = config?.requiredAcademic || 50;
 
       const completions = studentsInDept.map(s =>
         computeCompletion(caseMap[s.studentId] ?? 0, procMap[s.studentId] ?? 0, acadMap[s.studentId] ?? 0, reqCases, reqProcs, reqAcad)

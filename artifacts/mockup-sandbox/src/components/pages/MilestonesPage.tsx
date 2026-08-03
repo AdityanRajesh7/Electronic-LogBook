@@ -38,9 +38,9 @@ export function MilestonesPage() {
   const [thesisOpen, setThesisOpen] = React.useState(false);
   const [certificateOpen, setCertificateOpen] = React.useState(false);
   const [certificates, setCertificates] = React.useState([
-    { number: 3, name: "PALS — Pediatric Advanced Life Support", provider: "Indian Academy of Pediatrics", dateIssued: "2027-10-15" },
-    { number: 2, name: "NRP — Neonatal Resuscitation Program", provider: "IAP", dateIssued: "2027-04-20" },
-    { number: 1, name: "BLS — Basic Life Support", provider: "AHA", dateIssued: "2026-12-01" },
+    { name: "PALS — Pediatric Advanced Life Support", provider: "Indian Academy of Pediatrics", dateIssued: "2027-10-15" },
+    { name: "NRP — Neonatal Resuscitation Program", provider: "IAP", dateIssued: "2027-04-20" },
+    { name: "BLS — Basic Life Support", provider: "AHA", dateIssued: "2026-12-01" },
   ]);
   const [certificate, setCertificate] = React.useState({ name: "", provider: "", dateIssued: "2028-01-01" });
 
@@ -53,7 +53,7 @@ export function MilestonesPage() {
 
   const saveCertificate = (event: React.FormEvent) => {
     event.preventDefault();
-    setCertificates([{ number: certificates.length + 1, ...certificate }, ...certificates]);
+    setCertificates([...certificates, { ...certificate }]);
     setCertificateOpen(false);
     toast.success("Certificate added");
   };
@@ -133,7 +133,7 @@ export function MilestonesPage() {
           <Table>
             <TableHeader><TableRow><TableHead>Number</TableHead><TableHead>Certificate</TableHead><TableHead>Issuing body</TableHead><TableHead>Date issued</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
             <TableBody>
-              {certificates.map((item) => <TableRow key={item.number}><TableCell className="font-bold">{item.number}</TableCell><TableCell className="font-semibold"><span className="flex items-center gap-2"><FileText className="h-4 w-4 text-teal-600" /> {item.name}</span></TableCell><TableCell>{item.provider}</TableCell><TableCell>{formatLogbookDate(item.dateIssued)}</TableCell><TableCell><Badge className="border-emerald-200 bg-emerald-50 text-emerald-700"><CheckCircle2 className="mr-1 h-3 w-3" /> Active</Badge></TableCell></TableRow>)}
+              {certificates.map((item, idx) => <TableRow key={idx}><TableCell className="font-bold">{idx + 1}</TableCell><TableCell className="font-semibold"><span className="flex items-center gap-2"><FileText className="h-4 w-4 text-teal-600" /> {item.name}</span></TableCell><TableCell>{item.provider}</TableCell><TableCell>{formatLogbookDate(item.dateIssued)}</TableCell><TableCell><Badge className="border-emerald-200 bg-emerald-50 text-emerald-700"><CheckCircle2 className="mr-1 h-3 w-3" /> Active</Badge></TableCell></TableRow>)}
             </TableBody>
           </Table>
         </CardContent>

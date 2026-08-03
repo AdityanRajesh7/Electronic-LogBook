@@ -20,6 +20,9 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { apiGet } from "@/lib/apiClient";
+import { getCurrentUser } from "@/lib/session";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -65,12 +68,13 @@ type NavigationItem = {
   href: string;
   badge?: string;
   badgeColor?: string;
+  badgeLoading?: boolean;
 };
 
-function navigationForRole(role: RoleType): NavigationItem[] {
+function navigationForRole(role: RoleType, dashboardData?: any, loadingBadges?: boolean): NavigationItem[] {
   if (role === "Professor") {
     return [
-      { title: "Evaluation Queue", icon: FileText, href: "/", badge: "3 pending" },
+      { title: "Evaluation Queue", icon: FileText, href: "/" },
       { title: "All Students", icon: UserCheck, href: "/mentees" },
       { title: "Assessments", icon: ClipboardCheck, href: "/appraisals" },
     ];
@@ -78,17 +82,24 @@ function navigationForRole(role: RoleType): NavigationItem[] {
 
   if (role === "HOD") {
     return [
-      { title: "Department Overview", icon: AlertTriangle, href: "/", badge: "MCI live" },
+      { title: "Department Overview", icon: AlertTriangle, href: "/" },
       { title: "Student Registrations", icon: UserPlus, href: "/student-access" },
-      { title: "Leave Approvals", icon: CheckCircle2, href: "/leave-approvals", badge: "2 new" },
+      { title: "Leave Approvals", icon: CheckCircle2, href: "/leave-approvals" },
     ];
   }
 
+  const getCount = (id: string) => {
+    if (!dashboardData) return undefined;
+    const cat = dashboardData.categories?.find((c: any) => c.id === id);
+    if (!cat) return undefined;
+    return `${cat.logged}/${cat.required}`;
+  };
+
   return [
-    { title: "Dashboard", icon: LayoutDashboard, href: "/", badge: "MCI guide" },
-    { title: "Postings & Rotations", icon: CalendarDays, href: "/postings", badge: "PICU" },
-    { title: "Case Logs", icon: FileText, href: "/cases", badge: "42/50" },
-    { title: "Procedure Logs", icon: Stethoscope, href: "/procedures", badge: "11/101" },
+    { title: "Dashboard", icon: LayoutDashboard, href: "/" },
+    { title: "Postings & Rotations", icon: CalendarDays, href: "/postings" },
+    { title: "Case Logs", icon: FileText, href: "/cases", badge: getCount("cases"), badgeLoading: loadingBadges },
+    { title: "Procedure Logs", icon: Stethoscope, href: "/procedures", badge: getCount("procedures"), badgeLoading: loadingBadges },
     { title: "Academic Activities", icon: GraduationCap, href: "/academics" },
     { title: "Assessments", icon: ClipboardCheck, href: "/assessments" },
     { title: "Thesis & Certifications", icon: Award, href: "/milestones" },
@@ -102,7 +113,21 @@ export function AppLayout({
   onSignOut,
 }: AppLayoutProps) {
   const [location] = useLocation();
-  const navigationItems = navigationForRole(activeRole);
+  const [dashboardData, setDashboardData] = React.useState<any>(null);
+  const [loadingBadges, setLoadingBadges] = React.useState(activeRole === "Student");
+
+  React.useEffect(() => {
+    if (activeRole !== "Student") return;
+    const user = getCurrentUser();
+    if (!user?.studentProfileId) return;
+
+    apiGet(`/api/students/${user.studentProfileId}/dashboard`)
+      .then(data => setDashboardData(data))
+      .catch(err => console.error("Failed to load nav badges", err))
+      .finally(() => setLoadingBadges(false));
+  }, [activeRole]);
+
+  const navigationItems = navigationForRole(activeRole, dashboardData, loadingBadges);
 
   const printCurrentView = () => {
     const label = activeRole === "Student" ? "DRAFT" : "OFFICIAL COPY";
@@ -117,8 +142,8 @@ export function AppLayout({
 
   return (
     <SidebarProvider defaultOpen>
-      <div className="medical-grid min-h-screen w-full p-0 text-slate-900 md:p-3 lg:p-4">
-        <div className="glass-panel mx-auto flex min-h-screen w-full max-w-[1600px] overflow-hidden rounded-none border-white/70 md:min-h-[calc(100vh-24px)] md:rounded-[30px] lg:min-h-[calc(100vh-32px)]">
+      <div className="medical-grid h-screen w-full overflow-hidden p-0 text-slate-900 md:p-3 lg:p-4">
+        <div className="glass-panel mx-auto flex h-[100dvh] md:h-[calc(100vh-24px)] lg:h-[calc(100vh-32px)] w-full max-w-[1600px] overflow-hidden rounded-none border-white/70 md:rounded-[30px]">
           <Sidebar className="print-hidden border-r border-teal-100/80 bg-white/56">
             <SidebarHeader className="border-b border-teal-100/80 p-4">
               <div className="flex items-center gap-3">
@@ -160,7 +185,10 @@ export function AppLayout({
                             <Link href={item.href} className="flex w-full items-center gap-3">
                               <Icon className={`h-4 w-4 ${isActive ? "text-white" : "text-teal-600"}`} />
                               <span className="flex-1 truncate text-[13px]">{item.title}</span>
-                              {item.badge && (
+                              
+                              {item.badgeLoading ? (
+                                <Skeleton className="h-4 w-12 rounded-full bg-teal-100/50" />
+                              ) : item.badge ? (
                                 <Badge
                                   variant="outline"
                                   className={`rounded-full px-1.5 py-0 text-[9px] ${
@@ -171,7 +199,7 @@ export function AppLayout({
                                 >
                                   {item.badge}
                                 </Badge>
-                              )}
+                              ) : null}
                             </Link>
                           </SidebarMenuButton>
                         </SidebarMenuItem>
@@ -209,7 +237,7 @@ export function AppLayout({
             </SidebarFooter>
           </Sidebar>
 
-          <SidebarInset className="flex min-w-0 flex-1 flex-col bg-transparent">
+          <SidebarInset className="flex min-w-0 flex-1 flex-col bg-transparent overflow-y-auto">
             <header className="print-hidden sticky top-0 z-20 flex h-[72px] items-center justify-between border-b border-white/70 bg-white/58 px-4 backdrop-blur-xl md:px-6">
               <div className="flex min-w-0 items-center gap-3">
                 <SidebarTrigger className="rounded-xl text-teal-800 hover:bg-white" />

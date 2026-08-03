@@ -270,4 +270,47 @@ router.post("/department/procedures", async (req, res) => {
   }
 });
 
+// GET /api/admin/roster — all students + professors in the HOD's own department
+router.get("/roster", async (req, res) => {
+  try {
+    const departmentId = req.user?.departmentId;
+    if (!departmentId) {
+      res.status(400).json({ message: "HOD account has no department assigned" });
+      return;
+    }
+
+    const students = await db
+      .select({
+        id: usersTable.id,
+        fullName: usersTable.fullName,
+        email: usersTable.email,
+        status: usersTable.status,
+        registrationNumber: studentsTable.registrationNumber,
+        batch: studentsTable.batch,
+        createdAt: usersTable.createdAt,
+      })
+      .from(usersTable)
+      .innerJoin(studentsTable, eq(studentsTable.userId, usersTable.id))
+      .where(and(eq(usersTable.role, "student"), eq(usersTable.departmentId, departmentId)))
+      .orderBy(usersTable.fullName);
+
+    const professors = await db
+      .select({
+        id: usersTable.id,
+        fullName: usersTable.fullName,
+        email: usersTable.email,
+        status: usersTable.status,
+        createdAt: usersTable.createdAt,
+      })
+      .from(usersTable)
+      .where(and(eq(usersTable.role, "professor"), eq(usersTable.departmentId, departmentId)))
+      .orderBy(usersTable.fullName);
+
+    res.json({ students, professors });
+  } catch (error) {
+    req.log.error(error, "Error fetching department roster");
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
 export default router;

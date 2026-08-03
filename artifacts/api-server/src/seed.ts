@@ -43,7 +43,7 @@ async function main() {
     } else {
       const hodHash = await bcrypt.hash("password123", 10);
       [hod] = await db.insert(usersTable).values({
-        fullName: "Dr. Mohamad (HOD)",
+        fullName: "Dr. Mohammed (HOD)",
         email: "hod@elogbook.com",
         passwordHash: hodHash,
         role: "hod",

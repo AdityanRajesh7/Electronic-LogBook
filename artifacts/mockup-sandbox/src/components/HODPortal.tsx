@@ -13,7 +13,9 @@ import {
   AlertTriangle,
   UserPlus,
   Settings,
-  Syringe
+  Syringe,
+  BookOpen,
+  GraduationCap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +33,7 @@ import {
 } from "@/lib/logbook-config";
 import { apiGet, apiPost } from "@/lib/apiClient";
 import { getCurrentUser } from "@/lib/session";
+import { ProfessorPortal } from "@/components/ProfessorPortal";
 
 type Registration = {
   id: number;
@@ -61,9 +64,11 @@ type LeaveRequest = {
 
 const paths: Record<string, string> = {
   "gap-dashboard": "/",
+  "review-queue": "/review-queue",
   "student-access": "/student-access",
   "leave-approvals": "/leave-approvals",
   "professors": "/professors",
+  "roster": "/roster",
   "settings": "/settings",
   "procedures": "/procedures",
 };
@@ -74,6 +79,9 @@ export function HODPortal({ activeTab = "gap-dashboard" }: { activeTab?: string 
   const [pendingStudents, setPendingStudents] = React.useState<Registration[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+
+  const [roster, setRoster] = React.useState<{ students: any[]; professors: any[] } | null>(null);
+  const [rosterLoading, setRosterLoading] = React.useState(false);
 
   // Settings State
   const [deptConfig, setDeptConfig] = React.useState({ requiredCases: 50, requiredProcedures: 101, requiredAcademic: 15 });
@@ -146,9 +154,26 @@ export function HODPortal({ activeTab = "gap-dashboard" }: { activeTab?: string 
     }
   }, []);
 
+  const fetchRoster = React.useCallback(async () => {
+    setRosterLoading(true);
+    try {
+      const data = await apiGet<{ students: any[]; professors: any[] }>("/api/admin/roster");
+      setRoster(data);
+    } catch (err: any) {
+      toast.error("Failed to load roster");
+    } finally {
+      setRosterLoading(false);
+    }
+  }, []);
+
   React.useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Lazy-load roster only when that tab is active
+  React.useEffect(() => {
+    if (activeTab === "roster" && !roster) fetchRoster();
+  }, [activeTab, roster, fetchRoster]);
 
   const approveStudent = async (id: number) => {
     try {
@@ -245,6 +270,8 @@ export function HODPortal({ activeTab = "gap-dashboard" }: { activeTab?: string 
       <Tabs value={activeTab} onValueChange={(value) => setLocation(paths[value] ?? "/")}>
         <TabsList className="h-auto flex-wrap">
           <TabsTrigger value="gap-dashboard"><ShieldCheck className="h-4 w-4 mr-2" /> Overview</TabsTrigger>
+          <TabsTrigger value="review-queue"><FileCheck className="h-4 w-4 mr-2" /> Review Queue</TabsTrigger>
+          <TabsTrigger value="roster"><GraduationCap className="h-4 w-4 mr-2" /> Students & Professors</TabsTrigger>
           <TabsTrigger value="student-access"><Users className="h-4 w-4 mr-2" /> Pending Students</TabsTrigger>
           <TabsTrigger value="professors"><UserPlus className="h-4 w-4 mr-2" /> Add Professor</TabsTrigger>
           <TabsTrigger value="leave-approvals"><Clock3 className="h-4 w-4 mr-2" /> Leave approvals</TabsTrigger>
@@ -258,6 +285,94 @@ export function HODPortal({ activeTab = "gap-dashboard" }: { activeTab?: string 
             <Overview label="Case discussions" value={String(deptConfig.requiredCases)} note="Total cases required" icon={CheckCircle2} />
             <Overview label="Academic target" value={String(deptConfig.requiredAcademic)} note="Seminars, journals, etc." icon={TrendingUp} />
           </div>
+        </TabsContent>
+
+        {/* Review Queue tab — reuses ProfessorPortal which accepts HOD role */}
+        <TabsContent value="review-queue" className="pt-4">
+          <ProfessorPortal activeTab="review-queue" />
+        </TabsContent>
+
+        {/* Roster tab */}
+        <TabsContent value="roster" className="space-y-6 pt-4">
+          {rosterLoading ? (
+            <div className="flex h-40 items-center justify-center"><div className="animate-spin rounded-full border-4 border-slate-300 border-t-teal-600 h-8 w-8" /></div>
+          ) : (
+            <>
+              <Card>
+                <CardHeader className="border-b border-teal-100">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <GraduationCap className="h-5 w-5 text-teal-600" />
+                    PG Residents ({roster?.students.length ?? 0})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  {!roster?.students.length ? (
+                    <p className="p-6 text-center text-sm text-slate-500">No students in this department.</p>
+                  ) : (
+                    <Table>
+                      <TableHeader className="bg-slate-50">
+                        <TableRow>
+                          <TableHead>Reg. No.</TableHead>
+                          <TableHead>Full Name</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Batch</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {roster.students.map((s) => (
+                          <TableRow key={s.id}>
+                            <TableCell className="font-mono text-xs font-semibold">{s.registrationNumber}</TableCell>
+                            <TableCell className="font-semibold">{s.fullName}</TableCell>
+                            <TableCell className="text-xs text-slate-500">{s.email}</TableCell>
+                            <TableCell>{s.batch ?? "—"}</TableCell>
+                            <TableCell>
+                              <Badge variant={s.status === "approved" ? "default" : "secondary"} className="capitalize text-xs">{s.status}</Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="border-b border-teal-100">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Users className="h-5 w-5 text-teal-600" />
+                    Faculty ({roster?.professors.length ?? 0})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  {!roster?.professors.length ? (
+                    <p className="p-6 text-center text-sm text-slate-500">No professors in this department.</p>
+                  ) : (
+                    <Table>
+                      <TableHeader className="bg-slate-50">
+                        <TableRow>
+                          <TableHead>Full Name</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {roster.professors.map((p) => (
+                          <TableRow key={p.id}>
+                            <TableCell className="font-semibold">{p.fullName}</TableCell>
+                            <TableCell className="text-xs text-slate-500">{p.email}</TableCell>
+                            <TableCell>
+                              <Badge variant={p.status === "approved" ? "default" : "secondary"} className="capitalize text-xs">{p.status}</Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+            </>
+          )}
         </TabsContent>
 
         <TabsContent value="student-access" className="space-y-4 pt-4">

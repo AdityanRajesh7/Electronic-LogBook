@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { toast } from "sonner";
 import { apiPost } from "@/lib/apiClient";
 
 export function LoginPage({ onSignIn, onRegister }: { onSignIn: () => void; onRegister: () => void }) {
@@ -15,6 +17,13 @@ export function LoginPage({ onSignIn, onRegister }: { onSignIn: () => void; onRe
   
   const [error, setError] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
+
+  const [forgotStep, setForgotStep] = React.useState<0 | 1 | 2 | 3>(0);
+  const [resetEmail, setResetEmail] = React.useState("");
+  const [resetOtp, setResetOtp] = React.useState("");
+  const [newPassword, setNewPassword] = React.useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = React.useState("");
+  const [isResetting, setIsResetting] = React.useState(false);
 
   // Update pre-filled credentials when role changes
   React.useEffect(() => {
@@ -54,6 +63,53 @@ export function LoginPage({ onSignIn, onRegister }: { onSignIn: () => void; onRe
       setError(err.message || "Failed to sign in. Please check your credentials.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleForgotSendCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetEmail) return;
+    setIsResetting(true);
+    try {
+      await apiPost("/api/auth/forgot-password", { email: resetEmail });
+      toast.success("If an account exists, a reset code was sent");
+      setForgotStep(2);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to send code");
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
+  const handleForgotVerifyOtp = async () => {
+    if (resetOtp.length !== 6) return;
+    setIsResetting(true);
+    try {
+      await apiPost("/api/auth/verify-reset-otp", { email: resetEmail, otp: resetOtp });
+      toast.success("Code verified");
+      setForgotStep(3);
+    } catch (err: any) {
+      toast.error(err.message || "Invalid or expired code");
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
+  const handleForgotResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword !== confirmNewPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+    setIsResetting(true);
+    try {
+      await apiPost("/api/auth/reset-password", { email: resetEmail, newPassword });
+      toast.success("Password reset. Please log in with your new password.");
+      setForgotStep(0);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to reset password");
+    } finally {
+      setIsResetting(false);
     }
   };
 
@@ -120,19 +176,21 @@ export function LoginPage({ onSignIn, onRegister }: { onSignIn: () => void; onRe
         <section className="bg-white/80 p-8 md:p-12">
           <div className="mx-auto max-w-sm">
             
-            <Tabs value={role} onValueChange={(v) => setRole(v as any)} className="w-full mb-8">
-              <TabsList className="grid w-full grid-cols-3 bg-teal-50/50 p-1">
-                <TabsTrigger value="student" className="rounded-xl text-xs data-[state=active]:bg-white data-[state=active]:text-teal-800 data-[state=active]:shadow-sm">
-                  <UserCheck className="w-3.5 h-3.5 mr-1.5" /> Student
-                </TabsTrigger>
-                <TabsTrigger value="professor" className="rounded-xl text-xs data-[state=active]:bg-white data-[state=active]:text-teal-800 data-[state=active]:shadow-sm">
-                  <Stethoscope className="w-3.5 h-3.5 mr-1.5" /> Prof
-                </TabsTrigger>
-                <TabsTrigger value="hod" className="rounded-xl text-xs data-[state=active]:bg-white data-[state=active]:text-teal-800 data-[state=active]:shadow-sm">
-                  <Building className="w-3.5 h-3.5 mr-1.5" /> HOD
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+            {forgotStep === 0 && (
+              <Tabs value={role} onValueChange={(v) => { setRole(v as any); setForgotStep(0); }} className="w-full mb-8">
+                <TabsList className="grid w-full grid-cols-3 bg-teal-50/50 p-1">
+                  <TabsTrigger value="student" className="rounded-xl text-xs data-[state=active]:bg-white data-[state=active]:text-teal-800 data-[state=active]:shadow-sm">
+                    Student
+                  </TabsTrigger>
+                  <TabsTrigger value="professor" className="rounded-xl text-xs data-[state=active]:bg-white data-[state=active]:text-teal-800 data-[state=active]:shadow-sm">
+                    Professor
+                  </TabsTrigger>
+                  <TabsTrigger value="hod" className="rounded-xl text-xs data-[state=active]:bg-white data-[state=active]:text-teal-800 data-[state=active]:shadow-sm">
+                    HOD
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            )}
 
             <p className="page-eyebrow">
                {role === "student" ? "Secure student access" : role === "professor" ? "Professor portal" : "HOD Administration"}
@@ -148,7 +206,62 @@ export function LoginPage({ onSignIn, onRegister }: { onSignIn: () => void; onRe
               </div>
             )}
 
-            <form onSubmit={signIn} className="mt-9 space-y-5">
+            {forgotStep > 0 ? (
+               <div className="mt-9 space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                 <div className="flex items-center justify-between mb-2">
+                   {forgotStep > 1 ? (
+                     <button type="button" onClick={() => setForgotStep(forgotStep === 3 ? 2 : 1 as any)} className="text-xs text-teal-700 hover:underline block">
+                       &larr; Back
+                     </button>
+                   ) : <div />}
+                   <button type="button" onClick={() => setForgotStep(0)} className="text-xs text-teal-700 hover:underline block">
+                     Exit to login
+                   </button>
+                 </div>
+                 
+                 {forgotStep === 1 && (
+                   <form onSubmit={handleForgotSendCode} className="space-y-4">
+                     <div className="space-y-2">
+                       <Label>Enter your email to reset password</Label>
+                       <Input type="email" value={resetEmail} onChange={e => setResetEmail(e.target.value)} required />
+                     </div>
+                     <Button type="submit" className="w-full" disabled={isResetting}>{isResetting ? "Sending..." : "Send Code"}</Button>
+                   </form>
+                 )}
+
+                 {forgotStep === 2 && (
+                   <div className="space-y-4">
+                     <div className="space-y-2">
+                       <Label>Enter the 6-digit code sent to {resetEmail}</Label>
+                       <div className="flex justify-center py-2">
+                         <InputOTP maxLength={6} value={resetOtp} onChange={setResetOtp} disabled={isResetting}>
+                           <InputOTPGroup>
+                             <InputOTPSlot index={0} /><InputOTPSlot index={1} /><InputOTPSlot index={2} />
+                             <InputOTPSlot index={3} /><InputOTPSlot index={4} /><InputOTPSlot index={5} />
+                           </InputOTPGroup>
+                         </InputOTP>
+                       </div>
+                     </div>
+                     <Button type="button" onClick={handleForgotVerifyOtp} className="w-full" disabled={isResetting || resetOtp.length !== 6}>{isResetting ? "Verifying..." : "Verify Code"}</Button>
+                   </div>
+                 )}
+
+                 {forgotStep === 3 && (
+                   <form onSubmit={handleForgotResetPassword} className="space-y-4">
+                     <div className="space-y-2">
+                       <Label>New Password</Label>
+                       <Input type="password" minLength={8} value={newPassword} onChange={e => setNewPassword(e.target.value)} required />
+                     </div>
+                     <div className="space-y-2">
+                       <Label>Confirm New Password</Label>
+                       <Input type="password" minLength={8} value={confirmNewPassword} onChange={e => setConfirmNewPassword(e.target.value)} required />
+                     </div>
+                     <Button type="submit" className="w-full" disabled={isResetting}>{isResetting ? "Saving..." : "Reset Password"}</Button>
+                   </form>
+                 )}
+               </div>
+            ) : (
+            <form onSubmit={signIn} className="mt-9 space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-300">
               <div className="space-y-2">
                 <Label htmlFor="username">
                   {role === "student" ? "Registration number" : "Email address"}
@@ -170,7 +283,10 @@ export function LoginPage({ onSignIn, onRegister }: { onSignIn: () => void; onRe
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Password</Label>
+                  <button type="button" onClick={() => { setResetEmail(username); setForgotStep(1); }} className="text-[11px] font-medium text-teal-700 hover:underline">Forgot password?</button>
+                </div>
                 <div className="relative">
                   <KeyRound className="absolute left-3 top-3 h-4 w-4 text-teal-600" />
                   <Input
@@ -193,8 +309,9 @@ export function LoginPage({ onSignIn, onRegister }: { onSignIn: () => void; onRe
                 {isLoading ? "Signing in..." : "Sign in to E-Logbook"}
               </Button>
             </form>
+            )}
 
-            {role === "student" && (
+            {role === "student" && forgotStep === 0 && (
               <>
                 <div className="my-6 flex items-center gap-3">
                   <div className="h-px flex-1 bg-teal-100" />

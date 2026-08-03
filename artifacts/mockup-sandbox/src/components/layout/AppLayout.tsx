@@ -2,6 +2,9 @@ import * as React from "react";
 import { Link, useLocation } from "wouter";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
   SidebarProvider,
   Sidebar,
@@ -21,7 +24,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { apiGet } from "@/lib/apiClient";
+import { apiGet, apiPost } from "@/lib/apiClient";
 import { getCurrentUser } from "@/lib/session";
 import {
   DropdownMenu,
@@ -43,6 +46,7 @@ import {
   ClipboardCheck,
   FileText,
   GraduationCap,
+  KeyRound,
   LayoutDashboard,
   LogOut,
   Printer,
@@ -116,16 +120,26 @@ export function AppLayout({
   const [dashboardData, setDashboardData] = React.useState<any>(null);
   const [loadingBadges, setLoadingBadges] = React.useState(activeRole === "Student");
 
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = React.useState(false);
+  const [cpForm, setCpForm] = React.useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
+  const [changingPassword, setChangingPassword] = React.useState(false);
+
+  // Fix: Get actual user from session for the sidebar profile
+  const currentUser = getCurrentUser();
+  const displayName = currentUser?.name || getNameForRole(activeRole);
+  const initials = currentUser?.name 
+    ? currentUser.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()
+    : getInitialsForRole(activeRole);
+
   React.useEffect(() => {
     if (activeRole !== "Student") return;
-    const user = getCurrentUser();
-    if (!user?.studentProfileId) return;
+    if (!currentUser?.studentProfileId) return;
 
-    apiGet(`/api/students/${user.studentProfileId}/dashboard`)
+    apiGet(`/api/students/${currentUser.studentProfileId}/dashboard`)
       .then(data => setDashboardData(data))
       .catch(err => console.error("Failed to load nav badges", err))
       .finally(() => setLoadingBadges(false));
-  }, [activeRole]);
+  }, [activeRole, currentUser?.studentProfileId]);
 
   const navigationItems = navigationForRole(activeRole, dashboardData, loadingBadges);
 
@@ -138,6 +152,28 @@ export function AppLayout({
     };
     window.addEventListener("afterprint", clearLabel);
     window.print();
+  };
+
+  const handleChangePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (cpForm.newPassword !== cpForm.confirmPassword) {
+      toast.error("New passwords do not match");
+      return;
+    }
+    setChangingPassword(true);
+    try {
+      await apiPost("/api/auth/change-password", { 
+        currentPassword: cpForm.currentPassword, 
+        newPassword: cpForm.newPassword 
+      });
+      toast.success("Password changed successfully");
+      setIsChangePasswordOpen(false);
+      setCpForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    } catch (err: any) {
+      toast.error(err.message || "Failed to change password");
+    } finally {
+      setChangingPassword(false);
+    }
   };
 
   return (
@@ -216,17 +252,21 @@ export function AppLayout({
                   <button className="flex w-full items-center gap-3 rounded-2xl border border-white/80 bg-white/72 p-2.5 text-left shadow-sm transition hover:bg-white">
                     <Avatar className="h-10 w-10 border border-teal-100">
                       <AvatarFallback className="bg-gradient-to-br from-teal-100 to-cyan-100 text-xs font-bold text-teal-800">
-                        {getInitialsForRole(activeRole)}
+                        {initials}
                       </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-xs font-bold text-slate-900">{getNameForRole(activeRole)}</p>
+                      <p className="truncate text-xs font-bold text-slate-900">{displayName}</p>
                       <p className="truncate text-[10px] font-semibold text-teal-700">{activeRole} portal</p>
                     </div>
                     <ChevronDown className="h-4 w-4 text-teal-700/50" />
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-64 rounded-2xl border-teal-100 bg-white/95 p-1 shadow-xl">
+                  <DropdownMenuItem onClick={() => setIsChangePasswordOpen(true)} className="cursor-pointer rounded-xl text-xs">
+                    <KeyRound className="mr-2 h-4 w-4" /> Change Password
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   {onSignOut && (
                     <DropdownMenuItem onClick={onSignOut} className="cursor-pointer rounded-xl text-xs text-rose-700">
                       <LogOut className="mr-2 h-4 w-4" /> Sign out
@@ -280,6 +320,33 @@ export function AppLayout({
             </main>
           </SidebarInset>
           <Toaster position="top-right" richColors />
+
+          <Dialog open={isChangePasswordOpen} onOpenChange={setIsChangePasswordOpen}>
+            <DialogContent className="sm:max-w-md rounded-[20px]">
+              <DialogHeader>
+                <DialogTitle>Change Password</DialogTitle>
+                <DialogDescription>Update your account password securely.</DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleChangePasswordSubmit} className="space-y-4 pt-4">
+                <div className="space-y-2">
+                  <Label>Current Password</Label>
+                  <Input type="password" value={cpForm.currentPassword} onChange={e => setCpForm({...cpForm, currentPassword: e.target.value})} required />
+                </div>
+                <div className="space-y-2">
+                  <Label>New Password</Label>
+                  <Input type="password" minLength={8} value={cpForm.newPassword} onChange={e => setCpForm({...cpForm, newPassword: e.target.value})} required />
+                </div>
+                <div className="space-y-2">
+                  <Label>Confirm New Password</Label>
+                  <Input type="password" minLength={8} value={cpForm.confirmPassword} onChange={e => setCpForm({...cpForm, confirmPassword: e.target.value})} required />
+                </div>
+                <DialogFooter className="pt-2">
+                  <Button type="button" variant="outline" onClick={() => setIsChangePasswordOpen(false)}>Cancel</Button>
+                  <Button type="submit" disabled={changingPassword}>{changingPassword ? "Saving..." : "Change Password"}</Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
     </SidebarProvider>

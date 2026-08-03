@@ -14,7 +14,7 @@ import { AttendancePage } from "@/components/pages/AttendancePage";
 import { MilestonesPage } from "@/components/pages/MilestonesPage";
 import { AssessmentsPage } from "@/components/pages/AssessmentsPage";
 import { PrintableLogbook } from "@/components/pages/PrintableLogbook";
-import { getCurrentUser } from "@/lib/session";
+import { getCurrentUser, clearSession } from "@/lib/session";
 import { Toaster } from "@/components/ui/sonner";
 
 import { modules as discoveredModules } from "./.generated/mockup-components";
@@ -179,7 +179,7 @@ function App() {
     <AppLayout
       activeRole={activeRole}
       onSignOut={() => {
-        window.sessionStorage.removeItem("elogbook-authenticated");
+        clearSession();
         setIsAuthenticated(false);
       }}
     >

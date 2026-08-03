@@ -74,45 +74,45 @@
   --radius-control: 0.75rem;
   --radius-chip: 9999px;
 
-  --button-outline: rgba(13, 148, 136, .2);
-  --badge-outline: rgba(13, 148, 136, .12);
+  --button-outline: rgba(167, 139, 250, .26);
+  --badge-outline: rgba(167, 139, 250, .16);
   --opaque-button-border-intensity: -8;
 
-  --elevate-1: rgba(13, 148, 136, .05);
-  --elevate-2: rgba(13, 148, 136, .1);
+  --elevate-1: rgba(167, 139, 250, .05);
+  --elevate-2: rgba(167, 139, 250, .1);
 
-  --background: 178 57% 97%;
-  --foreground: 190 39% 13%;
+  --background: 278 100% 97%;
+  --foreground: 271 35% 14%;
   --card: 0 0% 100%;
-  --card-foreground: 190 39% 13%;
+  --card-foreground: 271 35% 14%;
   --popover: 0 0% 100%;
-  --popover-foreground: 190 39% 13%;
-  --primary: 174 72% 34%;
+  --popover-foreground: 271 35% 14%;
+  --primary: 272 80% 57%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 174 45% 94%;
-  --secondary-foreground: 177 74% 22%;
-  --muted: 178 30% 95%;
-  --muted-foreground: 187 12% 43%;
-  --accent: 174 55% 92%;
-  --accent-foreground: 177 74% 22%;
+  --secondary: 279 100% 94%;
+  --secondary-foreground: 272 60% 24%;
+  --muted: 279 90% 95%;
+  --muted-foreground: 273 10% 44%;
+  --accent: 279 88% 92%;
+  --accent-foreground: 272 60% 24%;
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 0 0% 98%;
-  --border: 176 30% 87%;
-  --input: 176 30% 84%;
-  --ring: 174 72% 34%;
-  --chart-1: 174 72% 38%;
-  --chart-2: 190 78% 42%;
-  --chart-3: 163 65% 44%;
-  --chart-4: 43 84% 57%;
-  --chart-5: 3 78% 60%;
-  --sidebar: 178 57% 98%;
-  --sidebar-foreground: 187 31% 25%;
-  --sidebar-primary: 174 72% 34%;
+  --border: 279 55% 88%;
+  --input: 279 55% 84%;
+  --ring: 272 80% 57%;
+  --chart-1: 272 80% 57%;
+  --chart-2: 285 75% 62%;
+  --chart-3: 258 70% 60%;
+  --chart-4: 294 72% 68%;
+  --chart-5: 309 68% 64%;
+  --sidebar: 279 100% 98%;
+  --sidebar-foreground: 271 35% 24%;
+  --sidebar-primary: 272 80% 57%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 174 55% 92%;
-  --sidebar-accent-foreground: 177 74% 22%;
-  --sidebar-border: 176 30% 87%;
-  --sidebar-ring: 174 72% 34%;
+  --sidebar-accent: 279 88% 92%;
+  --sidebar-accent-foreground: 272 60% 24%;
+  --sidebar-border: 279 55% 88%;
+  --sidebar-ring: 272 80% 57%;
 
   --font-sans: "Open Sauce One", "Segoe UI", sans-serif;
   --font-serif: "Roboto", "Segoe UI", sans-serif;
@@ -175,10 +175,10 @@
     @apply font-sans antialiased bg-background text-foreground;
     min-width: 320px;
     background:
-      radial-gradient(circle at 6% 0%, rgba(94, 234, 212, .28), transparent 30rem),
-      radial-gradient(circle at 94% 4%, rgba(34, 211, 238, .22), transparent 32rem),
-      radial-gradient(circle at 50% 120%, rgba(45, 212, 191, .08), transparent 38rem),
-      linear-gradient(145deg, #e2faf7 0%, #f8ffff 48%, #e8f9fb 100%);
+      radial-gradient(circle at 6% 0%, rgba(236, 208, 255, .95), transparent 28rem),
+      radial-gradient(circle at 94% 4%, rgba(225, 179, 255, .75), transparent 30rem),
+      radial-gradient(circle at 50% 120%, rgba(229, 190, 255, .85), transparent 38rem),
+      linear-gradient(145deg, #f9f0ff 0%, #fffafc 50%, #f1e3ff 100%);
     background-attachment: fixed;
   }
   h1, h2, h3, h4, .font-display {
@@ -192,16 +192,16 @@
 
 @layer utilities {
   .glass-panel {
-    background: rgba(255, 255, 255, .68);
-    border: 1px solid rgba(255, 255, 255, .68);
-    box-shadow: 0 20px 60px rgba(15, 23, 42, .06);
+    background: rgba(255, 255, 255, .72);
+    border: 1px solid rgba(255, 255, 255, .72);
+    box-shadow: 0 20px 60px rgba(124, 58, 237, .06);
     backdrop-filter: blur(14px);
   }
 
   .surface-panel {
-    background: rgba(255, 255, 255, .76);
-    border: 1px solid rgba(255, 255, 255, .6);
-    box-shadow: 0 20px 60px rgba(15, 23, 42, .06);
+    background: rgba(255, 255, 255, .78);
+    border: 1px solid rgba(255, 255, 255, .65);
+    box-shadow: 0 20px 60px rgba(124, 58, 237, .05);
   }
 
   .surface-interactive {
@@ -228,15 +228,15 @@
   }
 
   .layer-1 {
-    box-shadow: 0 8px 24px rgba(15, 23, 42, .04);
+    box-shadow: 0 8px 24px rgba(124, 58, 237, .04);
   }
 
   .layer-2 {
-    box-shadow: 0 20px 60px rgba(15, 23, 42, .06);
+    box-shadow: 0 20px 60px rgba(124, 58, 237, .07);
   }
 
   .layer-3 {
-    box-shadow: 0 28px 80px rgba(15, 23, 42, .10);
+    box-shadow: 0 28px 80px rgba(124, 58, 237, .11);
   }
 
   .metric-value {
@@ -257,7 +257,7 @@
   }
 
   .page-eyebrow {
-    @apply text-[11px] font-bold uppercase tracking-[0.18em] text-teal-700;
+    @apply text-[11px] font-bold uppercase tracking-[0.18em] text-purple-700;
     font-family: var(--font-sans);
   }
 
@@ -269,8 +269,8 @@
 
   .medical-grid {
     background-image:
-      linear-gradient(rgba(13, 148, 136, .035) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(13, 148, 136, .035) 1px, transparent 1px);
+      linear-gradient(rgba(168, 85, 247, .04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(168, 85, 247, .04) 1px, transparent 1px);
     background-size: 24px 24px;
     background-attachment: fixed;
   }
@@ -326,7 +326,7 @@
     inset: 45% auto auto 50%;
     z-index: 9999;
     transform: translate(-50%, -50%) rotate(-28deg);
-    color: rgba(15, 118, 110, .09);
+    color: rgba(124, 58, 237, .09);
     font-family: var(--font-sans);
     font-size: 72px;
     font-weight: 700;

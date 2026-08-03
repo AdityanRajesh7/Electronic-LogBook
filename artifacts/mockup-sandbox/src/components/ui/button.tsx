@@ -11,13 +11,13 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "border border-teal-500/40 bg-gradient-to-r from-teal-600 via-teal-500 to-cyan-500 text-primary-foreground shadow-[0_14px_30px_rgba(13,148,136,0.18)]",
+          "border border-purple-500/35 bg-gradient-to-r from-[#e1b3ff] via-[#dbb0f6] to-[#e8c7fd] text-purple-950 shadow-[0_14px_30px_rgba(124,58,237,0.16)]",
         destructive:
           "border border-destructive/30 bg-destructive text-destructive-foreground shadow-[0_14px_30px_rgba(239,68,68,0.18)]",
         outline:
-          "border-[0.5px] bg-white/75 [border-color:var(--button-outline)] shadow-[0_12px_24px_rgba(15,23,42,0.04)] active:shadow-none",
+          "border-[0.5px] bg-white/82 [border-color:var(--button-outline)] shadow-[0_12px_24px_rgba(124,58,237,0.04)] active:shadow-none",
         secondary:
-          "border border-teal-100 bg-teal-50 text-teal-900 shadow-none",
+          "border border-purple-100 bg-purple-50 text-purple-900 shadow-none",
         ghost: "border border-transparent bg-transparent shadow-none",
         link: "text-primary underline-offset-4 hover:underline",
       },

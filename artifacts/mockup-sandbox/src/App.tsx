@@ -13,7 +13,8 @@ import { PostingsPage } from "@/components/pages/PostingsPage";
 import { AttendancePage } from "@/components/pages/AttendancePage";
 import { MilestonesPage } from "@/components/pages/MilestonesPage";
 import { AssessmentsPage } from "@/components/pages/AssessmentsPage";
-import { getCurrentUser } from "@/lib/session";
+import { PrintableLogbook } from "@/components/pages/PrintableLogbook";
+import { getCurrentUser, clearSession } from "@/lib/session";
 import { Toaster } from "@/components/ui/sonner";
 
 import { modules as discoveredModules } from "./.generated/mockup-components";
@@ -142,6 +143,10 @@ function App() {
     );
   }
 
+  if (window.location.pathname === "/print") {
+    return <PrintableLogbook />;
+  }
+
   if (!isAuthenticated) {
     if (authScreen === "register") {
       return (
@@ -174,22 +179,28 @@ function App() {
     <AppLayout
       activeRole={activeRole}
       onSignOut={() => {
-        window.sessionStorage.removeItem("elogbook-authenticated");
+        clearSession();
         setIsAuthenticated(false);
       }}
     >
       {activeRole === "Professor" && (
         <Switch>
           <Route path="/mentees" component={() => <ProfessorPortal activeTab="mentees" />} />
-          <Route path="/appraisals" component={() => <ProfessorPortal activeTab="appraisals" />} />
+          <Route path="/assessments" component={() => <ProfessorPortal activeTab="assessments" />} />
           <Route component={() => <ProfessorPortal activeTab="review-queue" />} />
         </Switch>
       )}
       {activeRole === "HOD" && (
         <Switch>
+          <Route path="/review-queue" component={() => <HODPortal activeTab="review-queue" />} />
+          <Route path="/roster" component={() => <HODPortal activeTab="roster" />} />
           <Route path="/student-access" component={() => <HODPortal activeTab="student-access" />} />
           <Route path="/professors" component={() => <HODPortal activeTab="professors" />} />
           <Route path="/leave-approvals" component={() => <HODPortal activeTab="leave-approvals" />} />
+          <Route path="/requirements" component={() => <HODPortal activeTab="requirements" />} />
+          {/* Legacy routes — redirect to merged Requirements tab */}
+          <Route path="/procedures" component={() => <HODPortal activeTab="requirements" />} />
+          <Route path="/settings" component={() => <HODPortal activeTab="requirements" />} />
           <Route component={() => <HODPortal activeTab="gap-dashboard" />} />
         </Switch>
       )}

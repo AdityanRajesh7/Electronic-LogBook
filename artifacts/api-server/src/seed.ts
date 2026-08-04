@@ -1,9 +1,8 @@
-
 import bcrypt from "bcryptjs";
 import { 
   db,
   departmentsTable, usersTable, studentsTable, 
-  caseLogsTable, procedureLogsTable, leaveTable
+  caseLogsTable, procedureLogsTable
 } from "@workspace/db";
 
 import { eq } from "drizzle-orm";
@@ -12,19 +11,27 @@ async function main() {
   console.log("Seeding database...");
 
   try {
-    // 1. Create or Find Department
-    let dept;
-    const existingDept = await db.select().from(departmentsTable).where(eq(departmentsTable.code, "PAED")).limit(1);
-    if (existingDept.length > 0) {
-      dept = existingDept[0];
-      console.log(`Found existing Department: ${dept.name}`);
-    } else {
-      [dept] = await db.insert(departmentsTable).values({
-        name: "Pediatrics",
-        code: "PAED",
-        description: "Department of Pediatrics"
-      }).returning();
-      console.log(`Created Department: ${dept.name}`);
+    // 1. Create or Find All Departments
+    const departments = [
+      { name: "Pediatrics", code: "PAED", description: "Department of Pediatrics" },
+      { name: "General Medicine", code: "MED", description: "Department of General Medicine" },
+      { name: "General Surgery", code: "SURG", description: "Department of General Surgery" },
+      { name: "Obstetrics & Gynecology", code: "OBGYN", description: "Department of Obstetrics & Gynecology" },
+      { name: "Orthopedics", code: "ORTHO", description: "Department of Orthopedics" },
+      { name: "Radiodiagnosis", code: "RADIO", description: "Department of Radiodiagnosis" }
+    ];
+
+    let paedDeptId;
+    for (const d of departments) {
+      const existing = await db.select().from(departmentsTable).where(eq(departmentsTable.code, d.code)).limit(1);
+      if (existing.length > 0) {
+        console.log(`Found existing Department: ${existing[0].name}`);
+        if (d.code === "PAED") paedDeptId = existing[0].id;
+      } else {
+        const [inserted] = await db.insert(departmentsTable).values(d).returning();
+        console.log(`Created Department: ${inserted.name}`);
+        if (d.code === "PAED") paedDeptId = inserted.id;
+      }
     }
 
     // 2. Create or Find HOD User
@@ -36,12 +43,12 @@ async function main() {
     } else {
       const hodHash = await bcrypt.hash("password123", 10);
       [hod] = await db.insert(usersTable).values({
-        fullName: "Dr. Mohamad (HOD)",
+        fullName: "Dr. Mohammed (HOD)",
         email: "hod@elogbook.com",
         passwordHash: hodHash,
         role: "hod",
         status: "approved",
-        departmentId: dept.id
+        departmentId: paedDeptId
       }).returning();
       console.log(`Created HOD: ${hod.fullName}`);
     }
@@ -60,7 +67,7 @@ async function main() {
         passwordHash: profHash,
         role: "professor",
         status: "approved",
-        departmentId: dept.id
+        departmentId: paedDeptId
       }).returning();
       console.log(`Created Professor: ${prof.fullName}`);
     }
@@ -79,7 +86,7 @@ async function main() {
         passwordHash: studentHash,
         role: "student",
         status: "approved",
-        departmentId: dept.id
+        departmentId: paedDeptId
       }).returning();
       console.log(`Created Student User: ${studentUser.fullName}`);
     }
@@ -112,21 +119,12 @@ async function main() {
       patientGender: "male",
       chiefComplaints: "Fever and cough since 3 days",
       diagnosisProvisional: "Acute Bronchiolitis",
+      diagnosisFinal: "Acute Bronchiolitis",
       status: "pending"
     });
     console.log("Created Mock Case Log");
 
-    // 7. Create Leave Request for HOD to Review
-    await db.insert(leaveTable).values({
-      studentId: studentProfile.id,
-      fromDate: new Date(),
-      toDate: new Date(Date.now() + 86400000 * 2),
-      totalDays: 2,
-      leaveType: "casual",
-      reason: "Family emergency",
-      status: "pending"
-    });
-    console.log("Created Mock Leave Request");
+
 
     console.log("Seeding complete! You can now log in with the following credentials:");
     console.log("- HOD: hod@elogbook.com / password123");

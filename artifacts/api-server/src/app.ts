@@ -26,7 +26,8 @@ app.use(
     },
   }),
 );
-app.use(cors({ origin: true, credentials: true }));
+const frontendUrl = process.env.FRONTEND_URL || "https://electronic-log-book-mockup-sandbox-six.vercel.app";
+app.use(cors({ origin: frontendUrl, credentials: true }));
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

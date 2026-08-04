@@ -23,7 +23,7 @@ type Thesis = {
 
 const initialThesis: Thesis = {
   topic: "Clinical profile and predictors of severe acute asthma in children admitted to a tertiary-care centre",
-  guide: "Dr. Mohamad",
+  guide: "Dr. Mohammed M T P",
   coGuide: "Dr. Mohammed",
   protocolSubmissionDate: "2025-08-12",
   iecClearanceDate: "2025-10-06",
@@ -38,11 +38,11 @@ export function MilestonesPage() {
   const [thesisOpen, setThesisOpen] = React.useState(false);
   const [certificateOpen, setCertificateOpen] = React.useState(false);
   const [certificates, setCertificates] = React.useState([
-    { number: 3, name: "PALS — Pediatric Advanced Life Support", provider: "Indian Academy of Pediatrics", expiry: "2027-10-15" },
-    { number: 2, name: "NRP — Neonatal Resuscitation Program", provider: "IAP", expiry: "2027-04-20" },
-    { number: 1, name: "BLS — Basic Life Support", provider: "AHA", expiry: "2026-12-01" },
+    { name: "PALS — Pediatric Advanced Life Support", provider: "Indian Academy of Pediatrics", dateIssued: "2027-10-15" },
+    { name: "NRP — Neonatal Resuscitation Program", provider: "IAP", dateIssued: "2027-04-20" },
+    { name: "BLS — Basic Life Support", provider: "AHA", dateIssued: "2026-12-01" },
   ]);
-  const [certificate, setCertificate] = React.useState({ name: "", provider: "", expiry: "2028-01-01" });
+  const [certificate, setCertificate] = React.useState({ name: "", provider: "", dateIssued: "2028-01-01" });
 
   const saveThesis = (event: React.FormEvent) => {
     event.preventDefault();
@@ -53,7 +53,7 @@ export function MilestonesPage() {
 
   const saveCertificate = (event: React.FormEvent) => {
     event.preventDefault();
-    setCertificates([{ number: certificates.length + 1, ...certificate }, ...certificates]);
+    setCertificates([...certificates, { ...certificate }]);
     setCertificateOpen(false);
     toast.success("Certificate added");
   };
@@ -74,11 +74,11 @@ export function MilestonesPage() {
         <p className="mt-2 text-sm text-slate-500">Track the complete thesis timeline and required life-support certificates.</p>
       </div>
 
-      <Card className="overflow-hidden border-teal-100">
-        <CardHeader className="flex flex-row items-start justify-between border-b border-teal-100 bg-gradient-to-r from-teal-50 to-cyan-50">
+      <Card className="overflow-hidden border-white/70 bg-white/76 layer-2">
+        <CardHeader className="flex flex-row items-start justify-between border-b border-white/70 bg-white/52 backdrop-blur-md">
           <div>
             <p className="page-eyebrow">Thesis milestone tracker</p>
-            <CardTitle className="mt-2 max-w-3xl text-2xl leading-8">{thesis.topic}</CardTitle>
+            <CardTitle className="mt-2 max-w-3xl text-2xl leading-8 text-slate-950">{thesis.topic}</CardTitle>
             <p className="mt-2 text-xs text-slate-600"><strong>Guide:</strong> {thesis.guide} &nbsp;•&nbsp; <strong>Co-guide:</strong> {thesis.coGuide}</p>
           </div>
           <Dialog open={thesisOpen} onOpenChange={setThesisOpen}>
@@ -102,7 +102,7 @@ export function MilestonesPage() {
         <CardContent className="p-6">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             {fields.map(([key, label], index) => (
-              <div key={key} className="relative rounded-2xl border border-teal-100 bg-white p-4">
+              <div key={key} className="relative rounded-[18px] border border-white/70 bg-white/80 p-4 shadow-[0_12px_26px_rgba(15,23,42,0.04)]">
                 <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-teal-600 text-xs font-bold text-white">{index + 1}</span>
                 <p className="mt-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">{label}</p>
                 <p className="mt-1 text-sm font-bold text-slate-900">{formatLogbookDate(thesis[key])}</p>
@@ -113,8 +113,8 @@ export function MilestonesPage() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between border-b border-teal-100">
+      <Card className="border-white/70 bg-white/76">
+        <CardHeader className="flex flex-row items-center justify-between border-b border-white/70">
           <CardTitle className="flex items-center gap-2 text-lg"><Award className="h-5 w-5 text-teal-600" /> Life-support certifications</CardTitle>
           <Dialog open={certificateOpen} onOpenChange={setCertificateOpen}>
             <DialogTrigger asChild><Button size="sm"><PlusCircle className="h-4 w-4" /> Add certificate</Button></DialogTrigger>
@@ -123,7 +123,7 @@ export function MilestonesPage() {
               <form onSubmit={saveCertificate} className="space-y-4">
                 <Field label="Certificate"><Input value={certificate.name} onChange={(e) => setCertificate({ ...certificate, name: e.target.value })} required /></Field>
                 <Field label="Issuing body"><Input value={certificate.provider} onChange={(e) => setCertificate({ ...certificate, provider: e.target.value })} required /></Field>
-                <Field label="Expiry date"><Input type="date" value={certificate.expiry} onChange={(e) => setCertificate({ ...certificate, expiry: e.target.value })} /></Field>
+                <Field label="Date issued"><Input type="date" value={certificate.dateIssued} onChange={(e) => setCertificate({ ...certificate, dateIssued: e.target.value })} /></Field>
                 <DialogFooter><Button type="button" variant="outline" onClick={() => setCertificateOpen(false)}>Cancel</Button><Button type="submit">Save certificate</Button></DialogFooter>
               </form>
             </DialogContent>
@@ -131,9 +131,9 @@ export function MilestonesPage() {
         </CardHeader>
         <CardContent className="p-0">
           <Table>
-            <TableHeader><TableRow><TableHead>Number</TableHead><TableHead>Certificate</TableHead><TableHead>Issuing body</TableHead><TableHead>Expiry date</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+            <TableHeader><TableRow><TableHead>Number</TableHead><TableHead>Certificate</TableHead><TableHead>Issuing body</TableHead><TableHead>Date issued</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
             <TableBody>
-              {certificates.map((item) => <TableRow key={item.number}><TableCell className="font-bold">{item.number}</TableCell><TableCell className="font-semibold"><span className="flex items-center gap-2"><FileText className="h-4 w-4 text-teal-600" /> {item.name}</span></TableCell><TableCell>{item.provider}</TableCell><TableCell>{formatLogbookDate(item.expiry)}</TableCell><TableCell><Badge className="border-emerald-200 bg-emerald-50 text-emerald-700"><CheckCircle2 className="mr-1 h-3 w-3" /> Active</Badge></TableCell></TableRow>)}
+              {certificates.map((item, idx) => <TableRow key={idx}><TableCell className="font-bold">{idx + 1}</TableCell><TableCell className="font-semibold"><span className="flex items-center gap-2"><FileText className="h-4 w-4 text-teal-600" /> {item.name}</span></TableCell><TableCell>{item.provider}</TableCell><TableCell>{formatLogbookDate(item.dateIssued)}</TableCell><TableCell><Badge className="border-emerald-200 bg-emerald-50 text-emerald-700"><CheckCircle2 className="mr-1 h-3 w-3" /> Active</Badge></TableCell></TableRow>)}
             </TableBody>
           </Table>
         </CardContent>

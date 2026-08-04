@@ -12,6 +12,10 @@ export class ApiError extends Error {
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 
+if (!import.meta.env.VITE_API_URL && import.meta.env.PROD) {
+  console.error("VITE_API_URL is not set — API requests will fail in production");
+}
+
 /**
  * Helper to retrieve the current user session (we are not using JWTs/Bearer tokens yet).
  * Note: This is a temporary mechanism until real auth is implemented.
@@ -53,6 +57,12 @@ async function fetchWithAuth(
 
   if (!response.ok) {
     let errorData;
+    const contentType = response.headers.get("content-type") || "";
+    if (!contentType.includes("application/json")) {
+      const text = await response.text();
+      throw new ApiError(response.status, `Non-JSON response: ${text.slice(0, 200)}`, null);
+    }
+
     try {
       errorData = await response.json();
     } catch {
@@ -65,6 +75,12 @@ async function fetchWithAuth(
   // Allow empty responses (e.g. 204 No Content)
   if (response.status === 204) {
     return null;
+  }
+
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) {
+    const text = await response.text();
+    throw new ApiError(response.status, `Non-JSON response: ${text.slice(0, 200)}`, null);
   }
 
   return response.json();

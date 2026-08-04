@@ -7,7 +7,7 @@ export const DEPARTMENTS = [
   "Radiodiagnosis",
 ] as const;
 
-export const DEPARTMENT_HOD = "Dr. Mohamad";
+export const DEPARTMENT_HOD = "Dr. Mohammed M T P";
 
 export const POSTING_OPTIONS = [
   "Ward Posting U1",
@@ -18,11 +18,11 @@ export const POSTING_OPTIONS = [
 ] as const;
 
 export const POSTING_CHIEFS: Record<(typeof POSTING_OPTIONS)[number], string> = {
-  "Ward Posting U1": "Dr. Mohamad",
-  "Ward Posting U2": "Dr. Mohamad",
-  PICU: "Dr. Mohammed",
-  NICU: "Dr. Urmila",
-  DRP: "Dr. Mohamad",
+  "Ward Posting U1": "Dr. Mohammed M T P",
+  "Ward Posting U2": "Dr. Mohammed M T P",
+  PICU: "Dr. Urmila K V",
+  NICU: "Dr. Reetha G",
+  DRP: "Dr. Mohammed M T P",
 };
 
 export const PROCEDURE_REQUIREMENTS = [

@@ -1,18 +1,18 @@
 import { Router, type IRouter } from "express";
-import { db, caseLogsTable, procedureLogsTable, academicLogsTable, studentsTable, usersTable, departmentsTable } from "@workspace/db";
-import { eq, and, inArray, count } from "drizzle-orm";
+import { db, caseLogsTable, procedureLogsTable, academicLogsTable, studentsTable, usersTable, departmentsTable, departmentConfigsTable } from "@workspace/db";
+import { eq, and, inArray, count, or } from "drizzle-orm";
+import { requireAuth, requireRole } from "../middlewares/auth.js";
 
 const router: IRouter = Router();
 
-const REQUIRED_CASES = 50;
-const REQUIRED_PROCS = 101;
-const REQUIRED_ACAD  = 50;
+// Both professors and HODs can access all routes in this router
+router.use(requireAuth, requireRole(["professor", "hod"]));
 
-function computeCompletion(cases: number, procs: number, acad: number) {
+function computeCompletion(cases: number, procs: number, acad: number, reqCases: number, reqProcs: number, reqAcad: number) {
   const score =
-    (Math.min(cases / REQUIRED_CASES, 1) +
-     Math.min(procs / REQUIRED_PROCS, 1) +
-     Math.min(acad / REQUIRED_ACAD, 1)) / 3;
+    (Math.min(cases / (reqCases || 1), 1) +
+     Math.min(procs / (reqProcs || 1), 1) +
+     Math.min(acad / (reqAcad || 1), 1)) / 3;
   return Math.round(score * 100);
 }
 
@@ -30,6 +30,13 @@ router.get("/:professorId/review-queue", async (req, res) => {
       return;
     }
 
+    // Caller must be the same user as the professorId param, or an HOD viewing their dept
+    const caller = req.user!;
+    if (caller.role !== "hod" && caller.id !== professorId) {
+      res.status(403).json({ message: "Forbidden" });
+      return;
+    }
+
     const profMatch = await db
       .select()
       .from(usersTable)
@@ -41,41 +48,71 @@ router.get("/:professorId/review-queue", async (req, res) => {
       return;
     }
 
-    const cases = await db.select({
+    const deptId = profMatch[0].departmentId;
+    const isHod = profMatch[0].role === "hod";
+
+    // For HOD: show all pending logs in their department.
+    // For professor: show only logs where they are the named supervisor.
+    const caseWhere = isHod && deptId != null
+      ? eq(caseLogsTable.status, "pending")   // dept-scoped below via join
+      : and(eq(caseLogsTable.supervisorId, professorId), eq(caseLogsTable.status, "pending"));
+
+    const procWhere = isHod && deptId != null
+      ? eq(procedureLogsTable.status, "pending")
+      : and(eq(procedureLogsTable.supervisorId, professorId), eq(procedureLogsTable.status, "pending"));
+
+    const acadWhere = isHod && deptId != null
+      ? eq(academicLogsTable.status, "pending")
+      : and(eq(academicLogsTable.supervisorId, professorId), eq(academicLogsTable.status, "pending"));
+
+    const caseQuery = db.select({
       log: caseLogsTable,
       student: studentsTable,
       user: usersTable,
       department: departmentsTable,
     })
     .from(caseLogsTable)
-    .where(and(eq(caseLogsTable.supervisorId, professorId), eq(caseLogsTable.status, "pending")))
+    .where(caseWhere)
     .innerJoin(studentsTable, eq(caseLogsTable.studentId, studentsTable.id))
     .innerJoin(usersTable, eq(studentsTable.userId, usersTable.id))
     .leftJoin(departmentsTable, eq(usersTable.departmentId, departmentsTable.id));
 
-    const procedures = await db.select({
+    // If HOD, filter to their department via the joined usersTable
+    const cases = isHod && deptId != null
+      ? await caseQuery.where(and(eq(caseLogsTable.status, "pending"), eq(usersTable.departmentId, deptId)))
+      : await caseQuery;
+
+    const procQuery = db.select({
       log: procedureLogsTable,
       student: studentsTable,
       user: usersTable,
       department: departmentsTable,
     })
     .from(procedureLogsTable)
-    .where(and(eq(procedureLogsTable.supervisorId, professorId), eq(procedureLogsTable.status, "pending")))
+    .where(procWhere)
     .innerJoin(studentsTable, eq(procedureLogsTable.studentId, studentsTable.id))
     .innerJoin(usersTable, eq(studentsTable.userId, usersTable.id))
     .leftJoin(departmentsTable, eq(usersTable.departmentId, departmentsTable.id));
 
-    const academics = await db.select({
+    const procedures = isHod && deptId != null
+      ? await procQuery.where(and(eq(procedureLogsTable.status, "pending"), eq(usersTable.departmentId, deptId)))
+      : await procQuery;
+
+    const acadQuery = db.select({
       log: academicLogsTable,
       student: studentsTable,
       user: usersTable,
       department: departmentsTable,
     })
     .from(academicLogsTable)
-    .where(and(eq(academicLogsTable.supervisorId, professorId), eq(academicLogsTable.status, "pending")))
+    .where(acadWhere)
     .innerJoin(studentsTable, eq(academicLogsTable.studentId, studentsTable.id))
     .innerJoin(usersTable, eq(studentsTable.userId, usersTable.id))
     .leftJoin(departmentsTable, eq(usersTable.departmentId, departmentsTable.id));
+
+    const academics = isHod && deptId != null
+      ? await acadQuery.where(and(eq(academicLogsTable.status, "pending"), eq(usersTable.departmentId, deptId)))
+      : await acadQuery;
 
     const pendingReviews = [
       ...cases.map(c => ({
@@ -128,9 +165,7 @@ router.get("/:professorId/review-queue", async (req, res) => {
       }))
     ];
 
-    // ── Mentees (all students in the professor's department) ──────────────────
-    const deptId = profMatch[0].departmentId;
-
+    // ── Mentees (all students in the professor's / HOD's department) ──────────
     let menteesData: any[] = [];
     if (deptId != null) {
       const studentsInDept = await db
@@ -146,7 +181,6 @@ router.get("/:professorId/review-queue", async (req, res) => {
         .leftJoin(departmentsTable, eq(usersTable.departmentId,   departmentsTable.id))
         .where(eq(usersTable.departmentId, deptId));
 
-      // Count only verified logs per student for Professor Portal evaluation
       const caseCountRows = await db
         .select({ studentId: caseLogsTable.studentId, cnt: count() })
         .from(caseLogsTable)
@@ -172,11 +206,16 @@ router.get("/:professorId/review-queue", async (req, res) => {
       const procMap = toMap(procCountRows as any);
       const acadMap = toMap(acadCountRows as any);
 
+      const [config] = await db.select().from(departmentConfigsTable).where(eq(departmentConfigsTable.departmentId, deptId));
+      const reqCases = config?.requiredCases || 50;
+      const reqProcs = config?.requiredProcedures || 101;
+      const reqAcad = config?.requiredAcademic || 50;
+
       menteesData = studentsInDept.map(s => {
         const cases = caseMap[s.studentId] ?? 0;
         const procs = procMap[s.studentId] ?? 0;
         const acad  = acadMap[s.studentId]  ?? 0;
-        const pct   = computeCompletion(cases, procs, acad);
+        const pct   = computeCompletion(cases, procs, acad, reqCases, reqProcs, reqAcad);
         return {
           id:                 s.studentId,
           name:               s.fullName,
@@ -190,6 +229,7 @@ router.get("/:professorId/review-queue", async (req, res) => {
     }
 
     res.json({
+      faculty: { name: profMatch[0].fullName, role: profMatch[0].role },
       pendingReviews,
       assignedMentees: menteesData,
     });

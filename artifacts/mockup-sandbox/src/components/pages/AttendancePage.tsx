@@ -15,6 +15,9 @@ import {
 import { CalendarDays, CheckCircle2, Clock, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { formatLogbookDate, todayForInput } from "@/lib/logbook-config";
+import { apiGet, apiPost } from "@/lib/apiClient";
+import { getCurrentUser } from "@/lib/session";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 
 type LeaveStatus = "pending" | "approved" | "rejected";
 
@@ -36,93 +39,97 @@ export function AttendancePage() {
   const [toDate, setToDate] = React.useState("2026-08-14");
   const [reason, setReason] = React.useState("");
 
-  const [leaves, setLeaves] = React.useState<LeaveRecord[]>([
-    {
-      number: 402,
-      appliedOn: "2026-07-27",
-      fromDate: "2026-08-12",
-      toDate: "2026-08-14",
-      totalDays: 3,
-      leaveType: "Academic Leave",
-      reason: "Attending National Paediatric Pulmonary Conference (IAP)",
-      status: "pending",
-      approvedBy: "Awaiting HOD",
-    },
-    {
-      number: 388,
-      appliedOn: "2026-06-04",
-      fromDate: "2026-06-10",
-      toDate: "2026-06-11",
-      totalDays: 2,
-      leaveType: "Casual Leave",
-      reason: "Personal leave",
-      status: "approved",
-      approvedBy: "Dr. Mohamad",
-    },
-    {
-      number: 371,
-      appliedOn: "2026-05-10",
-      fromDate: "2026-05-18",
-      toDate: "2026-05-18",
-      totalDays: 1,
-      leaveType: "Casual Leave",
-      reason: "Personal appointment",
-      status: "rejected",
-      approvedBy: "Dr. Mohamad",
-    },
-  ]);
+  const [leaves, setLeaves] = React.useState<LeaveRecord[]>([]);
+  const [balance, setBalance] = React.useState({
+    casual: { used: 0, total: 20 },
+    academic: { used: 0, total: 15 }
+  });
+  const user = React.useMemo(() => getCurrentUser(), []);
 
-  const handleApplyLeave = (e: React.FormEvent) => {
+  const fetchLeaves = React.useCallback(async () => {
+    if (!user?.studentProfileId) return;
+    try {
+      const [leavesResponse, balanceData] = await Promise.all([
+        apiGet(`/api/students/${user.studentProfileId}/leave-records`),
+        apiGet<{casual: any, academic: any}>(`/api/students/${user.studentProfileId}/leave-balance`)
+      ]);
+
+      // Backend wraps leave-records in { data: [] }
+      const leavesData: any[] = Array.isArray(leavesResponse) ? leavesResponse : (leavesResponse?.data ?? []);
+      
+      setLeaves(leavesData.map((l: any) => ({
+        number: l.id.toString(),
+        appliedOn: new Date(l.createdAt).toISOString(),
+        leaveType: l.leaveType === "casual" ? "Casual Leave" : l.leaveType === "academic" ? "Academic Leave" : l.leaveType,
+        fromDate: l.startDate,
+        toDate: l.endDate,
+        reason: l.reason,
+        status: l.status,
+        approvedBy: l.reviewedBy ? "HOD" : "Awaiting HOD",
+        totalDays: l.startDate && l.endDate ? Math.ceil((new Date(l.endDate).getTime() - new Date(l.startDate).getTime()) / (1000 * 3600 * 24)) + 1 : 1
+      })));
+
+      setBalance(balanceData);
+    } catch (error) {
+      console.error("Error fetching leave data:", error);
+      toast.error("Failed to load leave records");
+    }
+  }, [user?.studentProfileId]);
+
+  React.useEffect(() => {
+    fetchLeaves();
+  }, [fetchLeaves]);
+
+  const handleApplyLeave = async (e: React.FormEvent) => {
     e.preventDefault();
-    const totalDays = getInclusiveDays(fromDate, toDate);
+    const start = new Date(fromDate);
+    const end = new Date(toDate);
+    const totalDays = fromDate && toDate ? Math.ceil((end.getTime() - start.getTime()) / (1000 * 3600 * 24)) + 1 : 0;
 
     if (!reason || totalDays < 1) {
       toast.error("Enter a valid leave period and reason.");
       return;
     }
+    
+    if (!user?.studentProfileId) return;
 
-    const newLeave: LeaveRecord = {
-      number: Math.max(...leaves.map((leave) => leave.number)) + 1,
-      appliedOn: todayForInput(),
-      fromDate,
-      toDate,
-      totalDays,
-      leaveType,
-      reason,
-      status: "pending",
-      approvedBy: "Awaiting HOD",
-    };
-
-    setLeaves([newLeave, ...leaves]);
-    toast.success(`Leave application number ${newLeave.number} submitted`, {
-      description: `Sent to the HOD for approval (${formatLogbookDate(fromDate)} to ${formatLogbookDate(toDate)}).`,
-    });
-    setReason("");
+    try {
+      const payload = {
+        startDate: fromDate,
+        endDate: toDate,
+        leaveType: leaveType.split(" ")[0].toLowerCase(),
+        reason
+      };
+      await apiPost(`/api/students/${user.studentProfileId}/leave-records`, payload);
+      toast.success(`Leave application submitted`, {
+        description: `Sent to the HOD for approval.`,
+      });
+      setReason("");
+      fetchLeaves();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to submit leave application");
+    }
   };
 
-  const approvedCount = leaves.filter((leave) => leave.status === "approved").length;
   const pendingCount = leaves.filter((leave) => leave.status === "pending").length;
-  const approvedDays = leaves
-    .filter((leave) => leave.status === "approved")
-    .reduce((total, leave) => total + leave.totalDays, 0);
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="section-spacing pb-12">
       <div>
         <p className="page-eyebrow">Attendance administration</p>
         <h2 className="page-title mt-1">Leave records</h2>
         <p className="mt-2 text-sm text-slate-500">Apply for leave and maintain the complete HOD decision record.</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <SummaryCard label="Approved Applications" value={approvedCount} tone="teal" />
+      <div className="grid gap-4 md:grid-cols-3">
+        <SummaryCard label={`Casual Leave (${balance.casual.total}/yr)`} value={balance.casual.used} total={balance.casual.total} tone="teal" />
+        <SummaryCard label={`Academic Leave (${balance.academic.total}/yr)`} value={balance.academic.used} total={balance.academic.total} tone="teal" />
         <SummaryCard label="Pending Approval" value={pendingCount} tone="amber" />
-        <SummaryCard label="Approved Leave Days" value={approvedDays} tone="slate" />
       </div>
 
-      <Card className="border border-slate-200 bg-white">
-        <CardHeader className="border-b border-slate-100 pb-3">
-          <CardTitle className="text-sm font-bold text-slate-900">New Leave Application</CardTitle>
+      <Card className="border-white/70 bg-white/76">
+        <CardHeader className="border-b border-white/70 pb-3">
+          <CardTitle className="text-sm font-bold text-slate-950">New Leave Application</CardTitle>
         </CardHeader>
         <CardContent className="p-4">
           <form onSubmit={handleApplyLeave} className="space-y-4">
@@ -158,48 +165,58 @@ export function AttendancePage() {
                 required
               />
             </div>
-            <Button type="submit" className="bg-teal-600 text-xs font-semibold text-white hover:bg-teal-700">
+            <Button type="submit" className="bg-gradient-to-r from-teal-600 via-teal-500 to-cyan-500 text-xs font-semibold text-white shadow-[0_14px_30px_rgba(13,148,136,0.18)] hover:shadow-[0_18px_38px_rgba(13,148,136,0.24)]">
               Submit Leave Application
             </Button>
           </form>
         </CardContent>
       </Card>
 
-      <Card className="border border-slate-200 bg-white">
-        <CardHeader className="border-b border-slate-100 pb-3">
-          <CardTitle className="text-base font-bold text-slate-900">Leave Records</CardTitle>
+      <Card className="border-white/70 bg-white/76">
+        <CardHeader className="border-b border-white/70 pb-3">
+          <CardTitle className="text-base font-bold text-slate-950">Leave Records</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader className="bg-slate-50">
-              <TableRow>
-                <TableHead className="text-xs font-semibold">Application</TableHead>
-                <TableHead className="text-xs font-semibold">Leave Type</TableHead>
-                <TableHead className="text-xs font-semibold">Leave Period</TableHead>
-                <TableHead className="text-xs font-semibold">Reason</TableHead>
-                <TableHead className="text-xs font-semibold">HOD decision</TableHead>
-                <TableHead className="text-xs font-semibold">Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {leaves.map((leave) => (
-                <TableRow key={leave.number}>
-                  <TableCell className="py-3 text-xs font-bold text-slate-900">
-                    {leave.number}
-                    <p className="text-[10px] font-normal text-slate-400">Applied {formatLogbookDate(leave.appliedOn)}</p>
-                  </TableCell>
-                  <TableCell className="py-3 text-xs font-medium text-slate-700">{leave.leaveType}</TableCell>
-                  <TableCell className="py-3 text-xs text-slate-700">
-                    {formatLogbookDate(leave.fromDate)} to {formatLogbookDate(leave.toDate)}
-                    <p className="text-[10px] text-slate-400">{leave.totalDays} day(s)</p>
-                  </TableCell>
-                  <TableCell className="max-w-[260px] py-3 text-xs text-slate-600">{leave.reason}</TableCell>
-                  <TableCell className="py-3 text-xs text-slate-600">{leave.approvedBy}</TableCell>
-                  <TableCell className="py-3">{renderLeaveStatus(leave.status)}</TableCell>
+          {leaves.length === 0 ? (
+            <Empty className="py-14">
+              <EmptyHeader>
+                <EmptyMedia variant="icon"><CalendarDays className="h-6 w-6" /></EmptyMedia>
+                <EmptyTitle>No leave records yet</EmptyTitle>
+                <EmptyDescription>Submit a leave application to see HOD decisions, dates, and total days here.</EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs font-semibold">Application</TableHead>
+                  <TableHead className="text-xs font-semibold">Leave Type</TableHead>
+                  <TableHead className="text-xs font-semibold">Leave Period</TableHead>
+                  <TableHead className="text-xs font-semibold">Reason</TableHead>
+                  <TableHead className="text-xs font-semibold">HOD decision</TableHead>
+                  <TableHead className="text-xs font-semibold">Status</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {leaves.map((leave, idx) => (
+                  <TableRow key={leave.number}>
+                    <TableCell className="py-3 text-xs font-bold text-slate-950">
+                      {idx + 1}
+                      <p className="text-[10px] font-normal text-slate-400">Applied {formatLogbookDate(leave.appliedOn)}</p>
+                    </TableCell>
+                    <TableCell className="py-3 text-xs font-medium text-slate-700">{leave.leaveType}</TableCell>
+                    <TableCell className="py-3 text-xs text-slate-700">
+                      {formatLogbookDate(leave.fromDate)} to {formatLogbookDate(leave.toDate)}
+                      <p className="text-[10px] text-slate-400">{leave.totalDays} day(s)</p>
+                    </TableCell>
+                    <TableCell className="max-w-[260px] py-3 text-xs text-slate-600">{leave.reason}</TableCell>
+                    <TableCell className="py-3 text-xs text-slate-600">{leave.approvedBy}</TableCell>
+                    <TableCell className="py-3">{renderLeaveStatus(leave.status)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -213,17 +230,19 @@ function getInclusiveDays(fromDate: string, toDate: string) {
   return Math.floor((end - start) / 86_400_000) + 1;
 }
 
-function SummaryCard({ label, value, tone }: { label: string; value: number; tone: "teal" | "amber" | "slate" }) {
+function SummaryCard({ label, value, tone, total }: { label: string; value: number; tone: "teal" | "amber" | "slate", total?: number }) {
   const toneClass = {
-    teal: "border-teal-200 bg-teal-50 text-teal-900",
-    amber: "border-amber-200 bg-amber-50 text-amber-900",
-    slate: "border-slate-200 bg-white text-slate-900",
+    teal: "border-white/70 bg-white/76 text-teal-900",
+    amber: "border-white/70 bg-white/76 text-amber-900",
+    slate: "border-white/70 bg-white/76 text-slate-900",
   }[tone];
 
   return (
-    <div className={`rounded-xl border p-4 ${toneClass}`}>
-      <p className="text-2xl font-black">{value}</p>
-      <p className="text-[11px] font-semibold uppercase tracking-wide opacity-70">{label}</p>
+    <div className={`rounded-[18px] border p-4 shadow-[0_18px_48px_rgba(15,23,42,0.05)] ${toneClass}`}>
+      <p className="text-4xl font-semibold leading-none text-slate-950">
+        {value} <span className="text-sm font-semibold opacity-60">{total ? `/ ${total} used` : ""}</span>
+      </p>
+      <p className="mt-2 text-[11px] font-bold uppercase tracking-[0.18em] opacity-70">{label}</p>
     </div>
   );
 }

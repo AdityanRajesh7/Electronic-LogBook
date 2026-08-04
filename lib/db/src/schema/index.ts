@@ -3,10 +3,15 @@ export * from "./students.js";
 export * from "./postings.js";
 export * from "./logs.js";
 export * from "./attendance.js";
-export * from "./requirements.js";
+
 export * from "./progress.js";
 export * from "./audit.js";
 export * from "./leave.js";
 export * from "./certifications.js";
 export * from "./research.js";
 export * from "./appraisals.js";
+export * from "./assessments.js";
+export * from "./department_configs.js";
+export * from "./procedure_types.js";
+export * from "./otp.js";
+export * from "./password-resets.js";

@@ -6,6 +6,8 @@ import {
   BookOpenCheck,
   CalendarDays,
   ShieldCheck,
+  CheckCircle,
+  Loader2
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -13,6 +15,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DEPARTMENTS, expectedCompletionDate, formatLogbookDate, todayForInput } from "@/lib/logbook-config";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { apiPost } from "@/lib/apiClient";
 
 export function RegistrationPage({
   onBack,
@@ -32,32 +36,71 @@ export function RegistrationPage({
     confirmPassword: "",
   });
 
+  const [emailVerified, setEmailVerified] = React.useState(false);
+  const [otpSent, setOtpSent] = React.useState(false);
+  const [otp, setOtp] = React.useState("");
+  const [countdown, setCountdown] = React.useState(0);
+  const [sendingOtp, setSendingOtp] = React.useState(false);
+  const [verifyingOtp, setVerifyingOtp] = React.useState(false);
+
+  React.useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (countdown > 0) {
+      timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [countdown]);
+
   const completionDate = expectedCompletionDate(form.joiningDate);
   const joiningYear = form.joiningDate ? new Date(`${form.joiningDate}T00:00:00`).getFullYear() : "";
   const passwordsMatch = Boolean(form.password) && form.password === form.confirmPassword;
 
+  const sendOtp = async () => {
+    if (!form.email) return;
+    setSendingOtp(true);
+    try {
+      await apiPost("/api/auth/send-otp", { email: form.email });
+      setOtpSent(true);
+      setCountdown(60);
+      toast.success("Verification code sent to your email");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to send code");
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+
+  const verifyOtp = async () => {
+    if (!form.email || otp.length !== 6) return;
+    setVerifyingOtp(true);
+    try {
+      await apiPost("/api/auth/verify-otp", { email: form.email, otp });
+      setEmailVerified(true);
+      setOtpSent(false); // Hide OTP input on success
+      toast.success("Email successfully verified");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Invalid or expired code");
+    } finally {
+      setVerifyingOtp(false);
+    }
+  };
+
   const completeRegistration = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!passwordsMatch) return;
+    if (!passwordsMatch || !emailVerified) return;
     
     setSubmitting(true);
     try {
-      const response = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fullName: form.fullName,
-          email: form.email,
-          password: form.password,
-          registrationNumber: form.registrationNumber,
-          batch: joiningYear.toString(),
-          dateOfJoining: form.joiningDate,
-          kuhsId: `KUHS-${form.registrationNumber}`, // Mock KUHS ID for now
-          specialty: form.department,
-        }),
+      await apiPost("/api/auth/register", {
+        fullName: form.fullName,
+        email: form.email,
+        password: form.password,
+        registrationNumber: form.registrationNumber,
+        batch: joiningYear.toString(),
+        dateOfJoining: form.joiningDate,
+        kuhsId: `KUHS-${form.registrationNumber}`, // Mock KUHS ID for now
+        specialty: form.department,
       });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.message || "Registration could not be completed.");
       toast.success("Registration submitted", {
         description: `HOD verification is pending. You will be able to log in after approval.`,
       });
@@ -108,7 +151,52 @@ export function RegistrationPage({
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label="Full name" htmlFor="registration-full-name"><Input id="registration-full-name" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} required /></Field>
-                  <Field label="Email address" htmlFor="registration-email"><Input id="registration-email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required /></Field>
+                  
+                  <Field label="Email address" htmlFor="registration-email">
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Input 
+                          id="registration-email" 
+                          type="email" 
+                          value={form.email} 
+                          onChange={(e) => {
+                            setForm({ ...form, email: e.target.value });
+                            if (emailVerified || otpSent) {
+                              setEmailVerified(false);
+                              setOtpSent(false);
+                              setOtp("");
+                            }
+                          }} 
+                          required 
+                          disabled={emailVerified}
+                        />
+                        {emailVerified && <CheckCircle className="absolute right-3 top-2.5 h-4 w-4 text-emerald-500" />}
+                      </div>
+                      {!emailVerified && (
+                        <Button type="button" variant="outline" onClick={sendOtp} disabled={!form.email || sendingOtp || countdown > 0}>
+                          {sendingOtp ? <Loader2 className="h-4 w-4 animate-spin" /> : (countdown > 0 ? `Resend (${countdown}s)` : (otpSent ? "Resend" : "Send Code"))}
+                        </Button>
+                      )}
+                    </div>
+                    {otpSent && !emailVerified && (
+                      <div className="mt-3 flex flex-col gap-3 rounded-lg border bg-slate-50 p-3">
+                        <Label className="text-xs text-slate-600">Enter 6-digit code</Label>
+                        <div className="flex items-center gap-3">
+                          <InputOTP maxLength={6} value={otp} onChange={setOtp} disabled={verifyingOtp}>
+                            <InputOTPGroup>
+                              <InputOTPSlot index={0} /><InputOTPSlot index={1} /><InputOTPSlot index={2} />
+                              <InputOTPSlot index={3} /><InputOTPSlot index={4} /><InputOTPSlot index={5} />
+                            </InputOTPGroup>
+                          </InputOTP>
+                          <Button type="button" size="sm" onClick={verifyOtp} disabled={otp.length !== 6 || verifyingOtp}>
+                            {verifyingOtp && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Verify
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </Field>
+
                   <Field label="Department" htmlFor="registration-department">
                     <Select value={form.department} onValueChange={(department) => setForm({ ...form, department })}>
                       <SelectTrigger id="registration-department"><SelectValue /></SelectTrigger>
@@ -130,9 +218,12 @@ export function RegistrationPage({
                     {form.confirmPassword && !passwordsMatch && <p className="text-[10px] text-rose-600">Passwords do not match.</p>}
                   </Field>
                 </div>
-                <Button type="submit" disabled={!passwordsMatch || submitting} className="w-full sm:w-auto">
-                   {submitting ? "Submitting Registration..." : "Complete Registration"} <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center mt-6">
+                  <Button type="submit" disabled={!passwordsMatch || submitting || !emailVerified} className="w-full sm:w-auto">
+                    {submitting ? "Submitting Registration..." : "Complete Registration"} <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                  {!emailVerified && <p className="text-xs font-medium text-slate-500">Please verify your email to continue</p>}
+                </div>
               </form>
           </main>
         </div>

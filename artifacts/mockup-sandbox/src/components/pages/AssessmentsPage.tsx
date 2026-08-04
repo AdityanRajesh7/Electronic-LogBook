@@ -1,62 +1,100 @@
 import * as React from "react";
-import { ClipboardCheck, PlusCircle, TrendingUp } from "lucide-react";
-import { toast } from "sonner";
+import { ClipboardCheck, TrendingUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatLogbookDate, todayForInput } from "@/lib/logbook-config";
+import { formatLogbookDate } from "@/lib/logbook-config";
+import { apiGet } from "@/lib/apiClient";
+import { getCurrentUser } from "@/lib/session";
+import { toast } from "sonner";
 
 type Assessment = {
   number: number;
-  type: "Quarterly" | "Annual";
+  examName: string;
+  type: string;
   date: string;
   marks: number;
   maximum: number;
-  assessor: string;
-  remarks: string;
+  assessorId: number;
+  assessorName: string;
 };
 
 export function AssessmentsPage() {
-  const [open, setOpen] = React.useState(false);
+  const [assessments, setAssessments] = React.useState<Assessment[]>([]);
+  const user = React.useMemo(() => getCurrentUser(), []);
+  const [loading, setLoading] = React.useState(false);
+
+  const fetchAssessments = React.useCallback(async () => {
+    if (!user?.studentProfileId) return;
+    setLoading(true);
+    try {
+      const data = await apiGet(`/api/students/${user.studentProfileId}/assessments`);
+      setAssessments(data || []);
+    } catch (e) {
+      toast.error("Failed to fetch assessments");
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.studentProfileId]);
+
+  React.useEffect(() => {
+    fetchAssessments();
+  }, [fetchAssessments]);
 
   return (
     <div className="space-y-6 pb-12">
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
-          <p className="page-eyebrow flex items-center gap-2">
-            Training progress
-            <Badge variant="secondary" className="h-4 px-1.5 text-[9px] bg-amber-100 text-amber-800 border-0 hover:bg-amber-100 rounded-sm">Demo data — not yet persisted</Badge>
-          </p>
-          <h2 className="page-title mt-1 text-slate-400">Assessments</h2>
-          <p className="mt-2 text-sm text-slate-400 italic">Assessment tracking is coming soon.</p>
+          <p className="page-eyebrow flex items-center gap-2">Training progress</p>
+          <h2 className="page-title mt-1">Assessments</h2>
+          <p className="mt-2 text-sm text-slate-500">Your quarterly and annual assessment results, entered by your faculty assessor.</p>
         </div>
-        <Button disabled className="opacity-50 cursor-not-allowed" title="Assessment tracking coming soon">
-          <PlusCircle className="h-4 w-4 mr-2" /> Add assessment
-        </Button>
       </div>
 
-      <div className="flex flex-col items-center justify-center p-12 text-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/50">
-        <ClipboardCheck className="h-12 w-12 text-slate-300 mb-4" />
-        <h3 className="text-lg font-bold text-slate-700">Assessment Module Not Available</h3>
-        <p className="mt-2 max-w-md text-sm text-slate-500">
-          The ability to log and track quarterly/annual assessments is not yet implemented. This page will be available in a future update once the backend schema is finalized.
-        </p>
-      </div>
+      <Card className="border-white/70 bg-white/76">
+        <CardHeader className="border-b border-white/70">
+          <CardTitle className="text-lg">Assessment Records</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {loading ? (
+             <div className="p-8 text-center text-slate-500">Loading...</div>
+          ) : assessments.length === 0 ? (
+            <Empty className="py-14">
+              <EmptyHeader>
+                <EmptyMedia variant="icon"><ClipboardCheck className="h-6 w-6" /></EmptyMedia>
+                <EmptyTitle>No assessments recorded</EmptyTitle>
+                <EmptyDescription>Assessment scores will appear here once your professor enters them.</EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          ) : (
+            <Table>
+              <TableHeader className="bg-slate-50">
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Exam Name</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Marks</TableHead>
+                  <TableHead>Assessed By</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {assessments.map((item) => (
+                  <TableRow key={item.number}>
+                    <TableCell className="font-medium text-slate-900">{formatLogbookDate(item.date)}</TableCell>
+                    <TableCell>{item.examName}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="capitalize">{item.type}</Badge>
+                    </TableCell>
+                    <TableCell className="font-bold text-slate-900">{item.marks} / {item.maximum}</TableCell>
+                    <TableCell>{item.assessorName}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
-
-

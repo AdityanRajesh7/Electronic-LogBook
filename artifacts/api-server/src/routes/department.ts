@@ -1,20 +1,33 @@
 import { Router, type IRouter } from "express";
-import { db, usersTable, departmentsTable, studentsTable, caseLogsTable, procedureLogsTable, academicLogsTable } from "@workspace/db";
+import { db, usersTable, departmentsTable, studentsTable, caseLogsTable, procedureLogsTable, academicLogsTable, departmentConfigsTable } from "@workspace/db";
 import { eq, and, inArray, count, sql } from "drizzle-orm";
 
 const router: IRouter = Router();
 
-const REQUIRED_CASES = 50;
-const REQUIRED_PROCS = 101;
-const REQUIRED_ACAD  = 50;
-
-function computeCompletion(cases: number, procs: number, acad: number) {
+function computeCompletion(cases: number, procs: number, acad: number, reqCases: number, reqProcs: number, reqAcad: number) {
   const score =
-    (Math.min(cases / REQUIRED_CASES, 1) +
-     Math.min(procs / REQUIRED_PROCS, 1) +
-     Math.min(acad / REQUIRED_ACAD, 1)) / 3;
+    (Math.min(cases / (reqCases || 1), 1) +
+     Math.min(procs / (reqProcs || 1), 1) +
+     Math.min(acad / (reqAcad || 1), 1)) / 3;
   return Math.round(score * 100);
 }
+
+// GET /api/departments/:departmentId/config
+router.get("/:departmentId/config", async (req, res) => {
+  try {
+    const departmentId = parseInt(req.params.departmentId, 10);
+    if (isNaN(departmentId)) {
+      res.status(400).json({ message: "Invalid departmentId" });
+      return;
+    }
+
+    const [config] = await db.select().from(departmentConfigsTable).where(eq(departmentConfigsTable.departmentId, departmentId));
+    res.json(config || { requiredCases: 50, requiredProcedures: 101, requiredAcademic: 50 });
+  } catch (error) {
+    req.log.error(error, "Error fetching department config");
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
 
 router.get("/:departmentId/professors", async (req, res) => {
   try {
@@ -141,8 +154,13 @@ router.get("/:departmentId/analytics", async (req, res) => {
       const procMap = toMap(procRows2 as any);
       const acadMap = toMap(acadRows as any);
 
+      const [config] = await db.select().from(departmentConfigsTable).where(eq(departmentConfigsTable.departmentId, departmentId));
+      const reqCases = config?.requiredCases || 50;
+      const reqProcs = config?.requiredProcedures || 101;
+      const reqAcad = config?.requiredAcademic || 50;
+
       const completions = studentsInDept.map(s =>
-        computeCompletion(caseMap[s.studentId] ?? 0, procMap[s.studentId] ?? 0, acadMap[s.studentId] ?? 0)
+        computeCompletion(caseMap[s.studentId] ?? 0, procMap[s.studentId] ?? 0, acadMap[s.studentId] ?? 0, reqCases, reqProcs, reqAcad)
       );
       avgCompletion = completions.length > 0
         ? Math.round(completions.reduce((a, b) => a + b, 0) / completions.length)

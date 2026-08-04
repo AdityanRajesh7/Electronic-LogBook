@@ -20,6 +20,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { Kbd } from "@/components/ui/kbd";
 import { formatLogbookDate, todayForInput } from "@/lib/logbook-config";
 
 type CaseLog = {
@@ -117,7 +118,7 @@ export function CaseLogsPage() {
         examination: form.examination,
         investigations: form.investigations,
         diagnosisProvisional: form.diagnosis,
-        diagnosisFinal: form.differentialDiagnosis, // reuse field for now or keep blank
+        diagnosisFinal: form.diagnosis, 
         differentialDiagnosis: form.differentialDiagnosis,
         managementPlan: form.management,
         outcome: form.outcome,
@@ -174,7 +175,7 @@ export function CaseLogsPage() {
             <form onSubmit={handleAddCase} className="space-y-5">
               <div className="grid gap-4 sm:grid-cols-4">
                 <Field label="Date"><Input type="date" value={form.date} onChange={(e) => setField("date", e.target.value)} required /></Field>
-                <Field label="Patient UHID"><Input value={form.patientUhid} onChange={(e) => setField("patientUhid", e.target.value)} placeholder="UHID-2026-…" required /></Field>
+                <Field label="Patient UHID"><Input value={form.patientUhid} onChange={(e) => setField("patientUhid", e.target.value)} placeholder="UHID-2026-…" /></Field>
                 <Field label="Age"><Input value={form.age} onChange={(e) => setField("age", e.target.value)} placeholder="e.g. 7 years" required /></Field>
                 <Field label="Gender">
                   <Select value={form.gender} onValueChange={(value) => setField("gender", value)}>
@@ -183,17 +184,17 @@ export function CaseLogsPage() {
                   </Select>
                 </Field>
               </div>
-              <Field label="Chief complaints"><Textarea rows={2} value={form.chiefComplaints} onChange={(e) => setField("chiefComplaints", e.target.value)} required /></Field>
-              <Field label="Relevant history"><Textarea rows={3} value={form.history} onChange={(e) => setField("history", e.target.value)} required /></Field>
-              <Field label="Clinical examination"><Textarea rows={3} value={form.examination} onChange={(e) => setField("examination", e.target.value)} required /></Field>
-              <Field label="Investigations"><Textarea rows={2} value={form.investigations} onChange={(e) => setField("investigations", e.target.value)} required /></Field>
+              <Field label="Chief complaints"><Textarea rows={2} value={form.chiefComplaints} onChange={(e) => setField("chiefComplaints", e.target.value)} /></Field>
+              <Field label="Relevant history"><Textarea rows={3} value={form.history} onChange={(e) => setField("history", e.target.value)} /></Field>
+              <Field label="Clinical examination"><Textarea rows={3} value={form.examination} onChange={(e) => setField("examination", e.target.value)} /></Field>
+              <Field label="Investigations"><Textarea rows={2} value={form.investigations} onChange={(e) => setField("investigations", e.target.value)} /></Field>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Final diagnosis"><Input value={form.diagnosis} onChange={(e) => setField("diagnosis", e.target.value)} required /></Field>
                 <Field label="Differential diagnosis"><Input value={form.differentialDiagnosis} onChange={(e) => setField("differentialDiagnosis", e.target.value)} /></Field>
               </div>
-              <Field label="Management and interventions"><Textarea rows={3} value={form.management} onChange={(e) => setField("management", e.target.value)} required /></Field>
+              <Field label="Management and interventions"><Textarea rows={3} value={form.management} onChange={(e) => setField("management", e.target.value)} /></Field>
               <Field label="Outcome / follow-up"><Textarea rows={2} value={form.outcome} onChange={(e) => setField("outcome", e.target.value)} /></Field>
-              <Field label="Learning points"><Textarea rows={2} value={form.learningPoints} onChange={(e) => setField("learningPoints", e.target.value)} required /></Field>
+              <Field label="Learning points"><Textarea rows={2} value={form.learningPoints} onChange={(e) => setField("learningPoints", e.target.value)} /></Field>
               <Field label="Reviewing professor">
                 <Select value={form.supervisorId} onValueChange={(value) => setField("supervisorId", value)}>
                   <SelectTrigger><SelectValue placeholder="Select a professor" /></SelectTrigger>
@@ -218,7 +219,12 @@ export function CaseLogsPage() {
         <CardHeader className="flex flex-col justify-between gap-4 border-b border-teal-100 md:flex-row md:items-center">
           <div className="relative w-full max-w-md">
             <Search className="absolute left-3 top-3 h-4 w-4 text-teal-600" />
-            <Input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" placeholder="Search number, diagnosis, UHID or complaint…" />
+            <Input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="h-11 pl-9 pr-24" placeholder="Search patient, UHID or diagnosis..." />
+            <div className="pointer-events-none absolute right-3 top-2.5 flex items-center gap-1">
+              <Kbd>Ctrl</Kbd>
+              <span className="text-[10px] text-slate-400">+</span>
+              <Kbd>K</Kbd>
+            </div>
           </div>
           <Badge variant="outline" className="w-fit border-teal-100 bg-teal-50 px-3 py-1 text-teal-800">{caseLogs.length} of 50 cases logged</Badge>
         </CardHeader>
@@ -229,8 +235,14 @@ export function CaseLogsPage() {
               <p className="text-sm font-medium text-slate-500">Loading cases...</p>
             </div>
           ) : filteredLogs.length === 0 ? (
-            <div className="flex h-48 flex-col items-center justify-center space-y-4 text-slate-500">
-              <p>No cases found.</p>
+            <div className="flex h-56 flex-col items-center justify-center space-y-4 text-slate-500">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-50 text-teal-700">
+                <FileText className="h-6 w-6" />
+              </div>
+              <div className="space-y-1 text-center">
+                <p className="text-base font-semibold text-slate-950">No cases found</p>
+                <p className="max-w-sm text-sm leading-6 text-slate-500">Try a different UHID, diagnosis, or case number, or clear the search to see all records.</p>
+              </div>
             </div>
           ) : (
             <Table>

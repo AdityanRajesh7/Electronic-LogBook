@@ -197,6 +197,10 @@ function App() {
           <Route path="/student-access" component={() => <HODPortal activeTab="student-access" />} />
           <Route path="/professors" component={() => <HODPortal activeTab="professors" />} />
           <Route path="/leave-approvals" component={() => <HODPortal activeTab="leave-approvals" />} />
+          <Route path="/requirements" component={() => <HODPortal activeTab="requirements" />} />
+          {/* Legacy routes — redirect to merged Requirements tab */}
+          <Route path="/procedures" component={() => <HODPortal activeTab="requirements" />} />
+          <Route path="/settings" component={() => <HODPortal activeTab="requirements" />} />
           <Route component={() => <HODPortal activeTab="gap-dashboard" />} />
         </Switch>
       )}

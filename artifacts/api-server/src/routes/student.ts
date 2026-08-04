@@ -305,7 +305,11 @@ router.post("/:studentId/leave-records", async (req, res) => {
     const studentId = parseInt(req.params.studentId, 10);
     const { fromDate, toDate, leaveType, reason, startDate, endDate } = req.body;
     
-    const type = ["casual", "academic"].includes(leaveType?.toLowerCase()) ? leaveType.toLowerCase() : "casual";
+    let type = "casual";
+    const rawType = leaveType?.toLowerCase();
+    if (rawType === "academic") type = "academic";
+    else if (rawType === "medical") type = "medical";
+    else if (rawType === "maternity" || rawType === "maternity_paternity") type = "maternity_paternity";
 
     const [inserted] = await db.insert(leaveRecordsTable).values({
       studentId,

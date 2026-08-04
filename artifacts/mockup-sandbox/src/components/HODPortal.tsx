@@ -69,8 +69,10 @@ const paths: Record<string, string> = {
   "leave-approvals": "/leave-approvals",
   "professors": "/professors",
   "roster": "/roster",
-  "settings": "/settings",
-  "procedures": "/procedures",
+  "requirements": "/requirements",
+  // Legacy aliases so old links still resolve to the merged tab
+  "settings": "/requirements",
+  "procedures": "/requirements",
 };
 
 export function HODPortal({ activeTab = "gap-dashboard" }: { activeTab?: string }) {
@@ -79,6 +81,9 @@ export function HODPortal({ activeTab = "gap-dashboard" }: { activeTab?: string 
   const [pendingStudents, setPendingStudents] = React.useState<Registration[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [analyticsError, setAnalyticsError] = React.useState<string | null>(null);
+  const [studentsError, setStudentsError] = React.useState<string | null>(null);
+  const [leavesError, setLeavesError] = React.useState<string | null>(null);
 
   const [roster, setRoster] = React.useState<{ students: any[]; professors: any[] } | null>(null);
   const [rosterLoading, setRosterLoading] = React.useState(false);
@@ -102,6 +107,9 @@ export function HODPortal({ activeTab = "gap-dashboard" }: { activeTab?: string 
   const fetchData = React.useCallback(async () => {
     setLoading(true);
     setError(null);
+    setAnalyticsError(null);
+    setStudentsError(null);
+    setLeavesError(null);
     try {
       const user = getCurrentUser();
       if (!user) {
@@ -114,6 +122,7 @@ export function HODPortal({ activeTab = "gap-dashboard" }: { activeTab?: string 
         setPendingStudents(students);
       } catch (err) {
         console.warn("Could not fetch pending students", err);
+        setStudentsError("Could not load pending students");
       }
 
       try {
@@ -121,6 +130,7 @@ export function HODPortal({ activeTab = "gap-dashboard" }: { activeTab?: string 
         setLeaves(pendingLeaves);
       } catch (err) {
         console.warn("Could not fetch pending leaves", err);
+        setLeavesError("Could not load pending leaves");
       }
 
       try {
@@ -141,11 +151,7 @@ export function HODPortal({ activeTab = "gap-dashboard" }: { activeTab?: string 
         const data = await apiGet<AnalyticsData>(`/api/departments/${user.departmentId}/analytics`);
         setAnalyticsData(data);
       } catch (err) {
-        setAnalyticsData({
-          totalStudents: 15, avgCompletion: 42,
-          logStats: { pending: 10, verified: 45, rejected: 2 },
-          topProcedures: [{ name: "Intubation", count: 20 }]
-        });
+        setAnalyticsError("Could not load analytics");
       }
     } catch (err: any) {
       setError(err.message || "Failed to load dashboard.");
@@ -275,11 +281,15 @@ export function HODPortal({ activeTab = "gap-dashboard" }: { activeTab?: string 
           <TabsTrigger value="student-access"><Users className="h-4 w-4 mr-2" /> Pending Students</TabsTrigger>
           <TabsTrigger value="professors"><UserPlus className="h-4 w-4 mr-2" /> Add Professor</TabsTrigger>
           <TabsTrigger value="leave-approvals"><Clock3 className="h-4 w-4 mr-2" /> Leave approvals</TabsTrigger>
-          <TabsTrigger value="procedures"><Syringe className="h-4 w-4 mr-2" /> Procedures</TabsTrigger>
-          <TabsTrigger value="settings"><Settings className="h-4 w-4 mr-2" /> Settings</TabsTrigger>
+          <TabsTrigger value="requirements"><Settings className="h-4 w-4 mr-2" /> Requirements</TabsTrigger>
         </TabsList>
 
         <TabsContent value="gap-dashboard" className="space-y-4 pt-4">
+          {analyticsError && (
+            <div className="p-4 bg-rose-50 text-rose-700 rounded-md border border-rose-200">
+              {analyticsError}
+            </div>
+          )}
           <div className="grid gap-4 md:grid-cols-3">
             <Overview label="Procedure target" value={String(deptConfig.requiredProcedures)} note="Total procedures required" icon={UserCheck} />
             <Overview label="Case discussions" value={String(deptConfig.requiredCases)} note="Total cases required" icon={CheckCircle2} />
@@ -381,7 +391,9 @@ export function HODPortal({ activeTab = "gap-dashboard" }: { activeTab?: string 
               <CardTitle className="text-xl">Pending Student Approvals</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              {pendingStudents.length === 0 ? (
+              {studentsError ? (
+                <p className="p-6 text-center text-sm text-red-500 font-medium">{studentsError}</p>
+              ) : pendingStudents.length === 0 ? (
                 <p className="p-6 text-center text-sm text-slate-500">No pending student registrations.</p>
               ) : (
                 <Table>
@@ -448,7 +460,9 @@ export function HODPortal({ activeTab = "gap-dashboard" }: { activeTab?: string 
               <CardTitle className="text-xl">Pending leave requests</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              {leaves.length === 0 ? (
+              {leavesError ? (
+                <p className="p-6 text-center text-sm text-red-500 font-medium">{leavesError}</p>
+              ) : leaves.length === 0 ? (
                 <p className="p-6 text-center text-sm text-slate-500">No pending leave requests.</p>
               ) : (
                 <Table>
@@ -475,83 +489,93 @@ export function HODPortal({ activeTab = "gap-dashboard" }: { activeTab?: string 
           </Card>
         </TabsContent>
 
-        <TabsContent value="procedures" className="space-y-4 pt-4">
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card>
-              <CardHeader className="border-b border-teal-100">
-                <CardTitle className="text-xl">Add New Procedure</CardTitle>
-              </CardHeader>
-              <CardContent className="p-5">
-                <form onSubmit={handleAddProcedure} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Procedure Name</Label>
-                    <Input value={procForm.name} onChange={(e) => setProcForm({...procForm, name: e.target.value})} required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Procedure Group</Label>
-                    <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" value={procForm.group} onChange={(e) => setProcForm({...procForm, group: e.target.value})} required>
-                      <option value="emergency">Emergency / Core</option>
-                      <option value="invasive">Invasive / Specialized</option>
-                      <option value="general">General / Routine</option>
-                    </select>
-                  </div>
-                  <Button type="submit" disabled={addingProc} className="w-full">
-                    <Syringe className="h-4 w-4 mr-2" /> {addingProc ? "Adding..." : "Add Procedure"}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
+        <TabsContent value="requirements" className="space-y-6 pt-4">
+          <div className="grid gap-6 lg:grid-cols-2">
+            {/* Left column: Department target settings */}
+            <div className="space-y-4">
+              <Card>
+                <CardHeader className="border-b border-teal-100">
+                  <CardTitle className="text-xl flex items-center gap-2">
+                    <Settings className="h-5 w-5 text-teal-600" /> Department Targets
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-5">
+                  <form onSubmit={handleSaveConfig} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Required Case Discussions (per resident)</Label>
+                      <Input type="number" min="0" value={deptConfig.requiredCases} onChange={(e) => setDeptConfig({...deptConfig, requiredCases: parseInt(e.target.value, 10) || 0})} required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Required Procedures (per resident)</Label>
+                      <Input type="number" min="0" value={deptConfig.requiredProcedures} onChange={(e) => setDeptConfig({...deptConfig, requiredProcedures: parseInt(e.target.value, 10) || 0})} required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Required Academic Presentations (per resident)</Label>
+                      <Input type="number" min="0" value={deptConfig.requiredAcademic} onChange={(e) => setDeptConfig({...deptConfig, requiredAcademic: parseInt(e.target.value, 10) || 0})} required />
+                    </div>
+                    <Button type="submit" disabled={savingConfig} className="w-full">
+                      <Settings className="h-4 w-4 mr-2" /> {savingConfig ? "Saving..." : "Save Settings"}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            </div>
 
-            <Card>
-              <CardHeader className="border-b border-teal-100">
-                <CardTitle className="text-xl">Existing Procedures</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                {procedures.length === 0 ? (
-                  <p className="p-6 text-center text-sm text-slate-500">No custom procedures defined.</p>
-                ) : (
-                  <Table>
-                    <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Group</TableHead></TableRow></TableHeader>
-                    <TableBody>
-                      {procedures.map((p) => (
-                        <TableRow key={p.id}>
-                          <TableCell className="font-medium">{p.name}</TableCell>
-                          <TableCell className="capitalize">{p.group}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
-              </CardContent>
-            </Card>
+            {/* Right column: Procedure management */}
+            <div className="space-y-4">
+              <Card>
+                <CardHeader className="border-b border-teal-100">
+                  <CardTitle className="text-xl flex items-center gap-2">
+                    <Syringe className="h-5 w-5 text-teal-600" /> Add Procedure Type
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-5">
+                  <form onSubmit={handleAddProcedure} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Procedure Name</Label>
+                      <Input value={procForm.name} onChange={(e) => setProcForm({...procForm, name: e.target.value})} required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Procedure Group</Label>
+                      <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" value={procForm.group} onChange={(e) => setProcForm({...procForm, group: e.target.value})} required>
+                        <option value="emergency">Emergency / Core</option>
+                        <option value="invasive">Invasive / Specialized</option>
+                        <option value="general">General / Routine</option>
+                      </select>
+                    </div>
+                    <Button type="submit" disabled={addingProc} className="w-full">
+                      <Syringe className="h-4 w-4 mr-2" /> {addingProc ? "Adding..." : "Add Procedure"}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="border-b border-teal-100">
+                  <CardTitle className="text-xl flex items-center gap-2">
+                    <BookOpen className="h-5 w-5 text-teal-600" /> Existing Procedures
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  {procedures.length === 0 ? (
+                    <p className="p-6 text-center text-sm text-slate-500">No custom procedures defined.</p>
+                  ) : (
+                    <Table>
+                      <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Group</TableHead></TableRow></TableHeader>
+                      <TableBody>
+                        {procedures.map((p) => (
+                          <TableRow key={p.id}>
+                            <TableCell className="font-medium">{p.name}</TableCell>
+                            <TableCell className="capitalize">{p.group}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </div>
-        </TabsContent>
-
-        <TabsContent value="settings" className="space-y-4 pt-4">
-          <Card className="max-w-xl">
-            <CardHeader className="border-b border-teal-100">
-              <CardTitle className="text-xl">Department Target Settings</CardTitle>
-            </CardHeader>
-            <CardContent className="p-5">
-              <form onSubmit={handleSaveConfig} className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Required Number of Case Discussions (per resident)</Label>
-                  <Input type="number" min="0" value={deptConfig.requiredCases} onChange={(e) => setDeptConfig({...deptConfig, requiredCases: parseInt(e.target.value, 10) || 0})} required />
-                </div>
-                <div className="space-y-2">
-                  <Label>Required Number of Procedures (per resident)</Label>
-                  <Input type="number" min="0" value={deptConfig.requiredProcedures} onChange={(e) => setDeptConfig({...deptConfig, requiredProcedures: parseInt(e.target.value, 10) || 0})} required />
-                </div>
-                <div className="space-y-2">
-                  <Label>Required Academic Presentations (per resident)</Label>
-                  <Input type="number" min="0" value={deptConfig.requiredAcademic} onChange={(e) => setDeptConfig({...deptConfig, requiredAcademic: parseInt(e.target.value, 10) || 0})} required />
-                </div>
-                <Button type="submit" disabled={savingConfig} className="w-full">
-                  <Settings className="h-4 w-4 mr-2" /> {savingConfig ? "Saving..." : "Save Settings"}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
         </TabsContent>
       </Tabs>
     </div>

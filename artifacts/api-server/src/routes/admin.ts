@@ -119,7 +119,6 @@ router.get("/leaves/pending", async (req, res) => {
         number: leaveRecordsTable.id, // for frontend compat
         fromDate: leaveRecordsTable.startDate,
         toDate: leaveRecordsTable.endDate,
-        totalDays: leaveRecordsTable.id, // mock or use sql date_part
         type: leaveRecordsTable.leaveType,
         reason: leaveRecordsTable.reason,
         status: leaveRecordsTable.status,
@@ -131,7 +130,14 @@ router.get("/leaves/pending", async (req, res) => {
       .innerJoin(usersTable, eq(studentsTable.userId, usersTable.id))
       .where(eq(leaveRecordsTable.status, "pending"));
 
-    res.json(pendingLeaves);
+    const mappedLeaves = pendingLeaves.map(leave => {
+      const start = new Date(leave.fromDate).getTime();
+      const end = new Date(leave.toDate).getTime();
+      const diff = Math.ceil((end - start) / (1000 * 3600 * 24)) + 1;
+      return { ...leave, totalDays: isNaN(diff) ? 1 : diff };
+    });
+
+    res.json(mappedLeaves);
   } catch (error) {
     req.log.error(error, "Error fetching pending leaves");
     res.status(500).json({ message: "Internal server error" });
